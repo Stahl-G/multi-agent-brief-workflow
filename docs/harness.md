@@ -1,6 +1,6 @@
 # Quality Harness
 
-The public repo keeps the private workflow's quality-control idea, but ports it as generic, clean-room checks.
+The public repo keeps the quality-control idea from local workflow prototypes, but ports it as generic, clean-room checks.
 
 ## Current Audit Stack
 
@@ -14,7 +14,7 @@ AuditorAgent
 
 ## Ported Generic Checks
 
-The current harness includes public-safe versions of the private weekly pipeline's offline gates:
+The current harness includes public-safe versions of local weekly pipeline gates:
 
 - Missing or orphan `[src:CLAIM_ID]` references
 - Number-like values without same-line source references
@@ -35,7 +35,7 @@ The current harness includes public-safe versions of the private weekly pipeline
 
 ## Clean-Room Boundary
 
-The private workflow contains company-specific rules, templates, and delivery constraints. Those should not be copied verbatim into this public repo.
+Local prototypes may contain company-specific rules, templates, and delivery constraints. Those should not be copied verbatim into this public repo.
 
 Instead, they should be migrated as:
 
@@ -48,7 +48,7 @@ Instead, they should be migrated as:
 
 ## Remaining Migration Backlog
 
-The following private-workflow capabilities still need clean-room migration:
+The following prototype capabilities still need clean-room migration:
 
 - Configurable rule packs instead of hard-coded harness regexes
 - Previous-report baseline ingestion for novelty/repeat detection
@@ -58,4 +58,3 @@ The following private-workflow capabilities still need clean-room migration:
 - DOCX/PDF layout validation
 - Semantic source-support comparison with a model-backed audit agent
 - Editor repair classification such as editor-fixable vs analyst-blocking
-

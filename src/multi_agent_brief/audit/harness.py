@@ -51,7 +51,7 @@ NUMBER_PATTERN = re.compile(r"(?<!\[src:)(?<!\[)(?<!\w)(\$[\d,.]+|[\d.]+%(?!\w)|
 
 
 class QualityHarnessAuditAgent(AuditAgentInterface):
-    """Generic quality harness ported from the private weekly workflow."""
+    """Generic quality harness ported from local workflow prototypes."""
 
     name = "quality-harness-auditor"
 
@@ -203,4 +203,3 @@ def _section_between(content: str, start: str, end: str) -> str:
         return ""
     end_idx = content.find(end, start_idx + len(start))
     return content[start_idx:end_idx if end_idx >= 0 else len(content)]
-

@@ -6,7 +6,7 @@ This file is a local blueprint for a GitHub Project board.
 
 - Roadmap: grouped by epic
 - Backlog: all open items
-- Migration Track: existing private capabilities to generalize
+- Migration Track: local prototype capabilities to generalize
 - Safety Review: privacy, redaction, and disclaimer tasks
 
 ## Status Columns
@@ -32,11 +32,11 @@ Issues:
 - Implement deterministic audit
 - Implement Markdown/source-map output
 - Add basic tests
-- Keep porting public-safe quality harness checks from the private workflow
+- Keep porting public-safe quality harness checks from local workflow prototypes
 
 ### Epic 1B: Harness Migration
 
-Goal: Preserve mature private-pipeline quality gates as clean-room, configurable harness modules.
+Goal: Preserve mature prototype quality gates as clean-room, configurable harness modules.
 
 Issues:
 
@@ -50,7 +50,7 @@ Issues:
 
 ### Epic 2: Output Migration
 
-Goal: Generalize already implemented private output capabilities.
+Goal: Generalize local prototype output capabilities.
 
 Issues:
 
@@ -63,7 +63,7 @@ Issues:
 
 ### Epic 3: Data Connector Migration
 
-Goal: Generalize already implemented private connector capabilities.
+Goal: Generalize local prototype connector capabilities.
 
 Issues:
 

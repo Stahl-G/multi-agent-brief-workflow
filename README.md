@@ -1,6 +1,13 @@
 # Multi-Agent Brief Workflow
 
+<p align="center">
+  <a href="README.md">English</a> |
+  <a href="README.zh-CN.md">简体中文</a>
+</p>
+
 A source-grounded, audit-ready multi-agent workflow for producing business, research, market, policy, and management briefs.
+
+> Let code do lookup. Let models do judgment. Keep every important claim traceable.
 
 This project turns the repeatable briefing workflow used by analysts, strategy teams, investor relations teams, research desks, and management offices into a transparent Python pipeline:
 
@@ -10,13 +17,44 @@ Scout -> Claim Ledger -> Analyst -> Auditor -> Editor -> Formatter
 
 It is not an investment advice tool, trading signal generator, or replacement for human review.
 
-## Why This Exists
+## What Problem This Solves
 
-Most weekly reports and executive briefs still depend on a fragile manual process: collect information, decide what matters, write analysis, verify facts, edit wording, and format the final file. This project makes that workflow modular, inspectable, and reusable.
+Most weekly reports and executive briefs still depend on a fragile manual process: collect information, decide what matters, write analysis, verify facts, edit wording, and format the final file. That process is easy to rush, hard to audit, and difficult to reuse across teams.
 
-The core design principle is simple:
+This repo makes the workflow modular, inspectable, and runnable locally:
 
-> Let code do lookup. Let models do judgment. Keep every important claim traceable.
+- Source-backed statements are written into a Claim Ledger before they enter the brief.
+- Drafts use explicit `[src:CLAIM_ID]` citations.
+- Auditors can check unsupported numbers, stale sources, duplicate claims, placeholders, and redaction risks.
+- Output artifacts keep the brief, audit report, claim ledger, and source map separate.
+
+## Why Multi-Agent Instead Of One Prompt
+
+A real briefing process is not one job. It is a small editorial desk:
+
+- Scout finds reportable signals.
+- Claim Ledger records evidence.
+- Analyst turns evidence into a structured draft.
+- Auditor checks whether the draft is supported and distribution-ready.
+- Editor improves readability without inventing new facts.
+- Formatter writes the final artifacts.
+
+Splitting these roles reduces hidden reasoning shortcuts. Each step has a narrow responsibility, and the audit trail shows where a claim came from before it reaches the final brief.
+
+## Architecture
+
+```mermaid
+flowchart LR
+  A["Inputs<br/>Markdown, text, JSON"] --> B["Scout"]
+  B --> C["Claim Ledger"]
+  C --> D["Analyst"]
+  D --> E["Auditor"]
+  E --> F["Editor"]
+  F --> G["Formatter"]
+  G --> H["Outputs<br/>Brief, Claim Ledger, Audit Report, Source Map"]
+```
+
+See [docs/architecture.md](docs/architecture.md) for the plain-language architecture guide.
 
 ## Current MVP
 
@@ -27,15 +65,10 @@ The first local MVP supports:
 - Claim Ledger with source-grounded claims
 - Analyst agent that drafts a Markdown brief with `[src:CLAIM_ID]` citations
 - Auditor agent interface with deterministic audit and semantic-audit adapter hooks
-- Deterministic Auditor for missing claims, unsupported numbers, duplicate claims, and redaction risks
-- Reporting-window checks that flag stale sources in weekly briefs
+- Deterministic Auditor for missing claims, unsupported numbers, duplicate claims, redaction risks, and stale sources
 - Quality harness checks for placeholders, low-confidence sources, process residue, stale filler, and unit risks
 - Editor agent that prepares the final Markdown brief
-- Formatter agent that writes:
-  - `brief.md`
-  - `claim_ledger.json`
-  - `audit_report.json`
-  - `source_map.md`
+- Formatter agent that writes `brief.md`, `claim_ledger.json`, `audit_report.json`, and `source_map.md`
 
 ## Example Output
 
@@ -67,25 +100,6 @@ The audit report records whether the draft is distribution-ready:
   "findings": []
 }
 ```
-
-## Existing Capability Tracks To Migrate
-
-These capabilities are treated as migration tracks because they already exist in the private workflow and should be generalized before entering this repo:
-
-- DOCX/PDF output
-- Feishu, Slack, and Email delivery
-- SEC, RSS, and API data connectors
-
-## Future GitHub Project Epics
-
-These are future workstreams and should be tracked as GitHub Project epics:
-
-- Enterprise internal message ingestion
-- Complex RAG and historical knowledge retrieval
-- Database and semantic layer integration
-- Automatic investment analysis guardrails and evaluator
-
-See [docs/github-project.md](docs/github-project.md).
 
 ## Quick Start
 
@@ -124,6 +138,16 @@ output/basic_market_brief/audit_report.json
 output/basic_market_brief/source_map.md
 ```
 
+## More Examples
+
+Run the synthetic earnings-season peer demo:
+
+```bash
+multi-agent-brief run --config examples/earnings_season_peer_demo/config.yaml
+```
+
+This demo uses only fictional peer names and synthetic source data. It is designed to show how public-safe earnings, competitor, policy, and market signals flow through the Claim Ledger and audit report.
+
 ## Example Without Install
 
 ```bash
@@ -159,25 +183,35 @@ The pipeline-level `AuditorAgent` delegates to an audit backend that implements 
 
 Current audit backends:
 
-- `DeterministicAuditAgent`: checks source IDs, unsupported numbers, duplicate claims, missing source evidence, and redaction risks.
-- `DeterministicAuditAgent`: also checks reporting-window freshness when `report.date` and `report.max_source_age_days` are configured.
-- `QualityHarnessAuditAgent`: ports public-safe quality gates from the private workflow, including placeholders, internal process residue, `needs_recrawl`, T5 source use, low source density, and possible unit inflation.
+- `DeterministicAuditAgent`: checks source IDs, unsupported numbers, duplicate claims, missing source evidence, redaction risks, and reporting-window freshness.
+- `QualityHarnessAuditAgent`: ports public-safe quality gates from local workflow prototypes, including placeholders, internal process residue, `needs_recrawl`, low source density, and possible unit inflation.
 - `NoOpSemanticAuditAgent`: placeholder adapter for future model-backed semantic source-support review.
 - `CompositeAuditAgent`: runs deterministic audit first, then an optional semantic audit adapter.
 
-This keeps the MVP runnable without API keys while leaving a clean interface for Claude/OpenAI/LiteLLM or local-model audit agents.
+This keeps the MVP runnable without API keys while leaving a clean interface for Claude, OpenAI, LiteLLM, or local-model audit agents.
 
 See [docs/harness.md](docs/harness.md) for the current harness and migration backlog.
+
+## Roadmap
+
+- MVP: local inputs, Claim Ledger, deterministic audit, Markdown output, source map, and quality harness checks.
+- Near-term: DOCX/PDF output, SEC/RSS connectors, semantic audit adapters, richer synthetic examples, and stronger documentation.
+- Mid-term: industry modules, role-specific brief templates, external analysis plugins, local corpus retrieval, and source-tier policies.
+- Long-term: opt-in internal message ingestion, database and semantic layer integration, multi-model routing, and enterprise deployment patterns.
+
+See [docs/roadmap.md](docs/roadmap.md) for the detailed roadmap and [docs/repo-metadata.md](docs/repo-metadata.md) for suggested GitHub description and topics.
+
+## Safety And Non-Investment-Advice Disclaimer
+
+Do not commit credentials, tokens, webhooks, raw internal logs, private reports, customer names, confidential files, internal paths, or company-specific prompts. All examples in this repo should use public or synthetic data.
+
+This project can help structure research and briefing workflows, but it does not provide legal, financial, investment, trading, or compliance advice. Human review remains required before any real-world distribution or decision-making use.
 
 ## Development
 
 ```bash
 python3 -m pytest -q
 ```
-
-## Safety
-
-Do not commit credentials, tokens, webhooks, raw internal logs, private reports, customer names, confidential files, or company-specific prompts. All examples in this repo should use public or synthetic data.
 
 ## License
 

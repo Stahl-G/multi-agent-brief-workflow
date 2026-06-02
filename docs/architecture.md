@@ -1,37 +1,45 @@
 # Architecture
 
+This project is designed like a small editorial desk for research and management briefs. One prompt can produce text, but a reliable brief needs separate responsibilities for discovery, evidence logging, analysis, audit, editing, and output.
+
 ## Core Workflow
 
-```text
-Data Connectors
-  -> Scout
-  -> Claim Ledger
-  -> Analyst
-  -> Auditor
-  -> Editor
-  -> Formatter
-  -> Output Artifacts
+```mermaid
+flowchart LR
+  A["Inputs<br/>Markdown, text, JSON"] --> B["Scout"]
+  B --> C["Claim Ledger"]
+  C --> D["Analyst"]
+  D --> E["Auditor"]
+  E --> F["Editor"]
+  F --> G["Formatter"]
+  G --> H["Outputs<br/>Brief, Claim Ledger, Audit Report, Source Map"]
 ```
 
 ## Agent Responsibilities
 
 ### Scout
 
-Scout loads sources, extracts candidate reportable items, and turns them into claims. Scout does not write final analysis.
+Scout loads sources, extracts candidate reportable items, and turns them into claims. Scout is responsible for finding usable signals, not for writing the final narrative.
+
+In the MVP, Scout reads local `.md`, `.txt`, and `.json` files. Future connectors can feed the same step from SEC filings, RSS feeds, APIs, or other public-safe inputs.
 
 ### Claim Ledger
 
-The Claim Ledger is the central control point. Every material fact, number, date, risk, or interpretation that appears in the brief should be traceable to a claim.
+The Claim Ledger is the control point of the workflow. Every material fact, number, date, risk, or interpretation that appears in the brief should be traceable to a claim.
+
+This keeps the project different from a generic summarizer: the draft is not just text, it is text backed by recorded evidence.
 
 ### Analyst
 
-Analyst drafts the brief using only Claim Ledger claims. In the MVP, this is deterministic. Future model-backed analysts must keep source references.
+Analyst drafts the brief using only Claim Ledger claims. In the MVP, this step is deterministic and writes Markdown sections with `[src:CLAIM_ID]` citations.
+
+Future model-backed analysts should keep the same rule: if a statement matters, it needs a claim ID.
 
 ### Auditor
 
-Auditor checks references and source support. The MVP includes deterministic audit. A future semantic audit adapter can compare the draft against source evidence.
+Auditor checks references and source support. The MVP includes deterministic audit and a public-safe quality harness. A future semantic audit adapter can compare the draft against source evidence using an LLM or local model.
 
-For weekly briefs, deterministic audit can enforce a reporting window using:
+For weekly briefs, deterministic audit can enforce a reporting window:
 
 ```yaml
 report:
@@ -54,19 +62,24 @@ AuditorAgent
 
 This separation lets the pipeline keep one stable agent step while swapping audit implementations.
 
-`QualityHarnessAuditAgent` is the clean-room port of the private weekly workflow's offline gates. It checks placeholder text, internal workflow residue, low-confidence sources, `needs_recrawl` claims, stale/no-update filler language, source-density failures, and known unit-risk patterns.
-
 ### Editor
 
-Editor improves structure and readability. Editor must not invent new facts or unsupported numbers.
+Editor improves structure, readability, and distribution polish. Editor must not invent new facts, add unsupported numbers, or hide audit failures.
 
 ### Formatter
 
 Formatter writes output files. It should not change the substance of the brief.
 
+Current outputs:
+
+- `brief.md`
+- `claim_ledger.json`
+- `audit_report.json`
+- `source_map.md`
+
 ## Migration Tracks
 
-The following existing private workflow capabilities should be migrated as clean-room modules:
+The following capability tracks should be implemented as clean-room, public-safe modules:
 
 - DOCX output
 - PDF output
@@ -87,7 +100,7 @@ Each migration should include:
 
 ## Current Interface-Only Modules
 
-The repo now includes interface-only migration tracks:
+The repo includes interface-only migration tracks:
 
 ```text
 connectors/
@@ -105,4 +118,4 @@ outputs/
   pdf.py
 ```
 
-They are deliberately disabled/non-operational in the MVP. Real implementations should be added with public or synthetic examples only.
+They are deliberately disabled or non-operational in the MVP. Real implementations should be added with public or synthetic examples only.
