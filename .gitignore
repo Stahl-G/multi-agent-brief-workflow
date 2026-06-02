@@ -15,3 +15,4 @@ build/
 *.xlsx
 logs/
 
+brief-workspace/
