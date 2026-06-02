@@ -12,7 +12,7 @@ from multi_agent_brief.core.claim_ledger import ClaimLedger
 from multi_agent_brief.core.schemas import AgentOutput, PipelineContext
 from multi_agent_brief.sources.base import SourceConfig, SourceQuery
 from multi_agent_brief.sources.planner import create_source_plan
-from multi_agent_brief.sources.registry import collect_all_sources, load_sources_config
+from multi_agent_brief.sources.registry import collect_all_sources
 
 
 class BriefPipeline:
@@ -30,7 +30,7 @@ class BriefPipeline:
         ledger = ClaimLedger()
         outputs: list[AgentOutput] = []
 
-        # Step 0: Source Collection (before Scout)
+        # Step 0: Source Collection — always via provider system
         source_output = self._collect_sources(context)
         if source_output:
             outputs.append(source_output)
@@ -40,28 +40,17 @@ class BriefPipeline:
         return outputs
 
     def _collect_sources(self, context: PipelineContext) -> AgentOutput | None:
-        """Collect sources from providers or local files, populate context.sources.
-
-        Priority:
-        1. If context.sources already populated → skip (pre-loaded)
-        2. If source_config available → use provider system (planner + providers)
-        3. Fallback → load from input_dir (backward compatible)
-        """
-        # Already have sources? Skip.
+        """Collect sources via the provider system, populate context.sources."""
         if context.sources:
             return None
 
-        # Try provider-based collection
+        # Build SourceConfig from context if not already set
         source_config = context.metadata.get("source_config")
-        if source_config and isinstance(source_config, SourceConfig):
-            return self._collect_from_providers(context, source_config)
+        if not source_config or not isinstance(source_config, SourceConfig):
+            source_config = self._build_default_config(context)
+            context.metadata["source_config"] = source_config
 
-        # Fallback: load local files (backward compatible)
-        return self._collect_from_local(context)
-
-    def _collect_from_providers(self, context: PipelineContext, source_config: SourceConfig) -> AgentOutput:
-        """Collect sources using the provider system with optional SourcePlanner."""
-        # Create source plan from config
+        # Create source plan
         plan = create_source_plan(
             industry=source_config.industry,
             report_date=context.report_date,
@@ -76,27 +65,27 @@ class BriefPipeline:
             max_results=100,
         )
 
-        # Merge industry RSS feeds into config if available
+        # Merge industry RSS feeds into config
         if plan.rss_feeds and not source_config.rss.get("feeds"):
             source_config.rss["feeds"] = plan.rss_feeds
             source_config.rss["enabled"] = True
             if "rss" not in source_config.enabled_providers:
                 source_config.enabled_providers.append("rss")
 
+        # Always include manual provider for local input/ directory
+        if "manual" not in source_config.enabled_providers:
+            source_config.enabled_providers.append("manual")
+        input_dir = Path(context.input_dir)
+        if not source_config.manual.get("sources"):
+            source_config.manual["enabled"] = True
+            source_config.manual["sources"] = [
+                {"name": "Local Input Directory", "path": str(input_dir), "category": "local_files", "enabled": True}
+            ]
+
         # Collect from all providers
         items = collect_all_sources(source_config, query)
 
-        # Also load local input files (always available)
-        input_dir = Path(context.input_dir)
-        if input_dir.exists():
-            try:
-                local_items = load_local_sources(input_dir)
-                items.extend(local_items)
-            except Exception:
-                pass
-
         # Populate context
-        # Convert sources.base.SourceItem to core.schemas.SourceItem (same class now)
         context.sources = items
 
         return AgentOutput(
@@ -110,16 +99,17 @@ class BriefPipeline:
             },
         )
 
-    def _collect_from_local(self, context: PipelineContext) -> AgentOutput:
-        """Fallback: load sources from local input directory."""
-        input_dir = Path(context.input_dir)
-        try:
-            sources = load_local_sources(input_dir)
-        except FileNotFoundError:
-            sources = []
-        context.sources = sources
-        return AgentOutput(
-            agent_name="source-collection",
-            summary=f"Loaded {len(sources)} local sources from {context.input_dir}.",
-            artifacts={"source_count": len(sources), "mode": "local_only"},
+    def _build_default_config(self, context: PipelineContext) -> SourceConfig:
+        """Build a default SourceConfig when none is provided."""
+        return SourceConfig(
+            profile="research",
+            enabled_providers=["manual"],
+            manual={
+                "enabled": True,
+                "sources": [
+                    {"name": "Local Input Directory", "path": context.input_dir, "category": "local_files", "enabled": True}
+                ],
+            },
+            rss={"enabled": False, "feeds": []},
+            web_search={"enabled": False},
         )

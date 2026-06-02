@@ -6,7 +6,7 @@ from pathlib import Path
 
 from multi_agent_brief import __version__
 from multi_agent_brief.audit.deterministic import run_deterministic_audit
-from multi_agent_brief.cli.init_wizard import build_profile_from_args, create_demo_workspace, create_workspace
+from multi_agent_brief.cli.init_wizard import build_profile_from_args, create_workspace
 from multi_agent_brief.sources.doctor import run_doctor, format_doctor_report
 from multi_agent_brief.sources.registry import load_sources_config
 from multi_agent_brief.core.claim_ledger import ClaimLedger
@@ -39,7 +39,6 @@ def build_parser() -> argparse.ArgumentParser:
 
     init_parser = subparsers.add_parser("init", help="Create a reusable brief workspace.")
     init_parser.add_argument("target", nargs="?", default="brief-workspace", help="Target workspace directory.")
-    init_parser.add_argument("--demo", action="store_true", help="Create the existing synthetic demo workspace.")
     init_parser.add_argument("--force", action="store_true", help="Overwrite existing init files.")
     init_parser.add_argument("--language", choices=["en-US", "zh-CN", "bilingual"], help="Wizard/interface language.")
     init_parser.add_argument("--output-language", choices=["en-US", "zh-CN", "bilingual"], help="Generated brief language.")
@@ -131,14 +130,6 @@ def run_audit_from_args(args: argparse.Namespace) -> int:
     return 0 if report.audit_status != "fail" else 2
 
 
-def init_demo_from_args(args: argparse.Namespace) -> int:
-    target = Path(args.target)
-    create_demo_workspace(target, force=args.force)
-    print(f"Created demo workspace: {target}")
-    print(f"Run: multi-agent-brief run --config {target / 'config.yaml'}")
-    return 0
-
-
 def init_workspace_from_args(args: argparse.Namespace) -> int:
     target = Path(args.target)
     profile = build_profile_from_args(args)
@@ -164,7 +155,7 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "audit":
         return run_audit_from_args(args)
     if args.command == "init":
-        return init_demo_from_args(args) if args.demo else init_workspace_from_args(args)
+        return init_workspace_from_args(args)
     if args.command == "doctor":
         return run_doctor_from_args(args)
     if args.command == "version":

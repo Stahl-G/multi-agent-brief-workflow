@@ -3,30 +3,47 @@ from pathlib import Path
 from multi_agent_brief.cli.main import main
 
 
-def test_cli_init_and_run_with_config(tmp_path):
-    demo_dir = tmp_path / "demo"
+def test_cli_init_and_run(tmp_path):
+    workspace = tmp_path / "ws"
 
-    assert main(["init", str(demo_dir), "--demo"]) == 0
-    assert (demo_dir / "config.yaml").exists()
-    assert (demo_dir / "input" / "news.json").exists()
+    assert main(["init", str(workspace), "--language", "zh-CN", "--industry", "finance"]) == 0
+    assert (workspace / "config.yaml").exists()
+    assert (workspace / "sources.yaml").exists()
 
-    assert main(["run", "--config", str(demo_dir / "config.yaml")]) == 0
-    assert (demo_dir / "output" / "brief.md").exists()
-    assert (demo_dir / "output" / "claim_ledger.json").exists()
+    # Add a source file
+    (workspace / "input").mkdir(exist_ok=True)
+    (workspace / "input" / "news.md").write_text("- Test signal for weekly brief.\n", encoding="utf-8")
+
+    assert main(["run", "--config", str(workspace / "config.yaml")]) == 0
+    assert (workspace / "output" / "brief.md").exists()
+    assert (workspace / "output" / "claim_ledger.json").exists()
+
+
+def test_cli_run_with_industry(tmp_path):
+    workspace = tmp_path / "ws"
+    main(["init", str(workspace), "--language", "zh-CN", "--industry", "finance"])
+
+    (workspace / "input").mkdir(exist_ok=True)
+    (workspace / "input" / "data.md").write_text("- Financial earnings report shows growth.\n", encoding="utf-8")
+
+    assert main(["run", "--config", str(workspace / "config.yaml"), "--industry", "finance"]) == 0
+    assert (workspace / "output" / "brief.md").exists()
 
 
 def test_cli_audit_existing_brief(tmp_path):
-    demo_dir = tmp_path / "demo"
-    main(["init", str(demo_dir), "--demo"])
-    main(["run", "--config", str(demo_dir / "config.yaml")])
+    workspace = tmp_path / "ws"
+    main(["init", str(workspace), "--language", "zh-CN"])
+    (workspace / "input").mkdir(exist_ok=True)
+    (workspace / "input" / "news.md").write_text("- Test signal for audit.\n", encoding="utf-8")
+    main(["run", "--config", str(workspace / "config.yaml")])
 
     audit_output = tmp_path / "audit.json"
     exit_code = main(
         [
             "audit",
-            str(demo_dir / "output" / "brief.md"),
+            str(workspace / "output" / "brief.md"),
             "--ledger",
-            str(demo_dir / "output" / "claim_ledger.json"),
+            str(workspace / "output" / "claim_ledger.json"),
             "--output",
             str(audit_output),
             "--report-date",
