@@ -108,9 +108,12 @@ def run_doctor(
     # 11. Output directory
     output_dir = p.parent / "output"
     if output_dir.exists():
-        if os.access(output_dir, os.W_OK):
+        try:
+            test_file = output_dir / ".write_test"
+            test_file.write_text("ok", encoding="utf-8")
+            test_file.unlink()
             results.append(CheckResult("OK", "Output directory writable"))
-        else:
+        except (PermissionError, OSError):
             results.append(CheckResult("ERROR", "Output directory not writable"))
     else:
         results.append(CheckResult("OK", "Output directory does not exist yet (will be created)"))

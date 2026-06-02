@@ -137,10 +137,17 @@ MVP 会生成带来源引用的 Markdown 简报：
 
 ```bash
 cd multi-agent-brief-workflow
-python3 -m venv .venv
+bash scripts/setup.sh
 source .venv/bin/activate
-python -m pip install --upgrade pip
-pip install -e ".[dev]"
+multi-agent-brief run examples/basic_market_brief/input --output output/basic_market_brief
+```
+
+Windows (PowerShell):
+
+```powershell
+cd multi-agent-brief-workflow
+.\scripts\setup.ps1
+.\.venv\Scripts\Activate.ps1
 multi-agent-brief run examples/basic_market_brief/input --output output/basic_market_brief
 ```
 

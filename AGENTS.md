@@ -13,6 +13,13 @@ bash scripts/setup.sh
 source .venv/bin/activate
 ```
 
+Windows (PowerShell):
+
+```powershell
+.\scripts\setup.ps1
+.\.venv\Scripts\Activate.ps1
+```
+
 This creates a venv, installs the package, and verifies it works.
 Do NOT skip this step. The CLI will fail with `ModuleNotFoundError` if the package is not installed.
 
@@ -86,6 +93,13 @@ Setup (one-time):
 ```bash
 bash scripts/setup.sh
 source .venv/bin/activate
+```
+
+Windows (PowerShell):
+
+```powershell
+.\scripts\setup.ps1
+.\.venv\Scripts\Activate.ps1
 ```
 
 Run tests:
