@@ -6,7 +6,7 @@ from multi_agent_brief.cli.main import main
 def test_cli_init_and_run_with_config(tmp_path):
     demo_dir = tmp_path / "demo"
 
-    assert main(["init", str(demo_dir)]) == 0
+    assert main(["init", str(demo_dir), "--demo"]) == 0
     assert (demo_dir / "config.yaml").exists()
     assert (demo_dir / "input" / "news.json").exists()
 
@@ -17,7 +17,7 @@ def test_cli_init_and_run_with_config(tmp_path):
 
 def test_cli_audit_existing_brief(tmp_path):
     demo_dir = tmp_path / "demo"
-    main(["init", str(demo_dir)])
+    main(["init", str(demo_dir), "--demo"])
     main(["run", "--config", str(demo_dir / "config.yaml")])
 
     audit_output = tmp_path / "audit.json"

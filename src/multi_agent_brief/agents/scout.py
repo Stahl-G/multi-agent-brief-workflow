@@ -64,6 +64,8 @@ def load_local_sources(input_dir: Path) -> list[SourceItem]:
     for path in sorted(input_dir.iterdir()):
         if path.is_dir() or path.name.startswith("."):
             continue
+        if path.name.lower() == "readme.md":
+            continue
         if path.suffix.lower() not in {".md", ".txt", ".json"}:
             continue
 

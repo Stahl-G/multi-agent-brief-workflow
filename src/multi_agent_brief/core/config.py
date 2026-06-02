@@ -50,8 +50,28 @@ def load_config(path: str | Path) -> dict[str, Any]:
     data = data or {}
     if not isinstance(data, dict):
         raise ValueError(f"Config must be a mapping: {config_path}")
+    data = normalize_language_config(data)
     data["_config_dir"] = str(config_path.parent)
     return data
+
+
+def normalize_language_config(config: dict[str, Any]) -> dict[str, Any]:
+    project = config.get("project", {}) or {}
+    language_config = config.get("language", {}) or {}
+    if not isinstance(language_config, dict):
+        language_config = {}
+
+    output_language = language_config.get("output") or project.get("language") or "zh-CN"
+    interface_language = language_config.get("interface") or output_language
+    source_handling = language_config.get("source_handling") or "preserve_original"
+
+    config["language"] = {
+        **language_config,
+        "interface": interface_language,
+        "output": output_language,
+        "source_handling": source_handling,
+    }
+    return config
 
 
 def build_run_settings(
@@ -65,6 +85,7 @@ def build_run_settings(
 ) -> dict[str, str]:
     config = config or {}
     project = config.get("project", {}) or {}
+    language_config = config.get("language", {}) or {}
     report = config.get("report", {}) or {}
     previous = config.get("previous", {}) or {}
     selection = config.get("selection", {}) or {}
@@ -89,7 +110,7 @@ def build_run_settings(
         "project_name": name or project.get("name") or "Weekly Intelligence Brief",
         "input_dir": str(input_path),
         "output_dir": str(output_path),
-        "language": language or project.get("language") or "en-US",
+        "language": language or language_config.get("output") or project.get("language") or "zh-CN",
         "audience": audience or project.get("audience") or "management",
         "report_date": str(report.get("date", "")),
         "max_source_age_days": int(report["max_source_age_days"]) if report.get("max_source_age_days") else None,
