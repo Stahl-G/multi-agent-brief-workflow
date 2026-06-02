@@ -144,3 +144,75 @@ def test_generated_input_readme_is_not_treated_as_source(tmp_path):
 
     ledger = (workspace / "output" / "claim_ledger.json").read_text(encoding="utf-8")
     assert ledger.strip() == "[]"
+
+
+def test_init_workspace_creates_user_md(tmp_path):
+    workspace = tmp_path / "workspace"
+    assert main(["init", str(workspace), "--language", "zh-CN"]) == 0
+    assert (workspace / "user.md").exists()
+    user_md = (workspace / "user.md").read_text(encoding="utf-8")
+    assert "用户简报画像" in user_md
+    assert "不是证据来源" in user_md or "not source evidence" in user_md
+
+
+def test_llm_decide_source_profile_generates_agent_policy(tmp_path):
+    workspace = tmp_path / "workspace"
+    assert main([
+        "init", str(workspace),
+        "--language", "zh-CN",
+        "--company", "某公司",
+        "--role", "strategy_office",
+        "--industry", "solar",
+        "--audience", "management",
+        "--source-profile", "llm_decide",
+    ]) == 0
+
+    sources = (workspace / "sources.yaml").read_text(encoding="utf-8")
+    assert 'profile: "llm_decide"' in sources
+    assert "requires_agent_resolution: true" in sources
+    assert "source_discovery:" in sources
+    assert "source_candidates.yaml" in sources
+
+    user_md = (workspace / "user.md").read_text(encoding="utf-8")
+    assert "用户简报画像" in user_md
+    assert "llm_decide" in user_md
+    assert "不是证据来源" in user_md
+
+
+def test_llm_decide_does_not_call_llm(tmp_path):
+    """llm_decide must only generate config, not make network calls."""
+    workspace = tmp_path / "workspace"
+    assert main([
+        "init", str(workspace),
+        "--language", "en-US",
+        "--source-profile", "llm_decide",
+    ]) == 0
+    # Verify source_candidates.yaml is NOT created at init time
+    assert not (workspace / "source_candidates.yaml").exists()
+
+
+def test_llm_decide_user_md_not_treated_as_source(tmp_path):
+    workspace = tmp_path / "workspace"
+    main(["init", str(workspace), "--language", "zh-CN", "--source-profile", "llm_decide"])
+    assert main(["run", "--config", str(workspace / "config.yaml")]) == 0
+    ledger = (workspace / "output" / "claim_ledger.json").read_text(encoding="utf-8")
+    assert ledger.strip() == "[]"
+
+
+def test_source_profile_noninteractive_arg_is_respected(tmp_path):
+    workspace = tmp_path / "workspace"
+    main(["init", str(workspace), "--language", "en-US", "--source-profile", "llm_decide"])
+    config = (workspace / "config.yaml").read_text(encoding="utf-8")
+    assert 'profile: "llm_decide"' in config
+    sources = (workspace / "sources.yaml").read_text(encoding="utf-8")
+    assert 'profile: "llm_decide"' in sources
+
+
+def test_all_source_profiles_generate_valid_workspace(tmp_path):
+    for profile in ["conservative", "research", "aggressive_signal", "custom", "llm_decide"]:
+        workspace = tmp_path / f"ws-{profile}"
+        assert main(["init", str(workspace), "--language", "zh-CN", "--source-profile", profile]) == 0
+        assert (workspace / "config.yaml").exists()
+        assert (workspace / "sources.yaml").exists()
+        assert (workspace / "user.md").exists()
+        assert (workspace / "input" / "README.md").exists()

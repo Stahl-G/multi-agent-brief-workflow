@@ -51,7 +51,7 @@ def build_parser() -> argparse.ArgumentParser:
     init_parser.add_argument("--rag", choices=["on", "off"], help="Enable or disable retrieval settings.")
     init_parser.add_argument("--retrieval-provider", choices=["ollama", "gemini"], help="Retrieval provider.")
     init_parser.add_argument("--output-formats", help="Comma-separated output formats.")
-    init_parser.add_argument("--source-profile", choices=["conservative", "research", "aggressive_signal", "custom"], help="Source collection profile.")
+    init_parser.add_argument("--source-profile", choices=["conservative", "research", "aggressive_signal", "custom", "llm_decide"], help="Source collection profile.")
 
     doctor_parser = subparsers.add_parser("doctor", help="Check source configuration health.")
     doctor_parser.add_argument("--config", required=True, help="Path to config.yaml in the workspace.")

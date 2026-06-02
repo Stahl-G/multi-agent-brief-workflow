@@ -129,6 +129,7 @@ class InitProfile:
         default_factory=lambda: ["markdown", "claim_ledger", "audit_report", "source_map"]
     )
     source_profile: str = "research"
+    source_decision_mode: str = "static"
 
 
 def create_demo_workspace(target: Path, *, force: bool = False) -> None:
@@ -142,6 +143,10 @@ def create_demo_workspace(target: Path, *, force: bool = False) -> None:
 
 
 def create_workspace(target: Path, profile: InitProfile, *, force: bool = False) -> None:
+    # Set decision mode based on source profile
+    if profile.source_profile == "llm_decide":
+        profile.source_decision_mode = "agent_decide"
+
     input_dir = target / "input"
     output_dir = target / "output"
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -151,6 +156,7 @@ def create_workspace(target: Path, profile: InitProfile, *, force: bool = False)
         target / "config.yaml": to_yaml(build_config(profile)),
         target / "profile.yaml": to_yaml(build_profile(profile)),
         target / "sources.yaml": to_yaml(build_sources(profile)),
+        target / "user.md": build_user_md(profile),
         target / ".gitignore": WORKSPACE_GITIGNORE,
         input_dir / "README.md": build_input_readme(profile.interface_language),
     }
@@ -268,8 +274,8 @@ def prompt_labels(language: str) -> dict[str, Any]:
             "retrieval_provider": "Choose retrieval provider:\n1. Ollama local\n2. Gemini API\nDefault [1]: ",
             "outputs": "Output formats, comma-separated: ",
             "max_age": "Maximum source age in days: ",
-            "source_profile": "Source profile:\n1. Conservative: official and approved sources only\n2. Research: official + industry media + web search\n3. Aggressive signal: forums, social media, GitHub, blogs\n4. Custom\nDefault [2]: ",
-            "source_profile_options": {"1": "conservative", "2": "research", "3": "aggressive_signal", "4": "custom"},
+            "source_profile": "Source profile:\n1. Conservative: official and high-confidence sources only\n2. Research: balanced official, industry, market, and research sources\n3. Aggressive signal: broader signal discovery, more noise allowed\n4. Custom: user will manually edit sources.yaml\n5. Let LLM decide: generate an agent-readable source discovery policy\nDefault [2]: ",
+            "source_profile_options": {"1": "conservative", "2": "research", "3": "aggressive_signal", "4": "custom", "5": "llm_decide"},
         }
     if language == "bilingual":
         labels = prompt_labels("en-US")
@@ -286,8 +292,8 @@ def prompt_labels(language: str) -> dict[str, Any]:
                 "rag": "Enable historical retrieval / RAG? 是否启用历史检索？[y/N]: ",
                 "outputs": "Output formats / 输出格式，comma-separated / 逗号分隔: ",
                 "max_age": "Maximum source age in days / 最大来源天数: ",
-                "source_profile": "Source profile / 信息来源策略:\n1. Conservative / 仅官方和审核来源\n2. Research / 官方 + 行业媒体 + 网络搜索\n3. Aggressive signal / 论坛、社交、GitHub、博客\n4. Custom / 自定义\nDefault [2]: ",
-                "source_profile_options": {"1": "conservative", "2": "research", "3": "aggressive_signal", "4": "custom"},
+                "source_profile": "Source profile / 信息来源策略:\n1. Conservative / 保守：仅官方和高置信来源\n2. Research / 研究：官方、行业、市场、研究来源平衡\n3. Aggressive signal / 激进信号：扩大发现范围\n4. Custom / 自定义\n5. Let LLM decide / 让 LLM 自动决定来源\nDefault [2]: ",
+                "source_profile_options": {"1": "conservative", "2": "research", "3": "aggressive_signal", "4": "custom", "5": "llm_decide"},
             }
         )
         return labels
@@ -328,8 +334,8 @@ def prompt_labels(language: str) -> dict[str, Any]:
         "retrieval_provider": "请选择检索 provider：\n1. Ollama 本地\n2. Gemini API\n默认 [1]：",
         "outputs": "请输入输出格式，逗号分隔：",
         "max_age": "请输入最大来源天数：",
-        "source_profile": "请选择信息来源策略：\n1. 保守：仅官方和审核来源\n2. 研究：官方 + 行业媒体 + 网络搜索\n3. 积极信号：论坛、社交、GitHub、博客\n4. 自定义\n默认 [2]：",
-        "source_profile_options": {"1": "conservative", "2": "research", "3": "aggressive_signal", "4": "custom"},
+        "source_profile": "请选择信息来源策略：\n1. 保守：只使用官方和高置信来源\n2. 研究：官方、行业媒体、市场数据、研究来源平衡\n3. 激进信号：扩大信号发现范围，允许更多噪音\n4. 自定义：用户后续手动编辑 sources.yaml\n5. 让 LLM 自动决定：生成 agent 可读的来源发现策略\n默认 [2]：",
+        "source_profile_options": {"1": "conservative", "2": "research", "3": "aggressive_signal", "4": "custom", "5": "llm_decide"},
     }
 
 
@@ -355,6 +361,10 @@ def build_config(profile: InitProfile) -> dict[str, Any]:
         },
         "input": {"path": "input"},
         "output": {"path": "output", "formats": profile.output_formats},
+        "source": {
+            "profile": profile.source_profile,
+            "decision_mode": profile.source_decision_mode,
+        },
         "pipeline": {
             "steps": [
                 "scout",
@@ -416,6 +426,9 @@ def build_sources(profile: InitProfile) -> dict[str, Any]:
     """Generate sources.yaml content based on the selected source profile."""
     sp = profile.source_profile
 
+    if sp == "llm_decide":
+        return _build_llm_decide_sources(profile)
+
     # Base: always include manual local inputs
     manual_sources = [
         {
@@ -470,12 +483,161 @@ def build_sources(profile: InitProfile) -> dict[str, Any]:
     }
 
 
+def _build_llm_decide_sources(profile: InitProfile) -> dict[str, Any]:
+    """Generate sources.yaml for llm_decide profile: agent-readable discovery policy."""
+    lang = profile.output_language.split("-")[0] if "-" in profile.output_language else profile.output_language
+    return {
+        "source_strategy": {
+            "profile": "llm_decide",
+            "decision_mode": "agent_decide",
+            "requires_agent_resolution": True,
+        },
+        "source_discovery": {
+            "instruction": (
+                "Let an LLM or external agent decide which sources to use based on "
+                "company, industry, role, audience, focus areas, cadence, source age limit, "
+                "and safety constraints. The agent must propose sources before ingestion."
+            ),
+            "company": profile.company,
+            "industry": profile.industry,
+            "role": profile.role,
+            "audience": profile.audience,
+            "focus_areas": profile.focus_areas,
+            "cadence": profile.cadence,
+            "max_source_age_days": profile.max_source_age_days,
+            "language": lang,
+            "selection_goals": [
+                "official company and peer company updates",
+                "regulator and policy sources",
+                "industry media",
+                "market data",
+                "customer or demand signals",
+                "competitor movements",
+            ],
+            "source_requirements": [
+                "prefer public, citable, timestamped sources",
+                "prefer sources with stable URLs or RSS feeds",
+                "avoid paywalled-only sources unless user provides access",
+                "avoid private, confidential, internal, or material non-public information",
+                "preserve source URL, source name, source tier, and published date",
+            ],
+            "forbidden_sources": [
+                "credentials",
+                "private emails",
+                "private chat logs",
+                "internal reports",
+                "customer names",
+                "confidential files",
+                "material non-public information",
+            ],
+            "review_policy": {
+                "require_user_confirmation_before_first_live_ingestion": True,
+                "write_candidate_sources_to": "source_candidates.yaml",
+            },
+        },
+        "manual": {
+            "enabled": True,
+            "sources": [
+                {
+                    "name": "Local Input Directory",
+                    "path": "input/",
+                    "category": "local_files",
+                    "language": lang,
+                    "enabled": True,
+                }
+            ],
+        },
+        "rss": {"enabled": False, "feeds": []},
+        "web_search": {"enabled": False},
+        "api": {"enabled": False, "providers": []},
+        "mcp": {"enabled": False, "servers": []},
+    }
+
+
 def build_input_readme(language: str) -> str:
     if language == "zh-CN":
         return INPUT_README_ZH
     if language == "bilingual":
         return INPUT_README_ZH + "\n---\n\n" + INPUT_README_EN
     return INPUT_README_EN
+
+
+def build_user_md(profile: InitProfile) -> str:
+    """Generate user.md: agent-readable briefing context, NOT source evidence."""
+    lang = profile.interface_language
+    focus = "\n".join(f"- {f}" for f in profile.focus_areas)
+
+    if lang == "zh-CN":
+        return _user_md_zh(profile, focus)
+    if lang == "bilingual":
+        return _user_md_en(profile, focus) + "\n---\n\n" + _user_md_zh(profile, focus)
+    return _user_md_en(profile, focus)
+
+
+def _user_md_zh(profile: InitProfile, focus: str) -> str:
+    return (
+        "# 用户简报画像\n\n"
+        "本文件用于帮助 Codex、Claude Code、OpenCode 或其他 agent 理解用户的简报需求。\n"
+        "它不是新闻来源、不是证据来源，不应被 Scout 当作 source ingestion 输入。\n\n"
+        "## 基本信息\n\n"
+        f"- 公司：{profile.company}\n"
+        f"- 行业：{profile.industry}\n"
+        f"- 岗位：{profile.role}\n"
+        f"- 阅读对象：{profile.audience}\n"
+        f"- 简报标题：{profile.brief_title}\n"
+        f"- 简报频率：{profile.cadence}\n"
+        f"- 最大来源天数：{profile.max_source_age_days}\n"
+        f"- 每期筛选条数：{profile.selector_max_items}\n"
+        f"- 信息来源策略：{profile.source_profile}\n\n"
+        "## 关注领域\n\n"
+        f"{focus}\n\n"
+        "## 来源选择偏好\n\n"
+        "如果 source_profile = llm_decide，请根据以下原则选择来源：\n\n"
+        "1. 优先使用公开、可引用、有发布时间的来源。\n"
+        "2. 优先覆盖公司官方、同行公司、监管政策、行业媒体、市场数据、客户需求和竞争动态。\n"
+        "3. 不要使用私有邮件、内部聊天记录、机密报告、客户名称、凭据、token 或重大非公开信息。\n"
+        "4. 对第一次自动发现的来源，应先写入 source_candidates.yaml，等待用户确认后再进入正式 sources.yaml。\n"
+        "5. 所有进入简报的事实仍必须经过 Claim Ledger 和 Auditor。\n\n"
+        "## Safety\n\n"
+        "This project is not investment advice, legal advice, tax advice, trading signal generation, or a replacement for human review.\n"
+    )
+
+
+def _user_md_en(profile: InitProfile, focus: str) -> str:
+    goals = "\n".join(f"- {g}" for g in [
+        "official company and peer company updates",
+        "regulator and policy sources",
+        "industry media",
+        "market data",
+        "customer or demand signals",
+        "competitor movements",
+    ])
+    return (
+        "# User Briefing Profile\n\n"
+        "This file describes the user/workspace context for agents.\n"
+        "It is not source evidence and must not be ingested as a report source.\n\n"
+        "## Basic Information\n\n"
+        f"- Company: {profile.company}\n"
+        f"- Industry: {profile.industry}\n"
+        f"- Role: {profile.role}\n"
+        f"- Audience: {profile.audience}\n"
+        f"- Brief title: {profile.brief_title}\n"
+        f"- Cadence: {profile.cadence}\n"
+        f"- Max source age: {profile.max_source_age_days} days\n"
+        f"- Max items per brief: {profile.selector_max_items}\n"
+        f"- Source profile: {profile.source_profile}\n\n"
+        "## Focus Areas\n\n"
+        f"{focus}\n\n"
+        "## Source Selection Policy\n\n"
+        "If source_profile = llm_decide, use these principles:\n\n"
+        "1. Prefer public, citable, timestamped sources.\n"
+        "2. Cover official company, peers, regulators, industry media, market data, demand signals, competitor moves.\n"
+        "3. Do not use private emails, chat logs, internal reports, customer names, credentials, tokens, or MNPI.\n"
+        "4. Write first-discovered sources to source_candidates.yaml for user confirmation before adding to sources.yaml.\n"
+        "5. All facts entering the brief must pass through Claim Ledger and Auditor.\n\n"
+        "## Safety\n\n"
+        "This project is not investment advice, legal advice, tax advice, trading signal generation, or a replacement for human review.\n"
+    )
 
 
 def apply_rag_args(profile: InitProfile, rag: str | None, retrieval_provider: str | None) -> None:
