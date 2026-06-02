@@ -13,7 +13,9 @@ bash scripts/setup.sh && source .venv/bin/activate
 Windows (PowerShell):
 
 ```powershell
-.\scripts\setup.ps1; .\.venv\Scripts\Activate.ps1
+.\scripts\setup.ps1
+.\.venv\Scripts\Activate.ps1
+multi-agent-brief version
 ```
 
 ### Commands
@@ -23,7 +25,10 @@ Windows (PowerShell):
 | Init workspace | `multi-agent-brief init ws --language zh-CN --company "Name" --industry finance --title "Brief" --audience management --source-profile research` |
 | Run pipeline | `multi-agent-brief run --config ws/config.yaml` |
 | Doctor check | `multi-agent-brief doctor --config ws/config.yaml` |
-| Run tests | `python3 -m pytest -q` |
+| Source decide | `multi-agent-brief sources decide --config ws/config.yaml` |
+| Merge sources | `multi-agent-brief sources decide --config ws/config.yaml --merge` |
+| Run tests | `python -m pytest -q` |
+| Agent config check | `python scripts/generate_agent_configs.py --check` |
 
 ### Init: interactive vs non-interactive
 
@@ -32,6 +37,13 @@ Windows (PowerShell):
 **`multi-agent-brief init ws --language zh-CN --company "Name" --industry finance --title "..." --audience management --source-profile research`** → non-interactive, uses CLI args. Agent can run this directly without asking user.
 
 **Important:** If you pass even ONE arg (like `--language`), the entire interactive wizard is SKIPPED. So either pass ALL args or pass NONE.
+
+**Agent behavior in non-interactive environments** (Bash tool, CI, pipe):
+- If no CLI args are passed and stdin is not a TTY, init uses default settings and prints guidance.
+- Agents should either:
+  - (A) Use AskUserQuestion to collect user preferences, then pass ALL args as CLI args.
+  - (B) Tell the user to run `! cd <repo> && multi-agent-brief init <target>` in their terminal.
+- Do NOT attempt to pipe stdin to the init wizard — the Bash tool does not support interactive input.
 
 ### Generate a brief (workflow)
 
@@ -66,6 +78,8 @@ tests/         pytest suite
 ### Rules
 
 - Python 3.9+, type hints, dataclasses, ABC
+- Windows native path is PowerShell: `.\scripts\setup.ps1`, `.\.venv\Scripts\Activate.ps1`, `python -m pytest -q`
+- WSL is optional, not required; CMD is not the primary support target
 - No network calls in tests
 - Generated files have `AUTO-GENERATED` header — edit `configs/agent_roles.yaml`
 - No API keys in config — use env var refs

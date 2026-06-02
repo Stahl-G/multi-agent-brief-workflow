@@ -34,4 +34,5 @@ Hard rules:
 Repository rules:
 - Do not bypass Screener, Claim Ledger, or audit gates.
 - Keep public examples synthetic or public-safe.
-- Run `python3 -m pytest -q` after behavior changes.
+- Run `python -m pytest -q` after behavior changes.
+- On Windows, use `.\scripts\setup.ps1` in native PowerShell; WSL is optional.

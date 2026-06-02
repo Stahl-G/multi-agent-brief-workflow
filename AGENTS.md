@@ -18,7 +18,10 @@ Windows (PowerShell):
 ```powershell
 .\scripts\setup.ps1
 .\.venv\Scripts\Activate.ps1
+multi-agent-brief version
 ```
+
+Windows users should use native PowerShell. WSL is optional, not required. CMD is not the primary support target.
 
 This creates a venv, installs the package, and verifies it works.
 Do NOT skip this step. The CLI will fail with `ModuleNotFoundError` if the package is not installed.
@@ -35,11 +38,26 @@ multi-agent-brief init my-workspace \
   --source-profile research
 ```
 
+Windows (PowerShell):
+
+```powershell
+multi-agent-brief init my-workspace `
+  --language zh-CN `
+  --company "Company Name" `
+  --industry solar `
+  --title "Weekly Brief" `
+  --audience management `
+  --source-profile research
+```
+
 Or use the interactive wizard (no CLI args):
 
 ```bash
 multi-agent-brief init my-workspace
 ```
+
+**Agent note:** If no CLI args are passed and stdin is not a TTY, init uses default settings.
+In agent environments (Bash tool, CI), either pass ALL args or tell the user to run `! multi-agent-brief init my-workspace`.
 
 ### Step 3: Add source files
 
@@ -58,6 +76,18 @@ Output files will be in `my-workspace/output/`.
 
 ```bash
 multi-agent-brief doctor --config my-workspace/config.yaml
+```
+
+### Step 6: Source discovery (if using llm_decide profile)
+
+```bash
+multi-agent-brief sources decide --config my-workspace/config.yaml
+```
+
+Review `my-workspace/source_candidates.yaml`, then merge:
+
+```bash
+multi-agent-brief sources decide --config my-workspace/config.yaml --merge
 ```
 
 ---
@@ -100,12 +130,21 @@ Windows (PowerShell):
 ```powershell
 .\scripts\setup.ps1
 .\.venv\Scripts\Activate.ps1
+multi-agent-brief version
 ```
+
+PowerShell is the Windows-native path. WSL is optional, not required.
 
 Run tests:
 
 ```bash
-python3 -m pytest -q
+python -m pytest -q
+```
+
+Windows (PowerShell):
+
+```powershell
+python -m pytest -q
 ```
 
 Run demo:
@@ -118,13 +157,25 @@ multi-agent-brief run --config brief-demo/config.yaml
 Generate agent configs:
 
 ```bash
-python3 scripts/generate_agent_configs.py --write
+python scripts/generate_agent_configs.py --write
+```
+
+Windows (PowerShell):
+
+```powershell
+python scripts/generate_agent_configs.py --write
 ```
 
 Check agent configs:
 
 ```bash
-python3 scripts/generate_agent_configs.py --check
+python scripts/generate_agent_configs.py --check
+```
+
+Windows (PowerShell):
+
+```powershell
+python scripts/generate_agent_configs.py --check
 ```
 
 ## Repository Rules

@@ -22,6 +22,7 @@ Responsibilities:
 - Preserve Claim Ledger before Analyst.
 - Preserve audit gates.
 - Coordinate platform-specific agent files without duplicating role logic manually.
+- Preserve Windows native PowerShell setup, test, demo, and agent-config check guidance.
 - Run or document tests before completion.
 
 Hard rules:
@@ -29,8 +30,10 @@ Hard rules:
 - Do not bypass Claim Ledger.
 - Do not weaken audit or harness checks.
 - Do not introduce private/company-specific examples.
+- Do not require Windows users to use WSL or Git Bash.
 
 Repository rules:
 - Do not bypass Screener, Claim Ledger, or audit gates.
 - Keep public examples synthetic or public-safe.
-- Run `python3 -m pytest -q` after behavior changes.
+- Run `python -m pytest -q` after behavior changes.
+- On Windows, use `.\scripts\setup.ps1` in native PowerShell; WSL is optional.

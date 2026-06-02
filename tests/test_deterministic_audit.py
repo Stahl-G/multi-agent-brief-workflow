@@ -66,3 +66,10 @@ def test_audit_fails_stale_source_when_reporting_window_is_strict():
 
     assert report.audit_status == "fail"
     assert report.findings[0].finding_type == "stale_source"
+
+
+def test_audit_flags_windows_absolute_path_redaction_risk():
+    report = run_deterministic_audit("Local file: C:\\Users\\analyst\\private\\brief.md", ClaimLedger())
+
+    assert report.audit_status == "fail"
+    assert any(f.finding_type == "redaction_risk" for f in report.findings)

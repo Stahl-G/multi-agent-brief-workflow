@@ -124,6 +124,8 @@ The audit report records whether the draft is distribution-ready:
 
 ## Quick Start
 
+macOS / Linux / WSL:
+
 ```bash
 cd multi-agent-brief-workflow
 bash scripts/setup.sh
@@ -131,18 +133,25 @@ source .venv/bin/activate
 multi-agent-brief run examples/basic_market_brief/input --output output/basic_market_brief
 ```
 
-Windows (PowerShell):
+Windows 10/11 should use native PowerShell 5.1 or PowerShell 7. WSL/Git Bash is optional, not required. CMD is not the primary support target.
 
 ```powershell
 cd multi-agent-brief-workflow
 .\scripts\setup.ps1
 .\.venv\Scripts\Activate.ps1
+multi-agent-brief version
 multi-agent-brief run examples/basic_market_brief/input --output output/basic_market_brief
 ```
 
 Or run from a config file:
 
 ```bash
+multi-agent-brief run --config examples/basic_market_brief/config.yaml
+```
+
+PowerShell:
+
+```powershell
 multi-agent-brief run --config examples/basic_market_brief/config.yaml
 ```
 
@@ -174,12 +183,28 @@ Run the synthetic earnings-season peer demo:
 multi-agent-brief run --config examples/earnings_season_peer_demo/config.yaml
 ```
 
+PowerShell:
+
+```powershell
+multi-agent-brief run --config examples/earnings_season_peer_demo/config.yaml
+```
+
 This demo uses only fictional peer names and synthetic source data. It is designed to show how public-safe earnings, competitor, policy, and market signals flow through the Claim Ledger and audit report.
 
 ## Example Without Install
 
+macOS / Linux / WSL:
+
 ```bash
-PYTHONPATH=src python3 -m multi_agent_brief.cli.main run examples/basic_market_brief/input --output output/basic_market_brief
+PYTHONPATH=src python -m multi_agent_brief.cli.main run examples/basic_market_brief/input --output output/basic_market_brief
+```
+
+PowerShell:
+
+```powershell
+$env:PYTHONPATH = "src"
+python -m multi_agent_brief.cli.main run examples/basic_market_brief/input --output output/basic_market_brief
+Remove-Item Env:PYTHONPATH
 ```
 
 ## CLI
@@ -187,7 +212,14 @@ PYTHONPATH=src python3 -m multi_agent_brief.cli.main run examples/basic_market_b
 Create a synthetic demo workspace:
 
 ```bash
-multi-agent-brief init brief-demo
+multi-agent-brief init --demo
+multi-agent-brief run --config brief-demo/config.yaml
+```
+
+PowerShell:
+
+```powershell
+multi-agent-brief init --demo
 multi-agent-brief run --config brief-demo/config.yaml
 ```
 
@@ -196,6 +228,14 @@ Audit an existing brief:
 ```bash
 multi-agent-brief audit output/basic_market_brief/brief.md \
   --ledger output/basic_market_brief/claim_ledger.json \
+  --output output/basic_market_brief/audit_report.json
+```
+
+PowerShell:
+
+```powershell
+multi-agent-brief audit output/basic_market_brief/brief.md `
+  --ledger output/basic_market_brief/claim_ledger.json `
   --output output/basic_market_brief/audit_report.json
 ```
 
@@ -237,14 +277,28 @@ This repository can generate Codex and Claude Code agent configurations from a s
 Regenerate configs:
 
 ```bash
-python3 scripts/generate_agent_configs.py --write
+python scripts/generate_agent_configs.py --write
+```
+
+PowerShell:
+
+```powershell
+python scripts/generate_agent_configs.py --write
 ```
 
 Check generated files:
 
 ```bash
-python3 scripts/generate_agent_configs.py --check
+python scripts/generate_agent_configs.py --check
 ```
+
+PowerShell:
+
+```powershell
+python scripts/generate_agent_configs.py --check
+```
+
+See [docs/windows-powershell.md](docs/windows-powershell.md) for native Windows setup. WSL is optional, not required.
 
 ## Roadmap
 
@@ -311,7 +365,13 @@ This project can help structure research and briefing workflows, but it does not
 ## Development
 
 ```bash
-python3 -m pytest -q
+python -m pytest -q
+```
+
+PowerShell:
+
+```powershell
+python -m pytest -q
 ```
 
 ## Contributing

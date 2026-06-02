@@ -163,6 +163,12 @@ def create_workspace(target: Path, profile: InitProfile, *, force: bool = False)
     _write_files(files, force=force)
 
 
+def _is_interactive() -> bool:
+    """Check if stdin is connected to a real terminal (not a pipe or agent Bash tool)."""
+    import sys
+    return sys.stdin.isatty() if hasattr(sys.stdin, "isatty") else False
+
+
 def build_profile_from_args(args: Any, *, input_func: Callable[[str], str] | None = None) -> InitProfile:
     input_func = input if input_func is None else input_func
     profile = InitProfile()
@@ -181,7 +187,19 @@ def build_profile_from_args(args: Any, *, input_func: Callable[[str], str] | Non
         profile.output_formats = parse_list_arg(args.output_formats) or profile.output_formats
         profile.source_profile = getattr(args, "source_profile", None) or profile.source_profile
         return profile
-    return prompt_for_profile(input_func=input_func)
+    # No CLI args → try interactive prompt
+    if _is_interactive():
+        try:
+            return prompt_for_profile(input_func=input_func)
+        except (EOFError, KeyboardInterrupt):
+            print("\n[init] Interactive input interrupted. Using defaults.")
+            return profile
+    # Non-interactive (agent Bash tool, pipe, CI) → use defaults with a clear message
+    print("[init] Non-interactive environment detected. Using default settings.")
+    print("[init] To customize, run with CLI args:")
+    print("  multi-agent-brief init <target> --language zh-CN --company \"Name\" --industry finance --title \"Brief\" --audience management --source-profile research")
+    print("[init] Or run interactively in a real terminal: multi-agent-brief init <target>")
+    return profile
 
 
 def has_noninteractive_profile_args(args: Any) -> bool:

@@ -135,6 +135,8 @@ MVP 会生成带来源引用的 Markdown 简报：
 
 ## 快速开始
 
+macOS / Linux / WSL:
+
 ```bash
 cd multi-agent-brief-workflow
 bash scripts/setup.sh
@@ -142,18 +144,25 @@ source .venv/bin/activate
 multi-agent-brief run examples/basic_market_brief/input --output output/basic_market_brief
 ```
 
-Windows (PowerShell):
+Windows 10/11 推荐使用原生 PowerShell 5.1 或 PowerShell 7，不要求 WSL/Git Bash。CMD 不是主要支持目标。
 
 ```powershell
 cd multi-agent-brief-workflow
 .\scripts\setup.ps1
 .\.venv\Scripts\Activate.ps1
+multi-agent-brief version
 multi-agent-brief run examples/basic_market_brief/input --output output/basic_market_brief
 ```
 
 也可以通过配置文件运行：
 
 ```bash
+multi-agent-brief run --config examples/basic_market_brief/config.yaml
+```
+
+PowerShell:
+
+```powershell
 multi-agent-brief run --config examples/basic_market_brief/config.yaml
 ```
 
@@ -185,12 +194,28 @@ output/basic_market_brief/source_map.md
 multi-agent-brief run --config examples/earnings_season_peer_demo/config.yaml
 ```
 
+PowerShell:
+
+```powershell
+multi-agent-brief run --config examples/earnings_season_peer_demo/config.yaml
+```
+
 这个 demo 只使用虚构同行名称和合成来源数据，用来展示 earnings、competitor、policy 和 market 信号如何进入 Claim Ledger 与审计报告。
 
 ## 不安装也可以运行
 
+macOS / Linux / WSL:
+
 ```bash
-PYTHONPATH=src python3 -m multi_agent_brief.cli.main run examples/basic_market_brief/input --output output/basic_market_brief
+PYTHONPATH=src python -m multi_agent_brief.cli.main run examples/basic_market_brief/input --output output/basic_market_brief
+```
+
+PowerShell:
+
+```powershell
+$env:PYTHONPATH = "src"
+python -m multi_agent_brief.cli.main run examples/basic_market_brief/input --output output/basic_market_brief
+Remove-Item Env:PYTHONPATH
 ```
 
 ## CLI
@@ -198,7 +223,14 @@ PYTHONPATH=src python3 -m multi_agent_brief.cli.main run examples/basic_market_b
 创建一个合成 demo 工作区：
 
 ```bash
-multi-agent-brief init brief-demo
+multi-agent-brief init --demo
+multi-agent-brief run --config brief-demo/config.yaml
+```
+
+PowerShell:
+
+```powershell
+multi-agent-brief init --demo
 multi-agent-brief run --config brief-demo/config.yaml
 ```
 
@@ -207,6 +239,14 @@ multi-agent-brief run --config brief-demo/config.yaml
 ```bash
 multi-agent-brief audit output/basic_market_brief/brief.md \
   --ledger output/basic_market_brief/claim_ledger.json \
+  --output output/basic_market_brief/audit_report.json
+```
+
+PowerShell:
+
+```powershell
+multi-agent-brief audit output/basic_market_brief/brief.md `
+  --ledger output/basic_market_brief/claim_ledger.json `
   --output output/basic_market_brief/audit_report.json
 ```
 
@@ -248,14 +288,28 @@ multi-agent-brief version
 重新生成配置：
 
 ```bash
-python3 scripts/generate_agent_configs.py --write
+python scripts/generate_agent_configs.py --write
+```
+
+PowerShell:
+
+```powershell
+python scripts/generate_agent_configs.py --write
 ```
 
 检查生成文件：
 
 ```bash
-python3 scripts/generate_agent_configs.py --check
+python scripts/generate_agent_configs.py --check
 ```
+
+PowerShell:
+
+```powershell
+python scripts/generate_agent_configs.py --check
+```
+
+Windows 原生 PowerShell 详细说明见 [docs/windows-powershell.md](docs/windows-powershell.md)。WSL 是可选高级路径，不是必需条件。
 
 ## 路线图
 
@@ -322,7 +376,13 @@ python3 scripts/generate_agent_configs.py --check
 ## 开发
 
 ```bash
-python3 -m pytest -q
+python -m pytest -q
+```
+
+PowerShell:
+
+```powershell
+python -m pytest -q
 ```
 
 ## 欢迎参与

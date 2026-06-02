@@ -2,12 +2,12 @@
 """Generate platform-specific agent configurations from configs/agent_roles.yaml.
 
 Usage:
-    python3 scripts/generate_agent_configs.py --write
-    python3 scripts/generate_agent_configs.py --check
-    python3 scripts/generate_agent_configs.py --target codex
-    python3 scripts/generate_agent_configs.py --target claude
-    python3 scripts/generate_agent_configs.py --target skills
-    python3 scripts/generate_agent_configs.py --target docs
+    python scripts/generate_agent_configs.py --write
+    python scripts/generate_agent_configs.py --check
+    python scripts/generate_agent_configs.py --target codex
+    python scripts/generate_agent_configs.py --target claude
+    python scripts/generate_agent_configs.py --target skills
+    python scripts/generate_agent_configs.py --target docs
 """
 from __future__ import annotations
 
@@ -156,7 +156,10 @@ def render_agents_md(manifest: dict) -> str:
         f"```powershell\n"
         f".\\scripts\\setup.ps1\n"
         f".\\.venv\\Scripts\\Activate.ps1\n"
+        f"multi-agent-brief version\n"
         f"```\n"
+        f"\n"
+        f"Windows users should use native PowerShell. WSL is optional, not required. CMD is not the primary support target.\n"
         f"\n"
         f"This creates a venv, installs the package, and verifies it works.\n"
         f"Do NOT skip this step. The CLI will fail with `ModuleNotFoundError` if the package is not installed.\n"
@@ -173,11 +176,26 @@ def render_agents_md(manifest: dict) -> str:
         f"  --source-profile research\n"
         f"```\n"
         f"\n"
+        f"Windows (PowerShell):\n"
+        f"\n"
+        f"```powershell\n"
+        f"multi-agent-brief init my-workspace `\n"
+        f"  --language zh-CN `\n"
+        f"  --company \"Company Name\" `\n"
+        f"  --industry solar `\n"
+        f"  --title \"Weekly Brief\" `\n"
+        f"  --audience management `\n"
+        f"  --source-profile research\n"
+        f"```\n"
+        f"\n"
         f"Or use the interactive wizard (no CLI args):\n"
         f"\n"
         f"```bash\n"
         f"multi-agent-brief init my-workspace\n"
         f"```\n"
+        f"\n"
+        f"**Agent note:** If no CLI args are passed and stdin is not a TTY, init uses default settings.\n"
+        f"In agent environments (Bash tool, CI), either pass ALL args or tell the user to run `! multi-agent-brief init my-workspace`.\n"
         f"\n"
         f"### Step 3: Add source files\n"
         f"\n"
@@ -196,6 +214,18 @@ def render_agents_md(manifest: dict) -> str:
         f"\n"
         f"```bash\n"
         f"multi-agent-brief doctor --config my-workspace/config.yaml\n"
+        f"```\n"
+        f"\n"
+        f"### Step 6: Source discovery (if using llm_decide profile)\n"
+        f"\n"
+        f"```bash\n"
+        f"multi-agent-brief sources decide --config my-workspace/config.yaml\n"
+        f"```\n"
+        f"\n"
+        f"Review `my-workspace/source_candidates.yaml`, then merge:\n"
+        f"\n"
+        f"```bash\n"
+        f"multi-agent-brief sources decide --config my-workspace/config.yaml --merge\n"
         f"```\n"
         f"\n"
         f"---\n"
@@ -233,12 +263,21 @@ def render_agents_md(manifest: dict) -> str:
         f"```powershell\n"
         f".\\scripts\\setup.ps1\n"
         f".\\.venv\\Scripts\\Activate.ps1\n"
+        f"multi-agent-brief version\n"
         f"```\n"
+        f"\n"
+        f"PowerShell is the Windows-native path. WSL is optional, not required.\n"
         f"\n"
         f"Run tests:\n"
         f"\n"
         f"```bash\n"
-        f"python3 -m pytest -q\n"
+        f"python -m pytest -q\n"
+        f"```\n"
+        f"\n"
+        f"Windows (PowerShell):\n"
+        f"\n"
+        f"```powershell\n"
+        f"python -m pytest -q\n"
         f"```\n"
         f"\n"
         f"Run demo:\n"
@@ -251,13 +290,25 @@ def render_agents_md(manifest: dict) -> str:
         f"Generate agent configs:\n"
         f"\n"
         f"```bash\n"
-        f"python3 scripts/generate_agent_configs.py --write\n"
+        f"python scripts/generate_agent_configs.py --write\n"
+        f"```\n"
+        f"\n"
+        f"Windows (PowerShell):\n"
+        f"\n"
+        f"```powershell\n"
+        f"python scripts/generate_agent_configs.py --write\n"
         f"```\n"
         f"\n"
         f"Check agent configs:\n"
         f"\n"
         f"```bash\n"
-        f"python3 scripts/generate_agent_configs.py --check\n"
+        f"python scripts/generate_agent_configs.py --check\n"
+        f"```\n"
+        f"\n"
+        f"Windows (PowerShell):\n"
+        f"\n"
+        f"```powershell\n"
+        f"python scripts/generate_agent_configs.py --check\n"
         f"```\n"
         f"\n"
         f"## Repository Rules\n"
@@ -366,7 +417,8 @@ def render_codex_agent(role_name: str, role: dict, manifest: dict) -> str:
         f"Repository rules:\n"
         f"        - Do not bypass Screener, Claim Ledger, or audit gates.\n"
         f"        - Keep public examples synthetic or public-safe.\n"
-        f"        - Run python3 -m pytest -q after behavior changes.\n"
+        f"        - Run python -m pytest -q after behavior changes.\n"
+        f"        - On Windows, use .\\scripts\\setup.ps1 and native PowerShell; WSL is optional.\n"
         f'        """\n'
     )
 
@@ -468,7 +520,8 @@ def render_claude_agent(role_name: str, role: dict, manifest: dict) -> str:
         f"Repository rules:\n"
         f"- Do not bypass Screener, Claim Ledger, or audit gates.\n"
         f"- Keep public examples synthetic or public-safe.\n"
-        f"- Run `python3 -m pytest -q` after behavior changes.\n"
+        f"- Run `python -m pytest -q` after behavior changes.\n"
+        f"- On Windows, use `.\\scripts\\setup.ps1` in native PowerShell; WSL is optional.\n"
     )
 
 
@@ -505,8 +558,15 @@ def render_docs(manifest: dict) -> dict[str, str]:
         ## Generation
 
         ```bash
-        python3 scripts/generate_agent_configs.py --write
-        python3 scripts/generate_agent_configs.py --check
+        python scripts/generate_agent_configs.py --write
+        python scripts/generate_agent_configs.py --check
+        ```
+
+        Windows (PowerShell):
+
+        ```powershell
+        python scripts/generate_agent_configs.py --write
+        python scripts/generate_agent_configs.py --check
         ```
 
         ## Pipeline
@@ -877,7 +937,7 @@ def main(argv: list[str] | None = None) -> int:
         if ok:
             print("All generated files are up to date.")
         else:
-            print("Generated files are stale. Run: python3 scripts/generate_agent_configs.py --write")
+            print("Generated files are stale. Run: python scripts/generate_agent_configs.py --write")
         return 0 if ok else 1
     else:
         print("Generated agent configs.")

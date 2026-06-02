@@ -6,7 +6,7 @@ import re
 REDACTION_PATTERNS: dict[str, re.Pattern[str]] = {
     "email": re.compile(r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b"),
     "api_key_hint": re.compile(r"(?i)\b(api[_-]?key|secret|token|webhook)\b\s*[:=]"),
-    "absolute_path": re.compile(r"(/Users/[^ \n]+|/Volumes/[^ \n]+)"),
+    "absolute_path": re.compile(r"(/Users/[^ \n]+|/Volumes/[^ \n]+|[A-Za-z]:\\[^ \n]+)"),
     "private_ip": re.compile(r"\b(?:10|172\.(?:1[6-9]|2\d|3[01])|192\.168)\.\d{1,3}\.\d{1,3}\b"),
 }
 
@@ -25,4 +25,3 @@ def scan_redaction_risks(text: str) -> list[dict]:
                 }
             )
     return findings
-

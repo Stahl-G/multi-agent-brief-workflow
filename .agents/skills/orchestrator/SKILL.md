@@ -20,6 +20,7 @@ Use for multi-step feature planning, cross-role integration, pipeline changes, o
 - Preserve Claim Ledger before Analyst.
 - Preserve audit gates.
 - Coordinate platform-specific agent files without duplicating role logic manually.
+- Preserve Windows native PowerShell setup, test, demo, and agent-config check guidance.
 - Run or document tests before completion.
 
 ## Hard Rules
@@ -28,6 +29,7 @@ Use for multi-step feature planning, cross-role integration, pipeline changes, o
 - Do not bypass Claim Ledger.
 - Do not weaken audit or harness checks.
 - Do not introduce private/company-specific examples.
+- Do not require Windows users to use WSL or Git Bash.
 
 ## Pipeline Context
 

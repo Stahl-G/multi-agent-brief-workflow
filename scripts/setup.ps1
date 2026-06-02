@@ -1,105 +1,158 @@
 # setup.ps1 - Windows PowerShell setup for multi-agent-brief-workflow
-# Run: powershell -ExecutionPolicy Bypass -File scripts\setup.ps1
-# Or:  .\scripts\setup.ps1
+# Run from the repository root:
+#   .\scripts\setup.ps1
+# If your policy blocks scripts:
+#   powershell -ExecutionPolicy Bypass -File .\scripts\setup.ps1
 
 $ErrorActionPreference = "Stop"
 
 Write-Host "=== multi-agent-brief-workflow setup ===" -ForegroundColor Cyan
 
-# --- Find Python ---
-# Check multiple locations, skip Windows Store placeholder (exit code 49)
+function Test-PythonCandidate {
+    param(
+        [Parameter(Mandatory = $true)]
+        [pscustomobject]$Candidate
+    )
+
+    try {
+        $version = & $Candidate.File @($Candidate.Args) -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}'); raise SystemExit(0 if sys.version_info >= (3, 9) else 1)" 2>$null
+        if ($LASTEXITCODE -eq 0 -and $version) {
+            return $version.Trim()
+        }
+    } catch {
+        return $null
+    }
+    return $null
+}
+
+function New-PythonCandidate {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$File,
+        [string[]]$Args = @(),
+        [string]$Label = ""
+    )
+
+    if (-not $Label) {
+        $Label = if ($Args.Count -gt 0) { "$File $($Args -join ' ')" } else { $File }
+    }
+    [pscustomobject]@{
+        File = $File
+        Args = $Args
+        Label = $Label
+    }
+}
+
 function Find-Python {
-    # 1. Try py launcher (Python.org installer adds this)
-    foreach ($cmd in @("py -3", "py")) {
-        try {
-            $ver = & cmd /c "$cmd --version 2>&1"
-            if ($ver -match "Python 3\.\d+") { return $cmd }
-        } catch {}
-    }
+    $candidates = @(
+        (New-PythonCandidate -File "py" -Args @("-3") -Label "py -3"),
+        (New-PythonCandidate -File "py"),
+        (New-PythonCandidate -File "python"),
+        (New-PythonCandidate -File "python3")
+    )
 
-    # 2. Try python from PATH (may be Windows Store stub)
-    foreach ($cmd in @("python3", "python")) {
-        try {
-            $proc = Start-Process -FilePath $cmd -ArgumentList "--version" -NoNewWindow -Wait -PassThru -RedirectStandardOutput "NUL" -RedirectStandardError "NUL"
-            if ($proc.ExitCode -eq 0) {
-                $ver = & $cmd --version 2>&1
-                if ($ver -match "Python 3\.\d+") { return $cmd }
-            }
-        } catch {}
-    }
-
-    # 3. Search common install locations
-    $searchPaths = @(
-        "$env:LOCALAPPDATA\Programs\Python\Python3*\python.exe",
-        "$env:LOCALAPPDATA\Programs\Python\Python3*\python.exe",
-        "C:\Python3*\python.exe",
-        "C:\Program Files\Python3*\python.exe",
+    $searchPatterns = @(
+        "$env:LOCALAPPDATA\Programs\Python\Python*\python.exe",
+        "C:\Program Files\Python*\python.exe",
+        "C:\Python*\python.exe",
         "$env:USERPROFILE\.cache\codex-runtimes\*\dependencies\python\python.exe",
         "$env:USERPROFILE\.codex\runtimes\*\python.exe"
     )
-    foreach ($pattern in $searchPaths) {
-        $found = Get-Item $pattern -ErrorAction SilentlyContinue | Sort-Object Name -Descending | Select-Object -First 1
-        if ($found) {
-            try {
-                $ver = & $found.FullName --version 2>&1
-                if ($ver -match "Python 3\.\d+") { return $found.FullName }
-            } catch {}
+
+    foreach ($pattern in $searchPatterns) {
+        Get-Item $pattern -ErrorAction SilentlyContinue |
+            Sort-Object FullName -Descending |
+            ForEach-Object {
+                $candidates += New-PythonCandidate -File $_.FullName -Label $_.FullName
+            }
+    }
+
+    foreach ($candidate in $candidates) {
+        $version = Test-PythonCandidate -Candidate $candidate
+        if ($version) {
+            return [pscustomobject]@{
+                Candidate = $candidate
+                Version = $version
+            }
         }
     }
 
     return $null
 }
 
-$python = Find-Python
+function Invoke-Python {
+    param(
+        [Parameter(Mandatory = $true)]
+        [pscustomobject]$Candidate,
+        [Parameter(ValueFromRemainingArguments = $true)]
+        [string[]]$Arguments
+    )
 
-if (-not $python) {
+    & $Candidate.File @($Candidate.Args) @Arguments
+}
+
+$pythonInfo = Find-Python
+
+if (-not $pythonInfo) {
     Write-Host ""
-    Write-Host "ERROR: Python 3.9+ not found on this system." -ForegroundColor Red
+    Write-Host "ERROR: Python 3.9+ was not found." -ForegroundColor Red
     Write-Host ""
-    Write-Host "The 'python' command may be a Windows Store placeholder." -ForegroundColor Yellow
-    Write-Host ""
-    Write-Host "To fix this, install real Python:" -ForegroundColor Yellow
-    Write-Host "  1. Download from https://www.python.org/downloads/" -ForegroundColor White
-    Write-Host "  2. During install, CHECK 'Add Python to PATH'" -ForegroundColor White
-    Write-Host "  3. Restart your terminal after install" -ForegroundColor White
-    Write-Host ""
-    Write-Host "Or use winget:" -ForegroundColor Yellow
+    Write-Host "PowerShell may be resolving 'python' to the Microsoft Store placeholder." -ForegroundColor Yellow
+    Write-Host "Install real Python, then reopen PowerShell:" -ForegroundColor Yellow
     Write-Host "  winget install Python.Python.3.12" -ForegroundColor White
+    Write-Host "or download from:" -ForegroundColor Yellow
+    Write-Host "  https://www.python.org/downloads/windows/" -ForegroundColor White
+    Write-Host ""
+    Write-Host "During python.org install, select 'Add python.exe to PATH'." -ForegroundColor Yellow
     Write-Host ""
     exit 1
 }
 
-# Resolve full path for display
-$pythonDisplay = $python
-try { $pythonDisplay = "$python ($( & $python --version 2>&1 ))" } catch {}
-Write-Host "[1/3] Found Python: $pythonDisplay" -ForegroundColor Green
+$python = $pythonInfo.Candidate
+Write-Host "[1/4] Found Python $($pythonInfo.Version): $($python.Label)" -ForegroundColor Green
 
-# --- Create venv ---
 $projectRoot = Split-Path -Parent $PSScriptRoot
 $venvDir = Join-Path $projectRoot ".venv"
 $venvPython = Join-Path $venvDir "Scripts\python.exe"
+$venvCli = Join-Path $venvDir "Scripts\multi-agent-brief.exe"
 
 if (-not (Test-Path $venvDir)) {
-    Write-Host "[2/3] Creating virtual environment..." -ForegroundColor Yellow
-    & $python -m venv $venvDir
+    Write-Host "[2/4] Creating virtual environment..." -ForegroundColor Yellow
+    & $python.File @($python.Args) -m venv $venvDir
 } else {
-    Write-Host "[2/3] Virtual environment already exists." -ForegroundColor Green
+    Write-Host "[2/4] Virtual environment already exists." -ForegroundColor Green
 }
 
-# --- Install package ---
-Write-Host "[3/3] Installing package..." -ForegroundColor Yellow
+if (-not (Test-Path $venvPython)) {
+    Write-Host "ERROR: Virtual environment Python was not created at $venvPython" -ForegroundColor Red
+    exit 1
+}
+
+Write-Host "[3/4] Installing package and development dependencies..." -ForegroundColor Yellow
 & $venvPython -m pip install --upgrade pip -q
 & $venvPython -m pip install -e ".[dev]" -q
+& $venvPython -c "import multi_agent_brief" 2>$null
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "Editable install did not expose the package; falling back to a standard install..." -ForegroundColor Yellow
+    & $venvPython -m pip install ".[dev]" -q --force-reinstall
+}
 
-# --- Verify ---
-& $venvPython -c "from multi_agent_brief.cli.main import main; print('OK: multi-agent-brief is ready')"
+Write-Host "[4/4] Verifying console scripts..." -ForegroundColor Yellow
+& $venvPython -m multi_agent_brief.cli.main version
+if (-not (Test-Path $venvCli)) {
+    Write-Host "ERROR: Console script was not created at $venvCli" -ForegroundColor Red
+    exit 1
+}
+& $venvCli version
 
 Write-Host ""
 Write-Host "=== Setup complete ===" -ForegroundColor Cyan
 Write-Host ""
 Write-Host "Next steps:"
-Write-Host "  cd $projectRoot"
+Write-Host "  cd `"$projectRoot`""
 Write-Host "  .\.venv\Scripts\Activate.ps1"
-Write-Host "  multi-agent-brief init my-workspace --language zh-CN"
-Write-Host "  # Add source files to my-workspace\input\"
-Write-Host "  multi-agent-brief run --config my-workspace\config.yaml"
+Write-Host "  multi-agent-brief version"
+Write-Host "  multi-agent-brief run examples/basic_market_brief/input --output output/basic_market_brief"
+Write-Host ""
+Write-Host "If Activate.ps1 is blocked, run this once for your user account:" -ForegroundColor Yellow
+Write-Host "  Set-ExecutionPolicy -Scope CurrentUser RemoteSigned" -ForegroundColor White

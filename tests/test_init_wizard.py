@@ -4,6 +4,16 @@ from multi_agent_brief.cli.init_wizard import build_profile_from_args, prompt_fo
 from multi_agent_brief.cli.main import main
 
 
+def test_init_demo_preserves_existing_demo_behavior(tmp_path):
+    demo_dir = tmp_path / "demo"
+
+    assert main(["init", str(demo_dir), "--demo"]) == 0
+
+    assert (demo_dir / "config.yaml").exists()
+    assert (demo_dir / "input" / "news.json").exists()
+    assert (demo_dir / "input" / "market_data.json").exists()
+
+
 def test_init_workspace_creates_expected_files(tmp_path):
     workspace = tmp_path / "workspace"
 

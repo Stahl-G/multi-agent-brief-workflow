@@ -17,8 +17,15 @@
         ## Generation
 
         ```bash
-        python3 scripts/generate_agent_configs.py --write
-        python3 scripts/generate_agent_configs.py --check
+        python scripts/generate_agent_configs.py --write
+        python scripts/generate_agent_configs.py --check
+        ```
+
+        Windows (PowerShell):
+
+        ```powershell
+        python scripts/generate_agent_configs.py --write
+        python scripts/generate_agent_configs.py --check
         ```
 
         ## Pipeline

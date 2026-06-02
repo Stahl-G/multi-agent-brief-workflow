@@ -1,44 +1,20 @@
 #!/usr/bin/env bash
 # Pre-push hook: require README update when src/ changes.
 # Install: git config core.hooksPath .githooks
+# Maintainer convenience only. Windows users do not need this hook.
 
 set -euo pipefail
 
-remote="$1"
-url="$2"
-
-# Read push info from stdin (local_ref local_sha remote_ref remote_sha)
-while read -r local_ref local_sha remote_ref remote_sha; do
-  # Skip branch deletions
-  [ "$local_ref" = "(delete)" ] && continue
-
-  # Compare against main
-  base=$(git rev-parse --verify main 2>/dev/null || echo "")
-  [ -z "$base" ] && continue
-
-  # Check if src/ has changes
-  src_changed=$(git diff --name-only "$base"...HEAD -- src/ 2>/dev/null | head -1)
-  [ -z "$src_changed" ] && continue
-
-  # src/ changed — check README
-  readme_changed=$(git diff --name-only "$base"...HEAD -- README.md README.zh-CN.md 2>/dev/null | head -1)
-  if [ -z "$readme_changed" ]; then
-    echo ""
-    echo "=============================================="
-    echo "  PUSH BLOCKED: README not updated"
-    echo "=============================================="
-    echo ""
-    echo "  src/ has changes but README.md and/or"
-    echo "  README.zh-CN.md were not modified."
-    echo ""
-    echo "  Please update README to record the changes"
-    echo "  before pushing."
-    echo ""
-    echo "  To bypass (not recommended):"
-    echo "    git push --no-verify"
-    echo ""
-    exit 1
+PYTHON_BIN="${PYTHON:-}"
+if [ -z "$PYTHON_BIN" ]; then
+  if command -v python >/dev/null 2>&1; then
+    PYTHON_BIN="python"
+  elif command -v python3 >/dev/null 2>&1; then
+    PYTHON_BIN="python3"
+  else
+    echo "README check skipped: python/python3 not found."
+    exit 0
   fi
-done
+fi
 
-exit 0
+"$PYTHON_BIN" scripts/check_readme_updated.py

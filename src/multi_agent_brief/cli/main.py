@@ -6,7 +6,13 @@ from pathlib import Path
 
 from multi_agent_brief import __version__
 from multi_agent_brief.audit.deterministic import run_deterministic_audit
-from multi_agent_brief.cli.init_wizard import build_profile_from_args, create_workspace
+from multi_agent_brief.cli.init_wizard import build_profile_from_args, create_demo_workspace, create_workspace
+from multi_agent_brief.sources.decider import (
+    load_source_discovery,
+    build_search_queries,
+    generate_source_candidates,
+    merge_candidates_to_sources,
+)
 from multi_agent_brief.sources.doctor import run_doctor, format_doctor_report
 from multi_agent_brief.sources.registry import load_sources_config
 from multi_agent_brief.core.claim_ledger import ClaimLedger
@@ -39,6 +45,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     init_parser = subparsers.add_parser("init", help="Create a reusable brief workspace.")
     init_parser.add_argument("target", nargs="?", default="brief-workspace", help="Target workspace directory.")
+    init_parser.add_argument("--demo", action="store_true", help="Create the existing synthetic demo workspace.")
     init_parser.add_argument("--force", action="store_true", help="Overwrite existing init files.")
     init_parser.add_argument("--language", choices=["en-US", "zh-CN", "bilingual"], help="Wizard/interface language.")
     init_parser.add_argument("--output-language", choices=["en-US", "zh-CN", "bilingual"], help="Generated brief language.")
@@ -57,6 +64,16 @@ def build_parser() -> argparse.ArgumentParser:
 
     doctor_parser = subparsers.add_parser("doctor", help="Check source configuration health.")
     doctor_parser.add_argument("--config", required=True, help="Path to config.yaml in the workspace.")
+
+    # sources subcommand
+    sources_parser = subparsers.add_parser("sources", help="Source discovery and management.")
+    sources_sub = sources_parser.add_subparsers(dest="sources_action", required=True)
+
+    decide_parser = sources_sub.add_parser("decide", help="Resolve llm_decide profile into concrete source candidates.")
+    decide_parser.add_argument("--config", required=True, help="Path to config.yaml in the workspace.")
+    decide_parser.add_argument("--search", action="store_true", help="Run web search to discover sources (requires search backend).")
+    decide_parser.add_argument("--merge", action="store_true", help="Merge approved source_candidates.yaml into sources.yaml.")
+    decide_parser.add_argument("--candidates", help="Path to source_candidates.yaml (for --merge).")
 
     subparsers.add_parser("version", help="Print package version.")
     return parser
@@ -132,6 +149,11 @@ def run_audit_from_args(args: argparse.Namespace) -> int:
 
 def init_workspace_from_args(args: argparse.Namespace) -> int:
     target = Path(args.target)
+    if args.demo:
+        create_demo_workspace(target, force=args.force)
+        print(f"Created demo workspace: {target}")
+        print(f"Run: multi-agent-brief run --config {target / 'config.yaml'}")
+        return 0
     profile = build_profile_from_args(args)
     create_workspace(target, profile, force=args.force)
     print(f"Created brief workspace: {target}")
@@ -146,6 +168,61 @@ def run_doctor_from_args(args: argparse.Namespace) -> int:
     return 1 if errors else 0
 
 
+def run_sources_decide_from_args(args: argparse.Namespace) -> int:
+    config_path = Path(args.config)
+    workspace = config_path.parent
+    sources_path = workspace / "sources.yaml"
+
+    if not sources_path.exists():
+        print(f"[error] sources.yaml not found: {sources_path}")
+        print("[hint] Run `multi-agent-brief init` first to create the workspace.")
+        return 1
+
+    discovery = load_source_discovery(sources_path)
+    if not discovery:
+        print("[error] No source_discovery section found in sources.yaml.")
+        print("[hint] Re-init with --source-profile llm_decide to generate discovery policy.")
+        return 1
+
+    # --merge: merge candidates into sources.yaml
+    if args.merge:
+        candidates_path = Path(args.candidates) if args.candidates else workspace / "source_candidates.yaml"
+        if not candidates_path.exists():
+            print(f"[error] source_candidates.yaml not found: {candidates_path}")
+            return 1
+        result = merge_candidates_to_sources(sources_path, candidates_path)
+        print(f"[sources] Merged {result['added_manual']} manual + {result['added_rss']} RSS sources into sources.yaml")
+        return 0
+
+    # Default: generate source_candidates.yaml
+    queries = build_search_queries(discovery)
+    print(f"[sources] Source discovery for: {discovery.get('company', 'N/A')} ({discovery.get('industry', 'N/A')})")
+    print(f"[sources] Generated {len(queries)} search queries:")
+    for i, q in enumerate(queries, 1):
+        print(f"  {i}. {q}")
+
+    search_results = None
+    if args.search:
+        print("[sources] Web search not yet implemented — use mock search backend or manual input.")
+
+    candidates = generate_source_candidates(discovery, search_results)
+    candidates_path = workspace / "source_candidates.yaml"
+    try:
+        import yaml
+        with open(candidates_path, "w", encoding="utf-8") as f:
+            yaml.dump(candidates, f, allow_unicode=True, default_flow_style=False, sort_keys=False)
+    except Exception as e:
+        # Fallback: write as JSON
+        import json
+        candidates_path = workspace / "source_candidates.json"
+        candidates_path.write_text(json.dumps(candidates, ensure_ascii=False, indent=2), encoding="utf-8")
+
+    print(f"[sources] Generated source_candidates.yaml at {candidates_path}")
+    print("[sources] Review and enable/disable sources, then run:")
+    print(f"  multi-agent-brief sources decide --config {args.config} --merge")
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
@@ -158,6 +235,9 @@ def main(argv: list[str] | None = None) -> int:
         return init_workspace_from_args(args)
     if args.command == "doctor":
         return run_doctor_from_args(args)
+    if args.command == "sources":
+        if args.sources_action == "decide":
+            return run_sources_decide_from_args(args)
     if args.command == "version":
         print(__version__)
         return 0

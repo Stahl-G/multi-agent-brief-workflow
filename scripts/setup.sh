@@ -8,12 +8,11 @@ cd "$(dirname "$0")/.."
 
 echo "=== multi-agent-brief-workflow setup ==="
 
-# Find Python: try python3, python, py -3
+# Find Python 3.9+: try python3, python, py -3
 PYTHON=""
 for cmd in python3 python "py -3"; do
     if command -v $cmd >/dev/null 2>&1 || $cmd --version >/dev/null 2>&1; then
-        ver=$($cmd --version 2>&1 || true)
-        if echo "$ver" | grep -q "Python 3"; then
+        if $cmd -c 'import sys; raise SystemExit(0 if sys.version_info >= (3, 9) else 1)' >/dev/null 2>&1; then
             PYTHON=$cmd
             break
         fi
@@ -29,26 +28,34 @@ if [ -z "$PYTHON" ]; then
     exit 1
 fi
 
-echo "[1/3] Found Python: $PYTHON ($($PYTHON --version 2>&1))"
+echo "[1/4] Found Python: $PYTHON ($($PYTHON --version 2>&1))"
 
 # 1. Create venv if missing
 if [ ! -d ".venv" ]; then
-    echo "[2/3] Creating virtual environment..."
+    echo "[2/4] Creating virtual environment..."
     $PYTHON -m venv .venv
 else
-    echo "[2/3] Virtual environment already exists."
+    echo "[2/4] Virtual environment already exists."
 fi
 
 # 2. Activate
 source .venv/bin/activate
+VENV_PYTHON=".venv/bin/python"
+VENV_CLI=".venv/bin/multi-agent-brief"
 
 # 3. Install package in editable mode with dev dependencies
-echo "[2/3] Installing package..."
-pip install -e ".[dev]" -q
+echo "[3/4] Installing package..."
+"$VENV_PYTHON" -m pip install --upgrade pip -q
+"$VENV_PYTHON" -m pip install -e ".[dev]" -q
+if ! "$VENV_PYTHON" -c "import multi_agent_brief" >/dev/null 2>&1; then
+    echo "Editable install did not expose the package; falling back to a standard install..."
+    "$VENV_PYTHON" -m pip install ".[dev]" -q --force-reinstall
+fi
 
 # 4. Verify
-echo "[3/3] Verifying installation..."
-$PYTHON -c "from multi_agent_brief.cli.main import main; print('OK: multi-agent-brief is ready')"
+echo "[4/4] Verifying installation..."
+"$VENV_PYTHON" -m multi_agent_brief.cli.main version
+"$VENV_CLI" version
 
 echo ""
 echo "=== Setup complete ==="
