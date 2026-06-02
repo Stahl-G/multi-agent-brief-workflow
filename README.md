@@ -26,6 +26,7 @@ The first local MVP supports:
 - Scout agent that extracts candidate reportable items
 - Claim Ledger with source-grounded claims
 - Analyst agent that drafts a Markdown brief with `[src:CLAIM_ID]` citations
+- Auditor agent interface with deterministic audit and semantic-audit adapter hooks
 - Deterministic Auditor for missing claims, unsupported numbers, duplicate claims, and redaction risks
 - Editor agent that prepares the final Markdown brief
 - Formatter agent that writes:
@@ -33,6 +34,37 @@ The first local MVP supports:
   - `claim_ledger.json`
   - `audit_report.json`
   - `source_map.md`
+
+## Example Output
+
+The MVP creates a Markdown brief with source citations:
+
+```markdown
+## Market
+
+- Synthetic module price checks showed a 3.5% week-over-week decline in selected spot-market channels. [src:MARKETDA_867A7D67D0]
+```
+
+Every source-backed statement is also written to `claim_ledger.json`:
+
+```json
+{
+  "claim_id": "MARKETDA_867A7D67D0",
+  "statement": "Synthetic module price checks showed a 3.5% week-over-week decline in selected spot-market channels.",
+  "source_id": "MARKET_DATA",
+  "evidence_text": "Synthetic module price checks showed a 3.5% week-over-week decline in selected spot-market channels."
+}
+```
+
+The audit report records whether the draft is distribution-ready:
+
+```json
+{
+  "audit_status": "pass",
+  "audit_score": 100,
+  "findings": []
+}
+```
 
 ## Existing Capability Tracks To Migrate
 
@@ -64,6 +96,12 @@ pip install -e ".[dev]"
 multi-agent-brief run examples/basic_market_brief/input --output output/basic_market_brief
 ```
 
+Or run from a config file:
+
+```bash
+multi-agent-brief run --config examples/basic_market_brief/config.yaml
+```
+
 Open the generated files:
 
 ```text
@@ -78,6 +116,41 @@ output/basic_market_brief/source_map.md
 ```bash
 PYTHONPATH=src python3 -m multi_agent_brief.cli.main run examples/basic_market_brief/input --output output/basic_market_brief
 ```
+
+## CLI
+
+Create a synthetic demo workspace:
+
+```bash
+multi-agent-brief init brief-demo
+multi-agent-brief run --config brief-demo/config.yaml
+```
+
+Audit an existing brief:
+
+```bash
+multi-agent-brief audit output/basic_market_brief/brief.md \
+  --ledger output/basic_market_brief/claim_ledger.json \
+  --output output/basic_market_brief/audit_report.json
+```
+
+Print the version:
+
+```bash
+multi-agent-brief version
+```
+
+## Auditor Agent Interface
+
+The pipeline-level `AuditorAgent` delegates to an audit backend that implements `AuditAgentInterface`.
+
+Current audit backends:
+
+- `DeterministicAuditAgent`: checks source IDs, unsupported numbers, duplicate claims, missing source evidence, and redaction risks.
+- `NoOpSemanticAuditAgent`: placeholder adapter for future model-backed semantic source-support review.
+- `CompositeAuditAgent`: runs deterministic audit first, then an optional semantic audit adapter.
+
+This keeps the MVP runnable without API keys while leaving a clean interface for Claude/OpenAI/LiteLLM or local-model audit agents.
 
 ## Development
 

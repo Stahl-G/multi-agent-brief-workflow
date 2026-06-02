@@ -31,6 +31,17 @@ Analyst drafts the brief using only Claim Ledger claims. In the MVP, this is det
 
 Auditor checks references and source support. The MVP includes deterministic audit. A future semantic audit adapter can compare the draft against source evidence.
 
+The pipeline-level `AuditorAgent` delegates to an `AuditAgentInterface` backend:
+
+```text
+AuditorAgent
+  -> CompositeAuditAgent
+       -> DeterministicAuditAgent
+       -> optional SemanticAuditAgent
+```
+
+This separation lets the pipeline keep one stable agent step while swapping audit implementations.
+
 ### Editor
 
 Editor improves structure and readability. Editor must not invent new facts or unsupported numbers.
@@ -60,3 +71,24 @@ Each migration should include:
 - Tests
 - Documentation
 
+## Current Interface-Only Modules
+
+The repo now includes interface-only migration tracks:
+
+```text
+connectors/
+  sec.py
+  rss.py
+  api.py
+
+delivery/
+  feishu.py
+  slack.py
+  email.py
+
+outputs/
+  docx.py
+  pdf.py
+```
+
+They are deliberately disabled/non-operational in the MVP. Real implementations should be added with public or synthetic examples only.

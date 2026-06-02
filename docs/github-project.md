@@ -39,11 +39,12 @@ Goal: Generalize already implemented private output capabilities.
 
 Issues:
 
-- Add DOCX output adapter with synthetic examples
-- Add PDF output adapter with synthetic examples
-- Add Feishu delivery interface, disabled by default
-- Add Slack delivery interface, disabled by default
-- Add Email delivery interface, disabled by default
+- Add DOCX output implementation with synthetic examples
+- Add PDF output implementation with synthetic examples
+- Wire Feishu delivery implementation, disabled by default
+- Wire Slack delivery implementation, disabled by default
+- Wire Email delivery implementation, disabled by default
+- Add tests for interface-only connectors staying disabled without credentials
 
 ### Epic 3: Data Connector Migration
 
@@ -51,9 +52,9 @@ Goal: Generalize already implemented private connector capabilities.
 
 Issues:
 
-- Add SEC filing connector
-- Add RSS connector
-- Add generic authenticated API connector
+- Implement SEC filing connector behind the existing interface
+- Implement RSS connector behind the existing interface
+- Implement generic authenticated API connector behind the existing interface
 - Add connector-level source metadata and tests
 - Add stale-source detection in audit
 
@@ -106,4 +107,3 @@ Issues:
 - Add recommendation-language detector
 - Add risk/caveat completeness checks
 - Add evaluator for overclaiming
-

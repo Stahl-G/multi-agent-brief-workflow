@@ -4,8 +4,7 @@ project:
   audience: "management"
 
 input:
-  path: "examples/basic_market_brief/input"
+  path: "input"
 
 output:
-  path: "output/basic_market_brief"
-
+  path: "output"

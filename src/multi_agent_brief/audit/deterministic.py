@@ -3,8 +3,9 @@ from __future__ import annotations
 import re
 
 from multi_agent_brief.audit.redaction import scan_redaction_risks
+from multi_agent_brief.audit.interfaces import AuditAgentInterface
 from multi_agent_brief.core.claim_ledger import ClaimLedger
-from multi_agent_brief.core.schemas import AuditFinding, AuditReport
+from multi_agent_brief.core.schemas import AuditFinding, AuditReport, PipelineContext
 
 
 SRC_REF_PATTERN = re.compile(r"\[src:([A-Z0-9_]{6,})\]")
@@ -112,3 +113,15 @@ def run_deterministic_audit(markdown: str, ledger: ClaimLedger) -> AuditReport:
         status = "pass"
     score = max(0, 100 - high * 25 - medium * 10 - (len(findings) - high - medium) * 3)
     return AuditReport(audit_status=status, audit_score=score, findings=findings, metadata=metadata)
+
+
+class DeterministicAuditAgent(AuditAgentInterface):
+    name = "deterministic-auditor"
+
+    def run_audit(
+        self,
+        markdown: str,
+        ledger: ClaimLedger,
+        context: PipelineContext | None = None,
+    ) -> AuditReport:
+        return run_deterministic_audit(markdown, ledger)
