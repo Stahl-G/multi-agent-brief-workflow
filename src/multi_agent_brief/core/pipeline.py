@@ -5,7 +5,7 @@ from multi_agent_brief.agents.auditor import AuditorAgent
 from multi_agent_brief.agents.editor import EditorAgent
 from multi_agent_brief.agents.formatter import FormatterAgent
 from multi_agent_brief.agents.scout import ScoutAgent
-from multi_agent_brief.agents.selector import ScreencerAgent
+from multi_agent_brief.agents.selector import ScreenerAgent
 from multi_agent_brief.core.claim_ledger import ClaimLedger
 from multi_agent_brief.core.schemas import AgentOutput, PipelineContext
 
@@ -14,7 +14,7 @@ class BriefPipeline:
     def __init__(self) -> None:
         self.agents = [
             ScoutAgent(),
-            ScreencerAgent(),
+            ScreenerAgent(),
             AnalystAgent(),
             AuditorAgent(),
             EditorAgent(),

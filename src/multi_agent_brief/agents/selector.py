@@ -7,8 +7,8 @@ from multi_agent_brief.core.schemas import AgentOutput, PipelineContext
 from multi_agent_brief.core.selection import ledger_from_selected, select_reportable_claims
 
 
-class ScreencerAgent(BaseAgent):
-    name = "screencer"
+class ScreenerAgent(BaseAgent):
+    name = "screener"
 
     def run(self, context: PipelineContext, ledger: ClaimLedger) -> AgentOutput:
         previous_text = context.previous_report_text
@@ -34,4 +34,3 @@ class ScreencerAgent(BaseAgent):
             ),
             artifacts=result.stats,
         )
-

@@ -1,5 +1,5 @@
 """Agent implementations."""
 
-from multi_agent_brief.agents.selector import ScreencerAgent
+from multi_agent_brief.agents.selector import ScreenerAgent
 
-__all__ = ["ScreencerAgent"]
+__all__ = ["ScreenerAgent"]

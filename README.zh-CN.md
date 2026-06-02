@@ -12,7 +12,7 @@
 本项目把分析师、战略团队、投资者关系团队、研究部门和管理层办公室常见的重复性简报生产流程，转化为一个透明的 Python 流水线：
 
 ```text
-Scout -> Screencer -> Claim Ledger -> Analyst -> Auditor -> Editor -> Formatter
+Scout -> Screener -> Claim Ledger -> Analyst -> Auditor -> Editor -> Formatter
 ```
 
 本项目不是投资建议工具，不是交易信号生成器，也不能替代人工审核。
@@ -33,7 +33,7 @@ Scout -> Screencer -> Claim Ledger -> Analyst -> Auditor -> Editor -> Formatter
 真实的简报生产不是一个任务，而像一个小型编辑台：
 
 - Scout（信息侦察员）负责发现可写入简报的信号。
-- Screencer（筛选员）按新颖度、源层级和主题容量筛选候选声明。
+- Screener（筛选师）按新颖度、源层级和主题容量筛选候选声明。
 - Claim Ledger（事实账本）负责记录证据。
 - Analyst（分析员）把证据整理成结构化草稿。
 - Auditor（审计员）检查草稿是否有来源支撑、是否适合分发。
@@ -47,7 +47,7 @@ Scout -> Screencer -> Claim Ledger -> Analyst -> Auditor -> Editor -> Formatter
 ```mermaid
 flowchart LR
   A["输入<br/>Markdown、文本、JSON"] --> B["Scout<br/>信息侦察员"]
-  B --> C["Screencer<br/>筛选员"]
+  B --> C["Screener<br/>筛选师"]
   C --> D["Claim Ledger<br/>事实账本"]
   D --> E["Analyst<br/>分析员"]
   E --> F["Auditor<br/>审计员"]
@@ -64,7 +64,7 @@ flowchart LR
 
 - 本地 `.md`、`.txt` 和 `.json` 输入
 - Scout 智能体抽取候选可写入简报的事项
-- Screencer 智能体按新颖度评分、主题容量上限和历史去重筛选候选声明
+- Screener 智能体按新颖度评分、主题容量上限和历史去重筛选候选声明
 - Claim Ledger 记录有来源支撑的事实与判断
 - Analyst 智能体用 `[src:CLAIM_ID]` 引用生成 Markdown 草稿
 - Auditor 智能体接口，支持确定性审计和语义审计适配器
@@ -195,6 +195,8 @@ multi-agent-brief version
 
 详见 [docs/harness.md](docs/harness.md)。
 
+严格终稿交付门详见 [docs/harness_matrix.md](docs/harness_matrix.md)。Codex、Claude Code subagents 和外部 agent 的协作/交接方式详见 [docs/agent-collaboration.md](docs/agent-collaboration.md)。
+
 ## 路线图
 
 - MVP：本地输入、Claim Ledger、确定性审计、Markdown 输出、来源映射和质量门控。
@@ -212,9 +214,9 @@ multi-agent-brief version
 
 ## 更新日志
 
-### v0.2.0 — Screencer 筛选智能体
+### v0.2.0 — Screener 筛选师
 
-- 在 Scout 与 Analyst 之间新增 ScreencerAgent。
+- 在 Scout 与 Analyst 之间新增 ScreenerAgent。
 - 10 个主题分类，每个主题有容量上限（总计最多 160 条声明）。
 - 新颖度评分：叠加源层级、声明类型和高信号词权重。
 - 历史报告去重：通过文本匹配和主题词组检测排除重复内容。

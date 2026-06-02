@@ -7,12 +7,13 @@ This project is designed like a small editorial desk for research and management
 ```mermaid
 flowchart LR
   A["Inputs<br/>Markdown, text, JSON"] --> B["Scout"]
-  B --> C["Claim Ledger"]
-  C --> D["Analyst"]
-  D --> E["Auditor"]
-  E --> F["Editor"]
-  F --> G["Formatter"]
-  G --> H["Outputs<br/>Brief, Claim Ledger, Audit Report, Source Map"]
+  B --> C["Screener"]
+  C --> D["Claim Ledger"]
+  D --> E["Analyst"]
+  E --> F["Auditor"]
+  F --> G["Editor"]
+  G --> H["Formatter"]
+  H --> I["Outputs<br/>Brief, Claim Ledger, Audit Report, Source Map"]
 ```
 
 ## Agent Responsibilities
@@ -22,6 +23,10 @@ flowchart LR
 Scout loads sources, extracts candidate reportable items, and turns them into claims. Scout is responsible for finding usable signals, not for writing the final narrative.
 
 In the MVP, Scout reads local `.md`, `.txt`, and `.json` files. Future connectors can feed the same step from SEC filings, RSS feeds, APIs, or other public-safe inputs.
+
+### Screener
+
+Screener filters and ranks candidate claims by novelty, source tier, topic capacity, and previous-report duplication. It is separate from Scout and Claim Ledger so screening policy can change without changing source loading or evidence storage.
 
 ### Claim Ledger
 

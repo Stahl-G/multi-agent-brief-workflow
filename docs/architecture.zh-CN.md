@@ -7,12 +7,13 @@
 ```mermaid
 flowchart LR
   A["输入<br/>Markdown、文本、JSON"] --> B["Scout<br/>信息侦察员"]
-  B --> C["Claim Ledger<br/>事实账本"]
-  C --> D["Analyst<br/>分析员"]
-  D --> E["Auditor<br/>审计员"]
-  E --> F["Editor<br/>编辑"]
-  F --> G["Formatter<br/>格式转换器"]
-  G --> H["输出<br/>Brief、Claim Ledger、Audit Report、Source Map"]
+  B --> C["Screener<br/>筛选师"]
+  C --> D["Claim Ledger<br/>事实账本"]
+  D --> E["Analyst<br/>分析员"]
+  E --> F["Auditor<br/>审计员"]
+  F --> G["Editor<br/>编辑"]
+  G --> H["Formatter<br/>格式转换器"]
+  H --> I["输出<br/>Brief、Claim Ledger、Audit Report、Source Map"]
 ```
 
 ## 各角色职责
@@ -22,6 +23,10 @@ flowchart LR
 Scout 负责读取来源、抽取候选事项，并把它们转成 claim。Scout 的职责是发现可用信号，不负责写最终分析。
 
 在 MVP 中，Scout 读取本地 `.md`、`.txt` 和 `.json` 文件。未来 SEC filing、RSS、API 或其他公开安全输入，都可以接入同一步。
+
+### Screener 筛选师
+
+Screener 按新颖度、来源层级、主题容量和历史重复情况筛选候选 claim。它和 Scout、Claim Ledger 分离，因此筛选策略可以调整，而不影响来源读取或证据存储。
 
 ### Claim Ledger 事实账本
 
