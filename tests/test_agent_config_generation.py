@@ -102,7 +102,7 @@ def test_agents_md_contains_harness_contract(manifest):
 def test_agents_md_lists_all_roles(manifest):
     content = render_agents_md(manifest)
     for name in ALL_ROLES:
-        assert f"### {name}" in content
+        assert f"**{name}**" in content
 
 
 def test_codex_config_valid_toml(manifest):

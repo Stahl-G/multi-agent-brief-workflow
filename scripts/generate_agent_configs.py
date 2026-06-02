@@ -128,19 +128,12 @@ def render_agents_md(manifest: dict) -> str:
     roles = manifest["roles"]
     non_goals = _join_lines([f"  - {g}" for g in project["non_goals"]])
 
-    role_blocks = []
+    # Compact role summary — one line per role, no full details
+    # Full details live in .claude/agents/*.md, .codex/agents/*.toml, .agents/skills/*/SKILL.md
+    role_lines = []
     for name, role in roles.items():
-        resp = _join_lines(role["responsibilities"])
-        rules = _join_lines(role["hard_rules"])
-        role_blocks.append(
-            f"### {name}\n\n"
-            f"**Stage:** {role['stage']}  \n"
-            f"**Description:** {role['description']}\n\n"
-            f"**Responsibilities:**\n{resp}\n\n"
-            f"**Hard rules:**\n{rules}"
-        )
-
-    roles_section = "\n\n".join(role_blocks)
+        role_lines.append(f"- **{name}** ({role['stage']}): {role['description']}")
+    roles_section = "\n".join(role_lines)
 
     return (
         f"{AUTOGEN_HEADER_MD}\n"
@@ -300,6 +293,11 @@ def render_agents_md(manifest: dict) -> str:
         f"## Agent Roles\n"
         f"\n"
         f"{roles_section}\n"
+        f"\n"
+        f"Full role details (responsibilities, hard rules, tool profiles) are in:\n"
+        f"- `.claude/agents/*.md` — Claude Code subagents\n"
+        f"- `.codex/agents/*.toml` — Codex custom agents\n"
+        f"- `.agents/skills/*/SKILL.md` — Codex skills\n"
     )
 
 
