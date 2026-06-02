@@ -2,75 +2,57 @@
 
 @AGENTS.md
 
-## Claude Code Specific Instructions
+## Claude Code
 
-### Setup (do this first after clone)
+### Setup (first after clone)
 
 ```bash
-bash scripts/setup.sh
-source .venv/bin/activate
+bash scripts/setup.sh && source .venv/bin/activate
 ```
 
-Do NOT attempt to run `multi-agent-brief` CLI without first running setup. The package must be installed in editable mode.
-
-### Quick command reference
+### Commands
 
 | Task | Command |
 |------|---------|
-| Setup | `bash scripts/setup.sh && source .venv/bin/activate` |
-| Init workspace | `multi-agent-brief init my-workspace --language zh-CN --company "Name" --industry solar --title "Weekly Brief" --audience management --source-profile research` |
-| Run pipeline | `multi-agent-brief run --config my-workspace/config.yaml` |
-| Doctor check | `multi-agent-brief doctor --config my-workspace/config.yaml` |
+| Init workspace | `multi-agent-brief init ws --language zh-CN --company "Name" --industry solar --title "Brief" --audience management --source-profile research` |
+| Run pipeline | `multi-agent-brief run --config ws/config.yaml` |
+| Doctor check | `multi-agent-brief doctor --config ws/config.yaml` |
 | Run tests | `python3 -m pytest -q` |
 | Demo | `multi-agent-brief init --demo && multi-agent-brief run --config brief-demo/config.yaml` |
-| Regenerate agent configs | `python3 scripts/generate_agent_configs.py --write` |
-| Check agent configs | `python3 scripts/generate_agent_configs.py --check` |
 
-### Workflow when user asks to generate a brief
+### Generate a brief (workflow)
 
-1. Confirm the workspace exists; if not, run `init` with user's parameters
-2. Ensure source files are in `workspace/input/` (`.md`, `.txt`, or `.json`)
-3. Run `multi-agent-brief run --config workspace/config.yaml`
-4. Show the user the generated `workspace/output/brief.md`
-5. If audit fails, show findings and help fix before re-running
+1. `init` workspace if not exists (ask user for company/industry/title/audience)
+2. Ensure source files in `ws/input/` (`.md`, `.txt`, `.json`)
+3. `run` pipeline → show `ws/output/brief.md`
+4. If audit fails → show findings → fix → re-run
 
 ### Source profiles
 
-- `conservative` — official sources only, no web search
-- `research` — balanced official + industry + RSS (default)
-- `aggressive_signal` — broad signal discovery including social media
-- `custom` — user edits sources.yaml manually
-- `llm_decide` — generates agent-readable discovery policy, does NOT call LLM at init time
+- `conservative` — official only
+- `research` — official + industry + RSS (default)
+- `aggressive_signal` — broad signals, more noise
+- `custom` — user edits sources.yaml
+- `llm_decide` — agent-readable discovery policy, no LLM at init
 
-### Project layout
+### Layout
 
 ```text
 src/multi_agent_brief/
-  cli/          # CLI entry points (main.py, init_wizard.py)
-  core/         # Pipeline, config, schemas, claim ledger
-  agents/       # Scout, Screener, Analyst, Auditor, Editor, Formatter
-  audit/        # Deterministic, quality harness, final quality, semantic
-  sources/      # Source providers (manual, rss, stubs), registry, doctor
-  connectors/   # Legacy connector stubs (not wired into pipeline)
-  delivery/     # Delivery stubs (email, slack, feishu)
-  outputs/      # Source map, docx/pdf stubs
-  models/       # Model provider abstraction
-configs/        # agent_roles.yaml (single source of truth)
-scripts/        # setup.sh, generate_agent_configs.py
-tests/          # pytest test suite
+  cli/         main.py, init_wizard.py
+  core/        pipeline, config, schemas, claim ledger
+  agents/      Scout, Screener, Analyst, Auditor, Editor, Formatter
+  audit/       deterministic, quality harness, final quality
+  sources/     providers, registry, doctor
+configs/       agent_roles.yaml (source of truth)
+scripts/       setup.sh, generate_agent_configs.py
+tests/         pytest suite
 ```
 
-### Coding conventions
+### Rules
 
-- Python 3.9+ compatible, type hints on all public functions
-- Dataclasses for data models, ABC for interfaces
-- No heavy dependencies in core — PyYAML is the only optional dep
-- Tests use `tmp_path` fixture, no network calls in tests
-- All generated files (`.codex/`, `.claude/agents/`, `.agents/`) have `AUTO-GENERATED` header — edit `configs/agent_roles.yaml` instead
-
-### Do not
-
-- Do not run `multi-agent-brief run` without a valid workspace (run `init` first)
-- Do not put API keys in config files — use env var references only
-- Do not modify generated agent config files directly — use `scripts/generate_agent_configs.py`
-- Do not let `user.md` enter `input/` directory — it is agent context, not source evidence
+- Python 3.9+, type hints, dataclasses, ABC
+- No network calls in tests
+- Generated files have `AUTO-GENERATED` header — edit `configs/agent_roles.yaml`
+- No API keys in config — use env var refs
+- `user.md` is agent context, never put it in `input/`
