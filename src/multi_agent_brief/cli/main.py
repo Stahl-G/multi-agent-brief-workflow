@@ -155,6 +155,17 @@ def run_pipeline_from_args(args: argparse.Namespace) -> int:
             context.max_source_age_days = days
         context.metadata["source_config"] = source_config
 
+        # Read source_discovery for query enhancement
+        if sources_path.exists():
+            try:
+                import yaml as _yaml
+                _sy = _yaml.safe_load(sources_path.read_text(encoding="utf-8")) or {}
+                _discovery = _sy.get("source_discovery", {})
+                if _discovery:
+                    context.metadata["source_discovery"] = _discovery
+            except Exception:
+                pass
+
     # Pre-flight check: llm_decide workspace without resolved sources
     _config_dir = Path(config.get("_config_dir", ".")) if config else Path(".")
     _sources_yaml = _config_dir / "sources.yaml"

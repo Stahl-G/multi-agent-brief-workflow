@@ -76,6 +76,19 @@ class BriefPipeline:
                     if task.query
                 ]
 
+        # Enhance search tasks with source_discovery queries if available
+        discovery = context.metadata.get("source_discovery")
+        if discovery and "web_search" in source_config.enabled_providers:
+            from multi_agent_brief.sources.decider import build_search_queries
+            discovery_queries = build_search_queries(discovery)
+            if discovery_queries:
+                existing_tasks = source_config.web_search.get("search_tasks", [])
+                existing_q = {t.get("query") for t in existing_tasks}
+                for q in discovery_queries:
+                    if q not in existing_q:
+                        existing_tasks.append({"query": q, "domains": None})
+                source_config.web_search["search_tasks"] = existing_tasks
+
         # Merge industry RSS feeds into config
         if plan.rss_feeds and not source_config.rss.get("feeds"):
             source_config.rss["feeds"] = plan.rss_feeds
