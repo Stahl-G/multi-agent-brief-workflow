@@ -169,12 +169,8 @@ def run_pipeline_from_args(args: argparse.Namespace) -> int:
                 print(f"[ERROR] Tavily live search is enabled, but {api_key_env} is not set.")
                 print("  Set it as an environment variable before running the pipeline.")
                 print("  Do not paste API keys into chat, config files, README, or GitHub.")
-                # Surface as collection error, don't silently skip
-                context.metadata.setdefault("collection_errors", []).append({
-                    "provider": "web_search",
-                    "error_type": "MissingApiKey",
-                    "message": f"Tavily requires {api_key_env} to be set in the environment.",
-                })
+                print("  Aborting. Either set the key or disable web_search in sources.yaml.")
+                return 1
 
     outputs = BriefPipeline().run(context)
     for output in outputs:

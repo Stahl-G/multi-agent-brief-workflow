@@ -443,3 +443,28 @@ def test_sources_decide_search_no_backend_returns_nonzero(tmp_path):
     # --search without a backend should fail
     exit_code = main(["sources", "decide", "--config", str(workspace / "config.yaml"), "--search"])
     assert exit_code != 0
+
+
+def test_pipeline_fails_when_tavily_key_missing(tmp_path, monkeypatch):
+    """Pipeline must fail-fast when Tavily is enabled but API key is missing."""
+    from multi_agent_brief.cli.main import main
+
+    workspace = tmp_path / "ws"
+    assert main([
+        "init", str(workspace),
+        "--language", "en-US",
+        "--company", "Test",
+        "--industry", "manufacturing",
+        "--tavily",
+    ]) == 0
+
+    # Ensure no Tavily key in environment
+    monkeypatch.delenv("TAVILY_API_KEY", raising=False)
+
+    # Add a minimal input file
+    (workspace / "input").mkdir(exist_ok=True)
+    (workspace / "input" / "test.md").write_text("- Test data.", encoding="utf-8")
+
+    # Pipeline should fail-fast
+    exit_code = main(["run", "--config", str(workspace / "config.yaml")])
+    assert exit_code != 0
