@@ -12,6 +12,10 @@ import urllib.request
 from typing import Any
 
 from multi_agent_brief.sources.search_backends.base import SearchBackend, SearchResult
+from multi_agent_brief.sources.search_backends.capabilities import (
+    TAVILY_CAPABILITIES,
+    SearchBackendCapabilities,
+)
 
 TAVILY_API_URL = "https://api.tavily.com/search"
 DEFAULT_API_KEY_ENV = "TAVILY_API_KEY"
@@ -39,6 +43,10 @@ class TavilyBackend(SearchBackend):
 
     def __init__(self, api_key_env: str = DEFAULT_API_KEY_ENV) -> None:
         self._api_key_env = api_key_env
+
+    @staticmethod
+    def capabilities() -> SearchBackendCapabilities:
+        return TAVILY_CAPABILITIES
 
     def is_available(self) -> bool:
         return bool(os.environ.get(self._api_key_env))
@@ -99,12 +107,14 @@ class TavilyBackend(SearchBackend):
                     published_at=raw_published,
                     source_name=_extract_domain(item.get("url", "")),
                     metadata={
-                        "score": item.get("score"),
                         "backend": "tavily",
                         "query": query,
-                        "has_raw_content": bool(item.get("raw_content")),
                         "date_status": "published_at_present" if has_published else "missing_published_at",
                         "source_temporality": "published" if has_published else "retrieved_only",
+                        "evidence_quality": "snippet",
+                        "vertical": topic,
+                        "raw_score": item.get("score"),
+                        "has_raw_content": bool(item.get("raw_content")),
                     },
                 )
             )

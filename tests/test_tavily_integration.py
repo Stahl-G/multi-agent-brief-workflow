@@ -85,7 +85,7 @@ class TestTavilyBackend:
         assert results[0].url == "https://gov-policy.org/manufacturing-policy"
         assert results[0].snippet == "New tariff regulations for manufacturing imports announced."
         assert results[0].published_at == "2026-06-01"
-        assert results[0].metadata["score"] == 0.95
+        assert results[0].metadata["raw_score"] == 0.95
         assert results[0].metadata["backend"] == "tavily"
         assert results[0].metadata["has_raw_content"] is True
         assert results[1].metadata["has_raw_content"] is False
