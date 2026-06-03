@@ -341,7 +341,7 @@ This project can help structure research and briefing workflows, but it does not
 - Added `industry_packs.py`: industry presets (solar, technology, finance, etc.) with RSS feeds and search tasks.
 - `WebSearchProvider` provides a pluggable backend interface (tavily, serpapi, etc.); no runtime mock backend shipped.
 - Added `CachedPackageProvider`: reads pre-collected source package folders (supports OpenClaw-style workflows).
-- Added `search_backends/` module: SearchBackend ABC + MockSearchBackend.
+- Added `search_backends/` module: SearchBackend ABC (pluggable backend interface).
 - Unified SourceItem: eliminated duplicate definitions in `core/schemas.py` and `sources/base.py`.
 - Pipeline restructured: Source Collection → Scout → Screener → ..., Scout now reads from Provider system.
 - CLI gained `--industry` and `--days` args for industry-aware automatic collection.

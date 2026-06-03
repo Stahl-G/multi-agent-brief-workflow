@@ -150,6 +150,15 @@ def test_web_search_with_injected_fake_backend_returns_results():
     assert items[0].source_type == "web_search"
 
 
+
+
+def test_web_search_metadata_uses_backend_name():
+    """metadata["backend"] should come from the injected backend, not _get_backend({})."""
+    provider = WebSearchProvider(backend=FakeSearchBackend())
+    items = provider.collect(SourceQuery(keywords=["solar"]), {"enabled": True})
+    assert len(items) > 0
+    assert items[0].metadata["backend"] == "fake"
+
 def test_web_search_disabled_returns_empty():
     provider = WebSearchProvider()
     config = {"enabled": False}

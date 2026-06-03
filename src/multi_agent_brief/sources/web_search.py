@@ -47,6 +47,7 @@ class WebSearchProvider(SourceProvider):
         if not backend.is_available():
             return []
 
+        backend_name = backend.name
         all_items: list[SourceItem] = []
         max_results = config.get("max_results", 20)
 
@@ -56,7 +57,7 @@ class WebSearchProvider(SourceProvider):
         for q, domains in queries:
             results = backend.search(q, max_results=max_results, domains=domains)
             for r in results:
-                item = self._result_to_source_item(r, q)
+                item = self._result_to_source_item(r, q, backend_name)
                 all_items.append(item)
 
         return all_items
@@ -85,7 +86,7 @@ class WebSearchProvider(SourceProvider):
 
         return queries
 
-    def _result_to_source_item(self, result: SearchResult, query: str) -> SourceItem:
+    def _result_to_source_item(self, result: SearchResult, query: str, backend_name: str) -> SourceItem:
         """Convert a SearchResult to a SourceItem."""
         raw = f"{result.url}|{result.title}"
         digest = hashlib.sha1(raw.encode("utf-8")).hexdigest()[:10].upper()
@@ -99,5 +100,5 @@ class WebSearchProvider(SourceProvider):
             url=result.url,
             published_at=result.published_at,
             reliability="medium",
-            metadata={"query": query, "backend": self._get_backend({}).name},
+            metadata={"query": query, "backend": backend_name},
         )

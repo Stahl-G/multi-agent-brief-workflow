@@ -352,7 +352,7 @@ Windows 原生 PowerShell 详细说明见 [docs/windows-powershell.md](docs/wind
 - 新增 `industry_packs.py`：行业预设包（solar、technology、finance 等），含 RSS 源和搜索任务。
 - `WebSearchProvider` 支持可插拔搜索后端接口（tavily、serpapi 等），不附带运行时 mock backend。
 - 新增 `CachedPackageProvider`：读取预收集的源包文件夹（支持 OpenClaw 式工作流）。
-- 新增 `search_backends/` 模块：SearchBackend ABC + MockSearchBackend。
+- 新增 `search_backends/` 模块：SearchBackend ABC（可插拔后端接口）。
 - 统一 SourceItem：消除 `core/schemas.py` 和 `sources/base.py` 的重复定义。
 - Pipeline 重构：Source Collection → Scout → Screener → ...，Scout 从 Provider 系统读取。
 - CLI 新增 `--industry` 和 `--days` 参数，支持行业感知的自动采集。
