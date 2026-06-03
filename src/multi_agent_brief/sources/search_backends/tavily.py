@@ -57,6 +57,7 @@ class TavilyBackend(SearchBackend):
 
         topic = kwargs.get("topic", "news")
         search_depth = kwargs.get("search_depth", "basic")
+        days = kwargs.get("days")
 
         payload: dict[str, Any] = {
             "api_key": api_key,
@@ -67,6 +68,8 @@ class TavilyBackend(SearchBackend):
             "include_answer": False,
             "include_raw_content": False,
         }
+        if days:
+            payload["days"] = days
         if domains:
             payload["include_domains"] = domains
 

@@ -78,12 +78,13 @@ class WebSearchProvider(SourceProvider):
         backend_name = backend.name
         all_items: list[SourceItem] = []
         max_results = config.get("max_results", 20)
+        recency_days = config.get("recency_days")
 
         # Build search queries from query keywords or config
         queries = self._build_queries(query, config)
 
         for q, domains in queries:
-            results = backend.search(q, max_results=max_results, domains=domains)
+            results = backend.search(q, max_results=max_results, domains=domains, days=recency_days)
             for r in results:
                 item = self._result_to_source_item(r, q, backend_name)
                 all_items.append(item)
