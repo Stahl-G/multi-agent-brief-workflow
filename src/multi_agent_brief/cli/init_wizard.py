@@ -456,15 +456,13 @@ def build_sources(profile: InitProfile) -> dict[str, Any]:
     if sp == "conservative":
         enabled = ["manual"]
         rss_enabled = False
-        web_search_enabled = False
     elif sp == "aggressive_signal":
-        enabled = ["manual", "rss", "web_search"]
+        enabled = ["manual", "rss"]
         rss_enabled = True
-        web_search_enabled = True
     else:  # research or custom
         enabled = ["manual", "rss"]
         rss_enabled = True
-        web_search_enabled = sp == "custom"
+    # web_search is never enabled by default; requires explicit backend configuration
 
     return {
         "source_strategy": {
@@ -481,9 +479,11 @@ def build_sources(profile: InitProfile) -> dict[str, Any]:
             "feeds": [],
         },
         "web_search": {
-            "enabled": web_search_enabled,
+            "enabled": False,
+            "backend": "",
             "max_results": 20,
             "recency_days": 7,
+            "note": "Configure a real backend or external agent before enabling web_search.",
         },
         "api": {
             "enabled": False,

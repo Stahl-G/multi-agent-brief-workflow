@@ -332,12 +332,14 @@ This project can help structure research and briefing workflows, but it does not
 - Fixed WebSearchProvider.collect() silently swallowing backend exceptions; errors now propagate to registry errors.
 - Implemented WebSearchProvider domain filtering: config.search_tasks supports domains field, passed through to backend.search().
 - Updated doctor.py: accurate warning when web_search uses mock backend instead of stale Phase 1 message.
+- Removed runtime MockSearchBackend: web_search.enabled=true without a real backend now fails explicitly via registry errors.
+- All init profiles default to web_search disabled; users must configure a real backend.
 
 ### v0.5.0 — Three-Layer Source Collection Architecture
 
 - Added `SourcePlanner`: generates search plans based on industry, role, and time window.
 - Added `industry_packs.py`: industry presets (solar, technology, finance, etc.) with RSS feeds and search tasks.
-- `WebSearchProvider` upgraded from stub to real implementation with pluggable backends (mock, tavily, serpapi).
+- `WebSearchProvider` provides a pluggable backend interface (tavily, serpapi, etc.); no runtime mock backend shipped.
 - Added `CachedPackageProvider`: reads pre-collected source package folders (supports OpenClaw-style workflows).
 - Added `search_backends/` module: SearchBackend ABC + MockSearchBackend.
 - Unified SourceItem: eliminated duplicate definitions in `core/schemas.py` and `sources/base.py`.

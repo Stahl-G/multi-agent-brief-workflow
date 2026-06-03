@@ -6,7 +6,6 @@ from typing import Any
 
 from multi_agent_brief.sources.base import SourceItem, SourceProvider, SourceQuery
 from multi_agent_brief.sources.search_backends.base import SearchBackend, SearchResult
-from multi_agent_brief.sources.search_backends.mock import MockSearchBackend
 
 
 class WebSearchProvider(SourceProvider):
@@ -21,17 +20,21 @@ class WebSearchProvider(SourceProvider):
     def _get_backend(self, config: dict[str, Any]) -> SearchBackend:
         if self._backend is not None:
             return self._backend
-        # Auto-select backend based on config
-        backend_name = config.get("backend", "mock")
-        if backend_name == "mock":
-            return MockSearchBackend()
-        # Future: tavily, serpapi, browser backends
-        return MockSearchBackend()
+        backend_name = config.get("backend") or ""
+        if not backend_name:
+            raise RuntimeError("web_search is enabled but no backend is configured.")
+        raise NotImplementedError(
+            f"web_search backend '{backend_name}' is not implemented in this package. "
+            "Use a connector/provider or inject a SearchBackend implementation."
+        )
 
     def validate_config(self, config: dict[str, Any]) -> list[str]:
         if not config.get("enabled"):
             return []
-        backend = self._get_backend(config)
+        try:
+            backend = self._get_backend(config)
+        except (RuntimeError, NotImplementedError) as exc:
+            return [str(exc)]
         if not backend.is_available():
             return [f"web_search: backend '{backend.name}' is not available"]
         return []

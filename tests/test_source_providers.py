@@ -6,6 +6,7 @@ from pathlib import Path
 import pytest
 
 from multi_agent_brief.sources.base import SourceConfig, SourceItem, SourceQuery, SOURCE_PROFILES
+from multi_agent_brief.sources.search_backends.base import SearchResult
 from multi_agent_brief.sources.manual import ManualProvider
 from multi_agent_brief.sources.rss import RssProvider
 from multi_agent_brief.sources.web_search import WebSearchProvider
@@ -14,6 +15,29 @@ from multi_agent_brief.sources.mcp_provider import McpProvider
 from multi_agent_brief.sources.normalizer import normalize_source_item, dedupe_sources, filter_by_recency
 from multi_agent_brief.sources.registry import load_sources_config, collect_all_sources, validate_all_providers
 from multi_agent_brief.sources.doctor import run_doctor, format_doctor_report
+
+
+class FakeSearchBackend:
+    """Test-local fake backend replacing the removed MockSearchBackend."""
+    name = "fake"
+
+    def __init__(self):
+        self.last_domains = None
+
+    def search(self, query, max_results=10, *, domains=None, **kwargs):
+        self.last_domains = domains
+        return [
+            SearchResult(
+                title="Fake solar result",
+                url="https://example.com/fake-solar",
+                snippet="Solar manufacturing capacity expanded in Q1 2026.",
+                published_at="2026-05-01",
+                source_name="Fake Search",
+            ),
+        ]
+
+    def is_available(self):
+        return True
 
 
 # --- SourceConfig ---
@@ -116,11 +140,11 @@ def test_rss_provider_skips_disabled():
     assert items == []
 
 
-# --- Stubs ---
+# --- WebSearchProvider with injected backend ---
 
-def test_web_search_returns_mock_results():
-    provider = WebSearchProvider()
-    config = {"enabled": True, "backend": "mock"}
+def test_web_search_with_injected_fake_backend_returns_results():
+    provider = WebSearchProvider(backend=FakeSearchBackend())
+    config = {"enabled": True}
     items = provider.collect(SourceQuery(), config)
     assert len(items) > 0
     assert items[0].source_type == "web_search"
@@ -132,6 +156,21 @@ def test_web_search_disabled_returns_empty():
     items = provider.collect(SourceQuery(), config)
     assert items == []
 
+
+def test_web_search_enabled_without_backend_returns_registry_error():
+    """web_search.enabled=true with no backend should produce a registry error."""
+    config = SourceConfig(
+        enabled_providers=["web_search"],
+        web_search={"enabled": True},
+    )
+    items, errors = collect_all_sources(config)
+    assert items == []
+    assert len(errors) == 1
+    assert errors[0]["provider"] == "web_search"
+    assert "no backend" in errors[0]["message"].lower()
+
+
+# --- Stubs ---
 
 def test_news_api_stub_returns_empty():
     provider = NewsApiProvider()
@@ -256,17 +295,67 @@ manual:
     results = run_doctor(config_path=config_path)
     report = format_doctor_report(results)
     assert "Source configuration check" in report
-    # Should have OK for config found, profile, providers, etc.
     assert any(r.status == "OK" for r in results)
+
+
+def test_doctor_errors_on_mock_backend_removed(tmp_path):
+    """Doctor should error when mock backend is configured."""
+    import yaml
+
+    config_path = tmp_path / "config.yaml"
+    config_path.write_text("project:\n  name: Test\n", encoding="utf-8")
+
+    sources = {
+        "source_strategy": {"profile": "research", "enabled_providers": ["web_search"]},
+        "web_search": {"enabled": True, "backend": "mock"},
+    }
+    (tmp_path / "sources.yaml").write_text(yaml.dump(sources), encoding="utf-8")
+
+    results = run_doctor(config_path=config_path)
+    assert any("mock backend has been removed" in r.message.lower() for r in results)
+    assert any(r.status == "ERROR" for r in results)
+
+
+def test_doctor_warns_unimplemented_backend(tmp_path):
+    """Doctor should warn for an unimplemented backend like tavily."""
+    import yaml
+
+    config_path = tmp_path / "config.yaml"
+    config_path.write_text("project:\n  name: Test\n", encoding="utf-8")
+
+    sources = {
+        "source_strategy": {"profile": "research", "enabled_providers": ["web_search"]},
+        "web_search": {"enabled": True, "backend": "tavily"},
+    }
+    (tmp_path / "sources.yaml").write_text(yaml.dump(sources), encoding="utf-8")
+
+    results = run_doctor(config_path=config_path)
+    assert any("tavily" in r.message.lower() and r.status == "WARN" for r in results)
+
+
+def test_doctor_errors_on_no_backend(tmp_path):
+    """Doctor should error when web_search enabled but no backend."""
+    import yaml
+
+    config_path = tmp_path / "config.yaml"
+    config_path.write_text("project:\n  name: Test\n", encoding="utf-8")
+
+    sources = {
+        "source_strategy": {"profile": "research", "enabled_providers": ["web_search"]},
+        "web_search": {"enabled": True},
+    }
+    (tmp_path / "sources.yaml").write_text(yaml.dump(sources), encoding="utf-8")
+
+    results = run_doctor(config_path=config_path)
+    assert any("no backend configured" in r.message.lower() for r in results)
+    assert any(r.status == "ERROR" for r in results)
 
 
 # --- P1: WebSearch source_id stability ---
 
 def test_web_search_source_id_stable():
     """Same search result should produce same source_id across calls."""
-    from multi_agent_brief.sources.search_backends.mock import MockSearchBackend
-
-    provider = WebSearchProvider(backend=MockSearchBackend())
+    provider = WebSearchProvider(backend=FakeSearchBackend())
     config = {"enabled": True}
     query = SourceQuery(keywords=["solar"])
 
@@ -276,7 +365,6 @@ def test_web_search_source_id_stable():
     ids1 = [item.source_id for item in items1]
     ids2 = [item.source_id for item in items2]
     assert ids1 == ids2
-    # Should use SHA1-based format
     assert all(sid.startswith("WS_") for sid in ids1)
 
 
@@ -310,9 +398,7 @@ def test_merge_does_not_auto_enable_web_search(tmp_path):
     merge_candidates_to_sources(sources_path, candidates_path)
 
     updated = yaml.safe_load(sources_path.read_text(encoding="utf-8"))
-    # web_search should NOT be auto-enabled
     assert updated["web_search"]["enabled"] is False
-    # web_search should NOT be in enabled_providers
     assert "web_search" not in updated["source_strategy"].get("enabled_providers", [])
 
 
@@ -320,7 +406,6 @@ def test_merge_does_not_auto_enable_web_search(tmp_path):
 
 def test_collect_all_sources_captures_provider_errors(tmp_path):
     """Failed providers should be recorded, not silently swallowed."""
-    from unittest.mock import MagicMock
     from multi_agent_brief.sources.base import SourceProvider, SourceQuery
     from multi_agent_brief.sources.registry import collect_all_sources
 
@@ -336,7 +421,6 @@ def test_collect_all_sources_captures_provider_errors(tmp_path):
         enabled_providers=["failing"],
     )
 
-    # Monkey-patch the registry to include our failing provider
     import multi_agent_brief.sources.registry as reg
     old_registry = reg.PROVIDER_CLASSES.copy()
     reg.PROVIDER_CLASSES["failing"] = FailingProvider
@@ -351,11 +435,12 @@ def test_collect_all_sources_captures_provider_errors(tmp_path):
         reg.PROVIDER_CLASSES.clear()
         reg.PROVIDER_CLASSES.update(old_registry)
 
+
 # --- P1: WebSearch backend errors propagate to registry errors ---
 
 def test_web_search_backend_error_captured_by_registry():
     """Backend exceptions should propagate through to collect_all_sources errors."""
-    from multi_agent_brief.sources.search_backends.base import SearchBackend, SearchResult
+    from multi_agent_brief.sources.search_backends.base import SearchBackend
     from multi_agent_brief.sources.registry import collect_all_sources
 
     class FailingSearchBackend(SearchBackend):
@@ -365,10 +450,8 @@ def test_web_search_backend_error_captured_by_registry():
         def is_available(self):
             return True
 
-    from multi_agent_brief.sources.web_search import WebSearchProvider
     import multi_agent_brief.sources.registry as reg
 
-    # Temporarily use our failing backend via WebSearchProvider
     provider = WebSearchProvider(backend=FailingSearchBackend())
     old_cls = reg.PROVIDER_CLASSES.get("web_search")
     reg.PROVIDER_CLASSES["web_search"] = lambda: provider
@@ -393,9 +476,7 @@ def test_web_search_backend_error_captured_by_registry():
 
 def test_web_search_passes_domains_to_backend():
     """search_tasks with domains should be forwarded to the backend."""
-    from multi_agent_brief.sources.search_backends.mock import MockSearchBackend
-
-    backend = MockSearchBackend()
+    backend = FakeSearchBackend()
     provider = WebSearchProvider(backend=backend)
     config = {
         "enabled": True,
@@ -405,15 +486,12 @@ def test_web_search_passes_domains_to_backend():
     }
     items = provider.collect(SourceQuery(), config)
     assert len(items) > 0
-    # Verify the backend received the domains
     assert backend.last_domains == ["pv-tech.org", "reuters.com"]
 
 
 def test_web_search_no_domains_passes_none():
     """search_tasks without domains should pass domains=None."""
-    from multi_agent_brief.sources.search_backends.mock import MockSearchBackend
-
-    backend = MockSearchBackend()
+    backend = FakeSearchBackend()
     provider = WebSearchProvider(backend=backend)
     config = {"enabled": True}
     items = provider.collect(SourceQuery(keywords=["solar"]), config)
@@ -421,39 +499,27 @@ def test_web_search_no_domains_passes_none():
     assert backend.last_domains is None
 
 
-# --- P2: Doctor web_search message ---
+# --- Init profiles should not enable web_search ---
 
-def test_doctor_warns_mock_backend_for_web_search(tmp_path):
-    """Doctor should warn about mock backend when web_search is enabled."""
-    from multi_agent_brief.sources.doctor import run_doctor, format_doctor_report
-    import yaml
-
-    config_path = tmp_path / "config.yaml"
-    config_path.write_text("project:\n  name: Test\n", encoding="utf-8")
-
-    sources = {
-        "source_strategy": {"profile": "research", "enabled_providers": ["web_search"]},
-        "web_search": {"enabled": True, "backend": "mock"},
-    }
-    (tmp_path / "sources.yaml").write_text(yaml.dump(sources), encoding="utf-8")
-
-    results = run_doctor(config_path=config_path)
-    assert any("mock backend" in r.message.lower() for r in results)
+def test_init_aggressive_signal_does_not_enable_web_search_by_default(tmp_path):
+    from multi_agent_brief.cli.main import main
+    workspace = tmp_path / "ws"
+    assert main(["init", str(workspace), "--language", "en-US", "--source-profile", "aggressive_signal"]) == 0
+    sources = (workspace / "sources.yaml").read_text(encoding="utf-8")
+    assert "enabled: false" in sources.split("web_search:")[1].split("api:")[0]
 
 
-def test_doctor_ok_for_real_backend(tmp_path):
-    """Doctor should report OK for a non-mock backend."""
-    from multi_agent_brief.sources.doctor import run_doctor
-    import yaml
+def test_init_custom_does_not_enable_web_search_by_default(tmp_path):
+    from multi_agent_brief.cli.main import main
+    workspace = tmp_path / "ws"
+    assert main(["init", str(workspace), "--language", "en-US", "--source-profile", "custom"]) == 0
+    sources = (workspace / "sources.yaml").read_text(encoding="utf-8")
+    assert "enabled: false" in sources.split("web_search:")[1].split("api:")[0]
 
-    config_path = tmp_path / "config.yaml"
-    config_path.write_text("project:\n  name: Test\n", encoding="utf-8")
 
-    sources = {
-        "source_strategy": {"profile": "research", "enabled_providers": ["web_search"]},
-        "web_search": {"enabled": True, "backend": "tavily"},
-    }
-    (tmp_path / "sources.yaml").write_text(yaml.dump(sources), encoding="utf-8")
-
-    results = run_doctor(config_path=config_path)
-    assert any("tavily" in r.message.lower() and r.status == "OK" for r in results)
+def test_init_research_does_not_enable_web_search_by_default(tmp_path):
+    from multi_agent_brief.cli.main import main
+    workspace = tmp_path / "ws"
+    assert main(["init", str(workspace), "--language", "en-US", "--source-profile", "research"]) == 0
+    sources = (workspace / "sources.yaml").read_text(encoding="utf-8")
+    assert "enabled: false" in sources.split("web_search:")[1].split("api:")[0]

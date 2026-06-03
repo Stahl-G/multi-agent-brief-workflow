@@ -11,9 +11,32 @@ from multi_agent_brief.sources.base import SourceConfig, SourceItem, SourceQuery
 from multi_agent_brief.sources.planner import SourcePlan, SearchTask, create_source_plan
 from multi_agent_brief.sources.industry_packs import get_industry_pack, list_industries
 from multi_agent_brief.sources.web_search import WebSearchProvider
-from multi_agent_brief.sources.search_backends.mock import MockSearchBackend
 from multi_agent_brief.sources.cached_package import CachedPackageProvider
 from multi_agent_brief.sources.registry import collect_all_sources
+
+
+class FakeSearchBackend:
+    """Test-local fake backend replacing the removed MockSearchBackend."""
+    name = "fake"
+
+    def __init__(self):
+        self.last_domains = None
+
+    def search(self, query, max_results=10, *, domains=None, **kwargs):
+        self.last_domains = domains
+        from multi_agent_brief.sources.search_backends.base import SearchResult
+        return [
+            SearchResult(
+                title="Fake solar result",
+                url="https://example.com/fake-solar",
+                snippet="Solar manufacturing capacity expanded in Q1 2026.",
+                published_at="2026-05-01",
+                source_name="Fake Search",
+            ),
+        ]
+
+    def is_available(self):
+        return True
 
 
 # --- SourcePlanner ---
@@ -59,16 +82,16 @@ def test_get_industry_pack_unknown():
 
 # --- WebSearchProvider ---
 
-def test_web_search_mock_backend():
-    backend = MockSearchBackend()
+def test_fake_search_backend():
+    backend = FakeSearchBackend()
     assert backend.is_available()
     results = backend.search("solar", max_results=2)
-    assert len(results) == 2
+    assert len(results) >= 1
     assert results[0].title  # not empty
 
 
 def test_web_search_provider_collects():
-    provider = WebSearchProvider(backend=MockSearchBackend())
+    provider = WebSearchProvider(backend=FakeSearchBackend())
     config = {"enabled": True}
     items = provider.collect(SourceQuery(keywords=["solar"]), config)
     assert len(items) > 0
@@ -77,7 +100,7 @@ def test_web_search_provider_collects():
 
 def test_web_search_domain_filtering():
     """Search tasks with domains should be passed to backend."""
-    provider = WebSearchProvider(backend=MockSearchBackend())
+    provider = WebSearchProvider(backend=FakeSearchBackend())
     config = {
         "enabled": True,
         "search_tasks": [

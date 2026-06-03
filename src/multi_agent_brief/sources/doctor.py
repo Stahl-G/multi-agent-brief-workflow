@@ -74,11 +74,14 @@ def run_doctor(
 
     # 7. Web search
     if source_config.web_search.get("enabled"):
-        backend_name = source_config.web_search.get("backend", "mock")
-        if backend_name == "mock":
-            results.append(CheckResult("WARN", "web_search uses mock backend; suitable for tests/demo only"))
+        backend_name = source_config.web_search.get("backend") or ""
+        if not backend_name:
+            results.append(CheckResult("ERROR", "web_search enabled but no backend configured"))
+        elif backend_name == "mock":
+            results.append(CheckResult("ERROR", "web_search: mock backend has been removed from runtime code"))
         else:
-            results.append(CheckResult("OK", f"web_search enabled with backend: {backend_name}"))
+            # Backend is configured but not yet implemented in this package
+            results.append(CheckResult("WARN", f"web_search: backend '{backend_name}' configured but not yet implemented in this package"))
 
     # 8. API providers
     api_providers = source_config.api.get("providers", [])

@@ -343,12 +343,14 @@ Windows 原生 PowerShell 详细说明见 [docs/windows-powershell.md](docs/wind
 - 修复 WebSearchProvider.collect() 内部静默吞掉 backend 异常的问题，异常现在传递到 registry errors。
 - 实现 WebSearchProvider 域名过滤：config.search_tasks 支持 domains 字段并传递到 backend.search()。
 - 更新 doctor.py：web_search 使用 mock backend 时给出准确警告文案，不再提示 Phase 1 未实现。
+- 移除运行时 MockSearchBackend：src/ 中不再有 mock 搜索后端，web_search.enabled=true 且无真实 backend 时明确失败。
+- 所有 init profile 默认不启用 web_search，需用户自行配置真实 backend。
 
 ### v0.5.0 — 三层来源采集架构
 
 - 新增 `SourcePlanner`：根据行业、岗位、时间窗口自动生成搜索计划。
 - 新增 `industry_packs.py`：行业预设包（solar、technology、finance 等），含 RSS 源和搜索任务。
-- `WebSearchProvider` 升级为真实实现，支持可插拔搜索后端（mock、tavily、serpapi）。
+- `WebSearchProvider` 支持可插拔搜索后端接口（tavily、serpapi 等），不附带运行时 mock backend。
 - 新增 `CachedPackageProvider`：读取预收集的源包文件夹（支持 OpenClaw 式工作流）。
 - 新增 `search_backends/` 模块：SearchBackend ABC + MockSearchBackend。
 - 统一 SourceItem：消除 `core/schemas.py` 和 `sources/base.py` 的重复定义。
