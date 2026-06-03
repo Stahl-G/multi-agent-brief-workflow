@@ -81,10 +81,16 @@ jobs:
             --title "Smoke Brief" \
             --audience management \
             --source-profile conservative
-          echo "# CI smoke source" > /tmp/mabw-ci-smoke/input/smoke.md
+          echo "- Solar manufacturing capacity expanded by 15 percent in Q1 2026 according to industry data." > /tmp/mabw-ci-smoke/input/smoke.md
 
       - name: Run pipeline
         run: multi-agent-brief run --config /tmp/mabw-ci-smoke/config.yaml
+
+      - name: Assert output quality
+        shell: bash
+        run: |
+          grep -q '\[src:' /tmp/mabw-ci-smoke/output/brief.md
+          python -c "import json,sys; d=json.load(open('/tmp/mabw-ci-smoke/output/claim_ledger.json')); assert len(d)>0, 'claim_ledger empty'; print(f'claim_ledger has {len(d)} entries')"
 
   readme-check:
     name: README update check

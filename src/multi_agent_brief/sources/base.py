@@ -58,6 +58,7 @@ class SourceConfig:
     api: dict[str, Any] = field(default_factory=dict)
     mcp: dict[str, Any] = field(default_factory=dict)
     cached_package: dict[str, Any] = field(default_factory=dict)
+    config_dir: str = ""
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> SourceConfig:

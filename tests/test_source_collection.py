@@ -371,3 +371,71 @@ def test_pipeline_backward_compat_empty_input(tmp_path):
     # Should complete without error, with 7 outputs
     assert len(outputs) == 7
     assert (output_dir / "brief.md").exists()
+
+
+# --- Manual source path resolution ---
+
+def test_manual_paths_resolved_against_config_dir(tmp_path):
+    """Relative manual.sources[].path must resolve against config_dir, not CWD."""
+    from multi_agent_brief.sources.registry import load_sources_config, collect_all_sources
+
+    ws = tmp_path / "workspace"
+    ws.mkdir()
+    input_dir = ws / "input"
+    input_dir.mkdir()
+    (input_dir / "news.md").write_text(
+        "- Solar manufacturing capacity expanded by 15 percent in Q1 2026.\n",
+        encoding="utf-8",
+    )
+
+    sources = ws / "sources.yaml"
+    sources.write_text(
+        'source_strategy:\n'
+        '  profile: conservative\n'
+        '  enabled_providers:\n'
+        '    - manual\n'
+        'manual:\n'
+        '  enabled: true\n'
+        '  sources:\n'
+        '    - name: Local Input\n'
+        '      path: input\n'
+        '      category: local_files\n'
+        '      enabled: true\n',
+        encoding="utf-8",
+    )
+
+    config = load_sources_config(sources)
+    assert config.config_dir == str(ws)
+
+    items, errors = collect_all_sources(config)
+    assert len(items) > 0, "Manual source should be found via config_dir-relative path"
+    assert "solar" in items[0].content.lower()
+
+
+def test_cli_run_with_external_workspace(tmp_path):
+    """multi-agent-brief run --config <external-ws>/config.yaml must find sources."""
+    from multi_agent_brief.cli.main import main
+
+    ws = tmp_path / "external-ws"
+    assert main([
+        "init", str(ws),
+        "--language", "zh-CN",
+        "--company", "TestCo",
+        "--industry", "solar",
+        "--source-profile", "conservative",
+    ]) == 0
+
+    (ws / "input" / "news.md").write_text(
+        "- Solar manufacturing capacity expanded by 15 percent in Q1 2026 according to industry data.\n",
+        encoding="utf-8",
+    )
+
+    exit_code = main(["run", "--config", str(ws / "config.yaml")])
+    assert exit_code == 0
+
+    brief = (ws / "output" / "brief.md").read_text(encoding="utf-8")
+    assert "[src:" in brief, "Brief should contain [src:] citations"
+
+    import json
+    ledger = json.loads((ws / "output" / "claim_ledger.json").read_text(encoding="utf-8"))
+    assert len(ledger) > 0, "Claim ledger should not be empty"

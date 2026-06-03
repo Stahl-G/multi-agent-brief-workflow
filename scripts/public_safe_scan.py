@@ -78,6 +78,9 @@ SCAN_EXTENSIONS: set[str] = {".md", ".toml", ".yaml", ".yml", ".txt", ".py"}
 
 SKIP_DIRS: set[str] = {".git", ".venv", "__pycache__", "dist", "build", ".pytest_cache"}
 
+# Files that define sensitive patterns and must not match themselves.
+SELF_SCAN_EXCLUDES: set[str] = {"scripts/public_safe_scan.py", "tests/test_public_safe_content.py"}
+
 
 @dataclass
 class ScanHit:
@@ -114,6 +117,10 @@ def collect_files() -> list[Path]:
                 continue
             # Skip excluded directories
             if any(skip in f.parts for skip in SKIP_DIRS):
+                continue
+            # Skip files that define sensitive patterns (avoid self-match)
+            rel = str(f.relative_to(REPO))
+            if rel in SELF_SCAN_EXCLUDES:
                 continue
             files.append(f)
 

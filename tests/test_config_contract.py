@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import json
 import sys
+from datetime import date
 from pathlib import Path
 
 import pytest
@@ -118,3 +119,76 @@ class TestPipelineSteps:
             f"  Expected: {EXPECTED_PIPELINE_STEPS}\n"
             f"  Got:      {steps}"
         )
+
+
+class TestReportDateAuto:
+    """report.date == 'auto' must resolve to today's date."""
+
+    def test_auto_date_resolves_to_today(self, tmp_path):
+        config = {
+            "report": {"date": "auto"},
+            "input": {"path": str(tmp_path / "input")},
+            "output": {"path": str(tmp_path / "output")},
+        }
+        settings = build_run_settings(
+            config=config,
+            input_dir=None,
+            output_dir=None,
+            name=None,
+            language=None,
+            audience=None,
+        )
+        assert settings["report_date"] == date.today().isoformat()
+
+    def test_explicit_date_preserved(self, tmp_path):
+        config = {
+            "report": {"date": "2026-01-15"},
+            "input": {"path": str(tmp_path / "input")},
+            "output": {"path": str(tmp_path / "output")},
+        }
+        settings = build_run_settings(
+            config=config,
+            input_dir=None,
+            output_dir=None,
+            name=None,
+            language=None,
+            audience=None,
+        )
+        assert settings["report_date"] == "2026-01-15"
+
+    def test_empty_date_stays_empty(self, tmp_path):
+        config = {
+            "input": {"path": str(tmp_path / "input")},
+            "output": {"path": str(tmp_path / "output")},
+        }
+        settings = build_run_settings(
+            config=config,
+            input_dir=None,
+            output_dir=None,
+            name=None,
+            language=None,
+            audience=None,
+        )
+        assert settings["report_date"] == ""
+
+    def test_init_generates_auto_date(self, tmp_path):
+        """Init-generated config should have report.date = 'auto' which resolves."""
+        from multi_agent_brief.cli.main import main
+
+        ws = tmp_path / "ws"
+        main(["init", str(ws), "--language", "zh-CN"])
+        config_text = (ws / "config.yaml").read_text(encoding="utf-8")
+        assert "auto" in config_text
+
+        import yaml
+        config = yaml.safe_load(config_text)
+        config["_config_dir"] = str(ws)
+        settings = build_run_settings(
+            config=config,
+            input_dir=None,
+            output_dir=None,
+            name=None,
+            language=None,
+            audience=None,
+        )
+        assert settings["report_date"] == date.today().isoformat()

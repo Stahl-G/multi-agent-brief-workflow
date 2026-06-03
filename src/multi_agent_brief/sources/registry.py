@@ -44,7 +44,23 @@ def load_sources_config(path: str | Path) -> SourceConfig:
         data = yaml.safe_load(text) or {}
     else:
         data = _minimal_yaml_load(text)
-    return SourceConfig.from_dict(data)
+    config = SourceConfig.from_dict(data)
+    config.config_dir = str(p.parent)
+    return config
+
+
+def _resolve_manual_paths(manual: dict[str, Any], config_dir: str) -> dict[str, Any]:
+    """Resolve relative paths in manual.sources[] against config_dir."""
+    if not config_dir or not manual.get("sources"):
+        return manual
+    base = Path(config_dir)
+    resolved = []
+    for src in manual["sources"]:
+        path = src.get("path")
+        if path and not Path(path).is_absolute():
+            src = {**src, "path": str(base / path)}
+        resolved.append(src)
+    return {**manual, "sources": resolved}
 
 
 def get_providers(source_config: SourceConfig) -> dict[str, SourceProvider]:
@@ -85,8 +101,11 @@ def collect_all_sources(
                 f"Available: {', '.join(sorted(PROVIDER_CLASSES))}",
             })
 
+    # Resolve relative manual source paths against config_dir
+    manual_config = _resolve_manual_paths(source_config.manual, source_config.config_dir)
+
     config_map = {
-        "manual": source_config.manual,
+        "manual": manual_config,
         "rss": source_config.rss,
         "web_search": source_config.web_search,
         "api": source_config.api,

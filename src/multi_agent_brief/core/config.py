@@ -89,6 +89,12 @@ def build_run_settings(
     report = config.get("report", {}) or {}
     previous = config.get("previous", {}) or {}
     selection = config.get("selection", {}) or {}
+
+    # Resolve report.date: "auto" → today's date
+    raw_date = report.get("date", "")
+    if raw_date == "auto":
+        from datetime import date
+        raw_date = date.today().isoformat()
     selector = config.get("selector", {}) or {}
     input_config = config.get("input", {}) or {}
     output_config = config.get("output", {}) or {}
@@ -113,7 +119,7 @@ def build_run_settings(
         "output_dir": str(output_path),
         "language": language or language_config.get("output") or project.get("language") or "zh-CN",
         "audience": audience or project.get("audience") or "management",
-        "report_date": str(report.get("date", "")),
+        "report_date": str(raw_date),
         "max_source_age_days": int(report["max_source_age_days"]) if report.get("max_source_age_days") else None,
         "fail_on_stale_source": bool(report.get("fail_on_stale_source", False)),
         "previous_report_dir": str(previous.get("path", "")),
