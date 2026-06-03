@@ -106,6 +106,8 @@ flowchart LR
 - 入职向导映射器自动将中文岗位、行业、受众标签映射为英文配置值
 - `python scripts/public_safe_scan.py` 公共安全扫描器检测公开文件中的个人信息和敏感内容泄露
 - `python scripts/check_terms.py` 术语一致性检查器防止拼写漂移
+- 手动来源路径解析：`sources.yaml` 中的相对路径基于配置文件所在目录解析，支持在仓库外部运行工作区
+- `report.date: auto` 自动生成报告日期（使用当天日期）
 
 ## 输出示例
 

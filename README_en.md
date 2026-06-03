@@ -95,6 +95,8 @@ The first local MVP supports:
 - Onboarding mapper auto-translates Chinese role, industry, and audience labels into English config values
 - `python scripts/public_safe_scan.py` public-safe content scanner detects personal info and sensitive content leaks in public files
 - `python scripts/check_terms.py` terminology consistency checker prevents spelling drift
+- Manual source path resolution: relative paths in `sources.yaml` are resolved against the config file's parent directory, enabling workspaces outside the repo
+- `report.date: auto` automatically generates the report date using today's date
 
 ## Example Output
 
