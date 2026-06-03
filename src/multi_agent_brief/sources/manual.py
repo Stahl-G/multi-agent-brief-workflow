@@ -113,5 +113,7 @@ class ManualProvider(SourceProvider):
             metadata={
                 "category": src_config.get("category", ""),
                 "note": "URL registered but not fetched in Phase 1. Add content to input/ directory.",
+                "ingestion_status": "placeholder",
+                "requires_fetch": True,
             },
         )

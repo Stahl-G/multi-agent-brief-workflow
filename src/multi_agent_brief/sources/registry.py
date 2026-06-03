@@ -61,13 +61,19 @@ def get_providers(source_config: SourceConfig) -> dict[str, SourceProvider]:
 def collect_all_sources(
     source_config: SourceConfig,
     query: SourceQuery | None = None,
-) -> list[SourceItem]:
-    """Collect sources from all enabled providers, normalize, and dedupe."""
+) -> tuple[list[SourceItem], list[dict[str, str]]]:
+    """Collect sources from all enabled providers, normalize, and dedupe.
+
+    Returns:
+        Tuple of (deduplicated source items, list of error dicts with keys
+        provider, error_type, message).
+    """
     if query is None:
         query = SourceQuery()
 
     providers = get_providers(source_config)
     all_items: list[SourceItem] = []
+    errors: list[dict[str, str]] = []
 
     config_map = {
         "manual": source_config.manual,
@@ -85,9 +91,13 @@ def collect_all_sources(
         try:
             items = provider.collect(query, config)
             all_items.extend(items)
-        except Exception:
-            # Provider failures are non-fatal in collection phase
-            pass
+        except Exception as exc:
+            # Provider failures are non-fatal, but record the error
+            errors.append({
+                "provider": name,
+                "error_type": type(exc).__name__,
+                "message": str(exc)[:200],
+            })
 
     # Normalize, filter, dedupe
     normalized = [normalize_source_item(item) for item in all_items]
@@ -95,7 +105,7 @@ def collect_all_sources(
     recency = query.recency_days if query.recency_days > 0 else 14
     filtered = filter_by_recency(normalized, recency)
 
-    return dedupe_sources(filtered)
+    return dedupe_sources(filtered), errors
 
 
 def validate_all_providers(source_config: SourceConfig) -> list[str]:

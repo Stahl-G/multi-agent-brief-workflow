@@ -225,11 +225,13 @@ def merge_candidates_to_sources(
             sources["rss"]["feeds"].append(feed)
             added_rss += 1
 
-    # Enable web_search if candidates suggest it
+    # Ensure web_search section exists, but do NOT auto-enable it.
+    # Only enable web_search if it was already enabled OR the user explicitly
+    # set a real backend (not mock). Mock data must never leak into real reports
+    # unless the user explicitly opted in with allow_mock_search: true.
     if not sources.get("web_search"):
         sources["web_search"] = {"enabled": False, "max_results": 20, "recency_days": 7}
-    if enabled:
-        sources["web_search"]["enabled"] = True
+    # Do not auto-enable web_search on merge.
 
     # Update source_strategy
     if "source_strategy" not in sources:
@@ -237,7 +239,8 @@ def merge_candidates_to_sources(
     providers = sources["source_strategy"].get("enabled_providers", [])
     if "rss" not in providers and added_rss > 0:
         providers.append("rss")
-    if "web_search" not in providers:
+    # Only add web_search to enabled_providers if it is actually enabled
+    if "web_search" not in providers and sources.get("web_search", {}).get("enabled"):
         providers.append("web_search")
     sources["source_strategy"]["enabled_providers"] = providers
 

@@ -83,20 +83,24 @@ class BriefPipeline:
             ]
 
         # Collect from all providers
-        items = collect_all_sources(source_config, query)
+        items, collection_errors = collect_all_sources(source_config, query)
 
         # Populate context
         context.sources = items
 
+        artifacts: dict = {
+            "source_count": len(items),
+            "providers": source_config.enabled_providers,
+            "industry": source_config.industry,
+            "plan_tasks": len(plan.search_tasks),
+        }
+        if collection_errors:
+            artifacts["collection_errors"] = collection_errors
+
         return AgentOutput(
             agent_name="source-collection",
             summary=f"Collected {len(items)} sources from {len(source_config.enabled_providers)} providers.",
-            artifacts={
-                "source_count": len(items),
-                "providers": source_config.enabled_providers,
-                "industry": source_config.industry,
-                "plan_tasks": len(plan.search_tasks),
-            },
+            artifacts=artifacts,
         )
 
     def _build_default_config(self, context: PipelineContext) -> SourceConfig:

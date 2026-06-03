@@ -1,6 +1,7 @@
 """Web search source provider with pluggable backends."""
 from __future__ import annotations
 
+import hashlib
 from typing import Any
 
 from multi_agent_brief.sources.base import SourceItem, SourceProvider, SourceQuery
@@ -83,7 +84,7 @@ class WebSearchProvider(SourceProvider):
 
     def _result_to_source_item(self, result: SearchResult, query: str) -> SourceItem:
         """Convert a SearchResult to a SourceItem."""
-        source_id = f"WS_{hash(result.url + result.title) % 10**8:08d}"
+        source_id = f"WS_{hashlib.sha1(f"{result.url}|{result.title}".encode("utf-8")).hexdigest()[:10].upper()}"
         return SourceItem(
             source_id=source_id,
             source_name=result.source_name or "web_search",

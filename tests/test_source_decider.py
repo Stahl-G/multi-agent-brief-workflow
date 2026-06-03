@@ -129,7 +129,8 @@ def test_merge_candidates_to_sources(workspace_with_sources: Path):
     updated = yaml.safe_load(sources_path.read_text(encoding="utf-8"))
     assert len(updated["manual"]["sources"]) == 1
     assert len(updated["rss"]["feeds"]) == 1
-    assert updated["web_search"]["enabled"] is True
+    # After fix: merge should NOT auto-enable web_search
+    assert updated["web_search"]["enabled"] is False
 
 
 def test_merge_candidates_idempotent(workspace_with_sources: Path):

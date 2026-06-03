@@ -12,11 +12,19 @@ class ScoutAgent(BaseAgent):
     name = "scout"
 
     def run(self, context: PipelineContext, ledger: ClaimLedger) -> AgentOutput:
-        sources = load_local_sources(Path(context.input_dir))
-        context.sources = sources
+        # Use provider-collected sources if already available (set by pipeline._collect_sources).
+        # Only fall back to loading local files when no sources were collected.
+        if context.sources:
+            sources = context.sources
+        else:
+            sources = load_local_sources(Path(context.input_dir))
+            context.sources = sources
 
         candidates: list[CandidateItem] = []
         for source in sources:
+            # Skip placeholder sources that have no real content to extract
+            if _is_placeholder(source):
+                continue
             for index, statement in enumerate(extract_candidate_lines(source.content), start=1):
                 item_id = f"{source.source_id}_ITEM_{index:03d}"
                 claim_id = ledger.build_claim_id(statement, source.source_id)
@@ -54,6 +62,15 @@ class ScoutAgent(BaseAgent):
             summary=f"Loaded {len(sources)} sources and created {len(candidates)} candidate claims.",
             artifacts={"source_count": len(sources), "candidate_count": len(candidates)},
         )
+
+
+def _is_placeholder(source: SourceItem) -> bool:
+    """Return True if source is a manual_url placeholder with no real content."""
+    if source.metadata.get("requires_fetch"):
+        return True
+    if source.source_type == "manual_url" and source.content.startswith("Manual URL source:"):
+        return True
+    return False
 
 
 def load_local_sources(input_dir: Path) -> list[SourceItem]:

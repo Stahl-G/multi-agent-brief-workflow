@@ -317,6 +317,16 @@ This project can help structure research and briefing workflows, but it does not
 
 ## Changelog
 
+### v0.5.1 — Source Provider Pipeline Fixes
+
+- Fixed ScoutAgent unconditionally overwriting context.sources: when the pipeline has already collected sources via providers, Scout now uses them directly instead of falling back to local files.
+- Fixed AnalystAgent only rendering 5 topics: expanded to all 10 Screener topics (added compliance, demand, rates, capital, technology); unknown topics are also appended.
+- Fixed merge_candidates_to_sources() auto-enabling web_search: merge no longer implicitly enables web_search, preventing mock search results from leaking into real reports.
+- Fixed WebSearchProvider using hash() for unstable source_id generation: switched to hashlib.sha1 for cross-process consistency.
+- Fixed Manual URL placeholders entering Claim Ledger: placeholder sources now carry requires_fetch metadata and Scout skips them automatically.
+- Fixed collect_all_sources() silently swallowing provider exceptions: errors are now captured in a returned errors list and included in pipeline artifacts as collection_errors.
+- Added 10 new tests covering all fixes.
+
 ### v0.5.0 — Three-Layer Source Collection Architecture
 
 - Added `SourcePlanner`: generates search plans based on industry, role, and time window.

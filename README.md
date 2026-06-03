@@ -328,6 +328,16 @@ Windows 原生 PowerShell 详细说明见 [docs/windows-powershell.md](docs/wind
 
 ## 更新日志
 
+### v0.5.1 — Source Provider 流水线修复
+
+- 修复 ScoutAgent 无条件覆盖 context.sources 的问题：当 pipeline 已通过 provider 收集来源时，Scout 直接使用已有 sources，不再回退到本地文件。
+- 修复 AnalystAgent 只渲染 5 个 topic 的问题：扩展到 Screener 的完整 10 个 topic（新增 compliance、demand、rates、capital、technology），未知 topic 也会追加渲染。
+- 修复 merge_candidates_to_sources() 自动启用 web_search 的问题：merge 不再隐式开启 web_search，防止 mock 搜索结果污染真实报告。
+- 修复 WebSearchProvider 使用 hash() 生成不稳定 source_id 的问题：改用 hashlib.sha1 确保跨进程一致。
+- 修复 Manual URL placeholder 进入 Claim Ledger 的问题：placeholder source 增加 requires_fetch metadata，Scout 自动跳过。
+- 修复 collect_all_sources() 静默吞掉 provider 异常的问题：错误记录到返回值的 errors 列表，pipeline artifacts 包含 collection_errors。
+- 新增 10 个测试覆盖所有修复。
+
 ### v0.5.0 — 三层来源采集架构
 
 - 新增 `SourcePlanner`：根据行业、岗位、时间窗口自动生成搜索计划。

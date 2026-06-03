@@ -225,8 +225,9 @@ def test_collect_all_sources_manual(tmp_path):
         enabled_providers=["manual"],
         manual={"enabled": True, "sources": [{"name": "Test", "path": str(input_dir)}]},
     )
-    items = collect_all_sources(config)
+    items, errors = collect_all_sources(config)
     assert len(items) == 1
+    assert errors == []
     assert "solar" in items[0].content.lower()
 
 
@@ -257,3 +258,95 @@ manual:
     assert "Source configuration check" in report
     # Should have OK for config found, profile, providers, etc.
     assert any(r.status == "OK" for r in results)
+
+
+# --- P1: WebSearch source_id stability ---
+
+def test_web_search_source_id_stable():
+    """Same search result should produce same source_id across calls."""
+    from multi_agent_brief.sources.search_backends.mock import MockSearchBackend
+
+    provider = WebSearchProvider(backend=MockSearchBackend())
+    config = {"enabled": True}
+    query = SourceQuery(keywords=["solar"])
+
+    items1 = provider.collect(query, config)
+    items2 = provider.collect(query, config)
+
+    ids1 = [item.source_id for item in items1]
+    ids2 = [item.source_id for item in items2]
+    assert ids1 == ids2
+    # Should use SHA1-based format
+    assert all(sid.startswith("WS_") for sid in ids1)
+
+
+# --- P1: Decider merge should not auto-enable web_search ---
+
+def test_merge_does_not_auto_enable_web_search(tmp_path):
+    """merge_candidates_to_sources should not enable web_search by default."""
+    import yaml
+    from multi_agent_brief.sources.decider import merge_candidates_to_sources
+
+    sources = {
+        "source_strategy": {"profile": "research", "enabled_providers": ["manual"]},
+        "manual": {"enabled": True, "sources": []},
+        "rss": {"enabled": False, "feeds": []},
+        "web_search": {"enabled": False, "max_results": 20, "recency_days": 7},
+    }
+    sources_path = tmp_path / "sources.yaml"
+    with open(sources_path, "w", encoding="utf-8") as f:
+        yaml.dump(sources, f)
+
+    candidates = {
+        "metadata": {"status": "pending_review"},
+        "recommended_sources": [
+            {"name": "Tech News", "url": "https://technews.com", "category": "industry_media", "enabled": True},
+        ],
+    }
+    candidates_path = tmp_path / "source_candidates.yaml"
+    with open(candidates_path, "w", encoding="utf-8") as f:
+        yaml.dump(candidates, f)
+
+    merge_candidates_to_sources(sources_path, candidates_path)
+
+    updated = yaml.safe_load(sources_path.read_text(encoding="utf-8"))
+    # web_search should NOT be auto-enabled
+    assert updated["web_search"]["enabled"] is False
+    # web_search should NOT be in enabled_providers
+    assert "web_search" not in updated["source_strategy"].get("enabled_providers", [])
+
+
+# --- P2: Provider errors are captured ---
+
+def test_collect_all_sources_captures_provider_errors(tmp_path):
+    """Failed providers should be recorded, not silently swallowed."""
+    from unittest.mock import MagicMock
+    from multi_agent_brief.sources.base import SourceProvider, SourceQuery
+    from multi_agent_brief.sources.registry import collect_all_sources
+
+    class FailingProvider(SourceProvider):
+        name = "failing"
+        source_type = "test"
+        def validate_config(self, config):
+            return []
+        def collect(self, query, config):
+            raise ConnectionError("Network timeout")
+
+    config = SourceConfig(
+        enabled_providers=["failing"],
+    )
+
+    # Monkey-patch the registry to include our failing provider
+    import multi_agent_brief.sources.registry as reg
+    old_registry = reg.PROVIDER_CLASSES.copy()
+    reg.PROVIDER_CLASSES["failing"] = FailingProvider
+    try:
+        items, errors = collect_all_sources(config)
+        assert items == []
+        assert len(errors) == 1
+        assert errors[0]["provider"] == "failing"
+        assert errors[0]["error_type"] == "ConnectionError"
+        assert "timeout" in errors[0]["message"]
+    finally:
+        reg.PROVIDER_CLASSES.clear()
+        reg.PROVIDER_CLASSES.update(old_registry)
