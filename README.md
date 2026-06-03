@@ -229,7 +229,7 @@ Remove-Item Env:PYTHONPATH
 
 Web 搜索默认关闭。启用需要 Tavily API key。
 
-1. 编辑工作区的 `sources.yaml`：
+初始化时可选择启用 Tavily（交互式向导会询问），或手动编辑 `sources.yaml`：
 
 ```yaml
 web_search:

@@ -220,7 +220,7 @@ Remove-Item Env:PYTHONPATH
 
 Web search is disabled by default. To enable it:
 
-1. Edit your workspace `sources.yaml`:
+You can opt in during `init` (the interactive wizard asks), or manually edit `sources.yaml`:
 
 ```yaml
 web_search:
