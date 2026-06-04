@@ -34,7 +34,7 @@ Use when inspecting source inputs or extracting candidate items before screening
 ## Pipeline Context
 
 ```text
-Scout -> Screener -> Claim Ledger -> Analyst -> Auditor -> Editor -> Formatter
+Scout -> Screener -> Claim Ledger -> Analyst -> Editor -> Auditor -> Formatter
 ```
 
 ## Expected Inputs

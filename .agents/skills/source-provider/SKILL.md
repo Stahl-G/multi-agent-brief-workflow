@@ -34,7 +34,7 @@ Use when implementing or reviewing source provider configuration, source collect
 ## Pipeline Context
 
 ```text
-Scout -> Screener -> Claim Ledger -> Analyst -> Auditor -> Editor -> Formatter
+Scout -> Screener -> Claim Ledger -> Analyst -> Editor -> Auditor -> Formatter
 ```
 
 ## Expected Inputs

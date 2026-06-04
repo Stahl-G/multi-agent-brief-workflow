@@ -34,7 +34,7 @@ Use for multi-step feature planning, cross-role integration, pipeline changes, o
 ## Pipeline Context
 
 ```text
-Scout -> Screener -> Claim Ledger -> Analyst -> Auditor -> Editor -> Formatter
+Scout -> Screener -> Claim Ledger -> Analyst -> Editor -> Auditor -> Formatter
 ```
 
 ## Expected Inputs

@@ -18,7 +18,7 @@ class AuditorAgent(BaseAgent):
         )
 
     def run(self, context: PipelineContext, ledger: ClaimLedger) -> AgentOutput:
-        report = self.audit_agent.run_audit(context.report_state.draft_markdown, ledger, context)
+        report = self.audit_agent.run_audit(context.report_state.prepared_markdown, ledger, context)
         context.report_state.audit_report = report
         return AgentOutput(
             agent_name=self.name,

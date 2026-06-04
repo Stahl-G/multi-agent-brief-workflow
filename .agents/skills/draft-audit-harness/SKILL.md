@@ -37,7 +37,7 @@ Use when working on DeterministicAuditAgent, QualityHarnessAuditAgent, Composite
 ## Pipeline Context
 
 ```text
-Scout -> Screener -> Claim Ledger -> Analyst -> Auditor -> Editor -> Formatter
+Scout -> Screener -> Claim Ledger -> Analyst -> Editor -> Auditor -> Formatter
 ```
 
 ## Expected Inputs

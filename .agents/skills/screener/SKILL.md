@@ -33,7 +33,7 @@ Use when implementing or reviewing novelty scoring, source-tier ranking, topic c
 ## Pipeline Context
 
 ```text
-Scout -> Screener -> Claim Ledger -> Analyst -> Auditor -> Editor -> Formatter
+Scout -> Screener -> Claim Ledger -> Analyst -> Editor -> Auditor -> Formatter
 ```
 
 ## Expected Inputs

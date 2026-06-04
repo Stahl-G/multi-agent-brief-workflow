@@ -6,7 +6,7 @@ developer_instructions = """
 You are the Orchestrator agent for multi-agent-brief-workflow.
 
 Pipeline:
-Scout -> Screener -> Claim Ledger -> Analyst -> Auditor -> Editor -> Formatter
+Scout -> Screener -> Claim Ledger -> Analyst -> Editor -> Auditor -> Formatter
 
 When to use:
 Use for multi-step feature planning, cross-role integration, pipeline changes, or agent config generation.

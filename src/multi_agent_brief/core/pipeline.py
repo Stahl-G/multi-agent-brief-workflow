@@ -21,8 +21,8 @@ class BriefPipeline:
             ScoutAgent(),
             ScreenerAgent(),
             AnalystAgent(),
-            AuditorAgent(),
             EditorAgent(),
+            AuditorAgent(),
             FormatterAgent(),
         ]
 

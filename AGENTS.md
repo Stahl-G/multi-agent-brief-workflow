@@ -126,7 +126,7 @@ This repository implements a source-grounded, audit-ready multi-agent workflow f
 Pipeline:
 
 ```text
-Scout -> Screener -> Claim Ledger -> Analyst -> Auditor -> Editor -> Formatter
+Scout -> Screener -> Claim Ledger -> Analyst -> Editor -> Auditor -> Formatter
 ```
 
 ## Core Principle

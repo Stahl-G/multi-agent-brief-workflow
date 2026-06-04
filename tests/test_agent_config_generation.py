@@ -28,7 +28,7 @@ from generate_agent_configs import (
     HARNESS_TEXT,
 )
 
-PIPELINE_ROLES = ["scout", "screener", "claim-ledger", "analyst", "auditor", "editor", "formatter"]
+PIPELINE_ROLES = ["scout", "screener", "claim-ledger", "analyst", "editor", "auditor", "formatter"]
 HARNESS_ROLES = ["draft-audit-harness", "final-quality-harness", "rendered-output-harness"]
 ALL_ROLES = PIPELINE_ROLES + HARNESS_ROLES + ["orchestrator"]
 REQUIRED_ROLE_FIELDS = ["stage", "tool_profile", "description", "trigger", "responsibilities", "hard_rules"]

@@ -8,8 +8,8 @@ project:
     - screener
     - claim-ledger
     - analyst
-    - auditor
     - editor
+    - auditor
     - formatter
   output_contract:
     - draft_brief.md

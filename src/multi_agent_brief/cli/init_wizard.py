@@ -410,8 +410,8 @@ def build_config(profile: InitProfile) -> dict[str, Any]:
                 "scout",
                 "screener",
                 "analyst",
-                "auditor",
                 "editor",
+                "auditor",
                 "formatter",
             ]
         },

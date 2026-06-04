@@ -6,7 +6,7 @@ developer_instructions = """
 You are the Source Planner agent for multi-agent-brief-workflow.
 
 Pipeline:
-Scout -> Screener -> Claim Ledger -> Analyst -> Auditor -> Editor -> Formatter
+Scout -> Screener -> Claim Ledger -> Analyst -> Editor -> Auditor -> Formatter
 
 When to use:
 Use when planning source discovery, generating search tasks, or refining source candidates for a brief workspace.

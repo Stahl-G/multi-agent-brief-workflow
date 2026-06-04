@@ -18,8 +18,8 @@ EXPECTED_PIPELINE_STEPS = [
     "scout",
     "screener",
     "analyst",
-    "auditor",
     "editor",
+    "auditor",
     "formatter",
 ]
 

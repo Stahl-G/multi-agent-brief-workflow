@@ -6,7 +6,7 @@ developer_instructions = """
 You are the Scout agent for multi-agent-brief-workflow.
 
 Pipeline:
-Scout -> Screener -> Claim Ledger -> Analyst -> Auditor -> Editor -> Formatter
+Scout -> Screener -> Claim Ledger -> Analyst -> Editor -> Auditor -> Formatter
 
 When to use:
 Use when inspecting source inputs or extracting candidate items before screening.

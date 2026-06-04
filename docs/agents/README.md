@@ -31,7 +31,7 @@
         ## Pipeline
 
         ```text
-        Scout -> Screener -> Claim Ledger -> Analyst -> Auditor -> Editor -> Formatter
+        Scout -> Screener -> Claim Ledger -> Analyst -> Editor -> Auditor -> Formatter
         ```
 
         ## Roles

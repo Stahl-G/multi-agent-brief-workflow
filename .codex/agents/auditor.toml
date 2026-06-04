@@ -6,7 +6,7 @@ developer_instructions = """
 You are the Auditor agent for multi-agent-brief-workflow.
 
 Pipeline:
-Scout -> Screener -> Claim Ledger -> Analyst -> Auditor -> Editor -> Formatter
+Scout -> Screener -> Claim Ledger -> Analyst -> Editor -> Auditor -> Formatter
 
 When to use:
 Use before final delivery of any real brief. Must verify brief against claim_ledger.json and enforce quality thresholds.
