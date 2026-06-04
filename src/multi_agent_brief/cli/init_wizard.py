@@ -274,11 +274,11 @@ def prompt_for_profile(*, input_func: Callable[[str], str] | None = None) -> Ini
 
     profile.company = ask_text(input_func, prompts["company"], profile.company)
     profile.role = ask_text(input_func, prompts["role"], profile.role)
-    profile.industry = ask_choice(input_func, prompts["industry"], prompts["industry_options"], "1")
+    profile.industry = ask_text(input_func, prompts["industry"], profile.industry)
     profile.brief_title = ask_text(input_func, prompts["title"], profile.brief_title)
     profile.audience = ask_text(input_func, prompts["audience"], profile.audience)
     profile.focus_areas = parse_list_arg(ask_text(input_func, prompts["focus"], ",".join(profile.focus_areas)))
-    profile.cadence = ask_choice(input_func, prompts["cadence"], prompts["cadence_options"], "1")
+    profile.cadence = ask_text(input_func, prompts["cadence"], profile.cadence)
     max_items = ask_text(input_func, prompts["selector_max_items"], str(profile.selector_max_items))
     profile.selector_max_items = parse_int(max_items, profile.selector_max_items)
     rag_enabled = ask_yes_no(input_func, prompts["rag"], default=False)
