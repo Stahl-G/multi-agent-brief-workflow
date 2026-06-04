@@ -541,6 +541,8 @@ See [CHANGELOG.md](CHANGELOG.md) for the full version history.
 
 Current version: **v0.7.0** — interactive onboarding workflow with enforced business fields.
 
+Latest unreleased fix: `multi-agent-brief run <workspace>` now auto-loads that workspace's `config.yaml`, while zero-source / zero-claim empty briefs remain blocked by the audit gate.
+
 [View full changelog →](CHANGELOG.md)
 
 ## Development

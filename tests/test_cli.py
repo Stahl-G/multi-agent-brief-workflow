@@ -55,6 +55,19 @@ def test_cli_run_with_industry(tmp_path):
     assert (workspace / "output" / "brief.md").exists()
 
 
+def test_cli_run_accepts_workspace_directory_with_config(tmp_path):
+    workspace = tmp_path / "ws"
+    main(complete_init_args(workspace))
+    (workspace / "input" / "news.md").write_text(
+        "- Workspace directory invocation should load this reportable source from input.\n",
+        encoding="utf-8",
+    )
+
+    output_dir = tmp_path / "out"
+    assert main(["run", str(workspace), "--output", str(output_dir)]) == 0
+    assert (output_dir / "brief.md").exists()
+
+
 def test_cli_audit_existing_brief(tmp_path):
     workspace = tmp_path / "ws"
     main(complete_init_args(workspace))

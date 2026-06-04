@@ -18,6 +18,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `has_noninteractive_profile_args()` renamed to `has_direct_init_args()` for clarity.
 - Quick-start guides in README and docs updated: init command is now `multi-agent-brief init <workspace>` (no flags) for interactive mode.
 - All CLI tests updated to pass explicit required fields via `complete_init_args()` helper.
+- `multi-agent-brief run <workspace>` now auto-loads `<workspace>/config.yaml` when present, preserving the legacy workspace-directory invocation while the zero-claim audit gate remains strict.
+
+### Fixed
+
+- Source ingestion and audit edge cases: invalid JSON diagnostics, manual URL fetching/errors, recency filtering, relative provider paths, stub provider visibility, string boolean parsing, onboarding list normalization, default DOCX output, and setup prompts.
 
 ## [0.7.0] — 2025-07-17
 

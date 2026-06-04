@@ -109,10 +109,19 @@ def run_pipeline_from_args(args: argparse.Namespace) -> int:
     print("For polished final delivery, review the audit artifacts and use Claude Code / Codex agents or human editing.")
     print()
 
-    config = load_config(args.config) if args.config else None
+    config_arg = args.config
+    positional_input_dir = args.input_dir
+    if not config_arg and positional_input_dir:
+        candidate_workspace = Path(positional_input_dir)
+        candidate_config = candidate_workspace / "config.yaml"
+        if candidate_config.exists():
+            config_arg = str(candidate_config)
+            positional_input_dir = None
+
+    config = load_config(config_arg) if config_arg else None
     settings = build_run_settings(
         config=config,
-        input_dir=args.input_dir,
+        input_dir=positional_input_dir,
         output_dir=args.output,
         name=args.name,
         language=args.language,
