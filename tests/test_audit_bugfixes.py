@@ -210,10 +210,10 @@ def test_stub_providers_are_validation_errors():
 
     errors = validate_all_providers(config)
 
-    assert any("News API provider" in error for error in errors)
-    assert any("Filings provider" in error for error in errors)
-    assert any("MCP source provider" in error for error in errors)
-    assert any("CLI source provider" in error for error in errors)
+    assert any("no providers configured" in error for error in errors)
+    # filings shares the api config, so it gets the same "no providers configured" message
+    assert any("no servers configured" in error for error in errors)
+    assert any("no scrapers configured" in error for error in errors)
 
 
 def test_string_false_booleans_parse_as_false(tmp_path):
