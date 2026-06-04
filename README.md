@@ -483,12 +483,10 @@ multi-agent-brief init ../mabw-workspace
 
 完整的版本历史和变更说明请参见 [CHANGELOG.md](CHANGELOG.md)。
 
-当前版本：**v0.1.0** — 正式发布版。
-
-**最新未发布 (v0.1.1)：来源层补齐 — 4 个 Source Provider 从接口变为可用**
+当前版本：**v0.1.1** — 来源层补齐：4 个 Source Provider 从接口变为可用
 
 此前 `api_news`（新闻搜索）、`api_filings`（SEC 财报）、`mcp_provider`（MCP 协议）、`cli_provider`（本地脚本）
-四个来源提供者只有空接口，启用后返回 0 条结果。本次更新全部实现为可工作的来源通道：
+四个来源提供者只有空接口，启用后返回 0 条结果。v0.1.1 全部实现为可工作的来源通道：
 
 | 提供者 | 现在能做什么 |
 |--------|------------|

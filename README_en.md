@@ -539,13 +539,11 @@ This project can help structure research and briefing workflows, but it does not
 
 See [CHANGELOG.md](CHANGELOG.md) for the full version history.
 
-Current version: **v0.1.0** — first public release.
-
-**Latest unreleased (v0.1.1): Source layer completion — 4 stub providers now functional**
+Current version: **v0.1.1** — Source layer completion: 4 stub providers now functional
 
 Previously `api_news`, `api_filings` (SEC EDGAR), `mcp_provider`, and `cli_provider`
 were empty interfaces — enabling them silently returned 0 results.
-This release fills all four with working implementations:
+v0.1.1 fills all four with working implementations:
 
 | Provider | What it does now |
 |----------|-----------------|
