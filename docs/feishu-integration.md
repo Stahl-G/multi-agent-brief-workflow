@@ -34,7 +34,7 @@ feishu:
   enabled: true
   sources:
     - name: "weekly-meeting"
-      token: "{{ DOC_TOKEN }}"
+      token: "..."           # from feishu doc URL
       type: doc              # doc | minutes | base | sheet | agenda | approval
 ```
 
