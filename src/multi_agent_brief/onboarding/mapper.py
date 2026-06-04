@@ -372,14 +372,17 @@ def map_onboarding_to_profile(result: OnboardingResult) -> InitProfile:
         profile.tavily_enabled = True
 
     # Handle search backend selection
-    search_backend = normalize_search_backend(getattr(result, "search_backend_plain", "tavily"))
-    if search_backend == "tavily":
-        profile.tavily_enabled = True
-    elif search_backend == "none":
-        profile.tavily_enabled = False
-    # For other backends (exa, brave, etc.), we'll enable tavily as default for now
-    # since the workspace generation only supports tavily configuration
-    else:
+    # Only enable tavily if explicitly requested via search_backend_plain or tavily_enabled
+    search_backend = getattr(result, "search_backend_plain", "")
+    if search_backend:
+        search_backend = normalize_search_backend(search_backend)
+        if search_backend == "tavily":
+            profile.tavily_enabled = True
+        elif search_backend == "none":
+            profile.tavily_enabled = False
+        # For other backends, don't enable tavily by default
+    # Also check the legacy tavily_enabled field
+    if getattr(result, "tavily_enabled", False):
         profile.tavily_enabled = True
 
     # Handle max items per brief
