@@ -15,7 +15,7 @@ class McpProvider(SourceProvider):
     def validate_config(self, config: dict[str, Any]) -> list[str]:
         if not config.get("enabled"):
             return []
-        errors: list[str] = []
+        errors: list[str] = ["mcp: MCP source provider is configured but not implemented in this release"]
         servers = config.get("servers", [])
         if not servers:
             errors.append("mcp: enabled but no servers configured")

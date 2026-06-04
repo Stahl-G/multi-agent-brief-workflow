@@ -155,7 +155,7 @@ def build_run_settings(
         "audience": resolved_audience,
         "report_date": str(raw_date),
         "max_source_age_days": int(report["max_source_age_days"]) if "max_source_age_days" in report else None,
-        "fail_on_stale_source": bool(report.get("fail_on_stale_source", False)),
+        "fail_on_stale_source": _as_bool(report.get("fail_on_stale_source"), False),
         "previous_report_dir": str(previous.get("path", "")),
         "max_claims": (
             int(selector["max_items"]) if selector.get("max_items") is not None

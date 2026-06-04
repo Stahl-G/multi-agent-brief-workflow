@@ -62,6 +62,7 @@ class QualityHarnessAuditAgent(AuditAgentInterface):
         context: PipelineContext | None = None,
     ) -> AuditReport:
         findings: list[AuditFinding] = []
+        findings.extend(_empty_report_findings(markdown, ledger, context))
         findings.extend(_regex_rule_findings(markdown))
         findings.extend(_claim_gate_findings(markdown, ledger))
         findings.extend(_source_density_findings(markdown))
@@ -69,6 +70,30 @@ class QualityHarnessAuditAgent(AuditAgentInterface):
         findings.extend(_repeat_summary_findings(markdown, ledger))
         findings.extend(_stale_filler_findings(markdown))
         return AuditReport(audit_status="pass", audit_score=100, findings=findings)
+
+
+def _empty_report_findings(
+    markdown: str,
+    ledger: ClaimLedger,
+    context: PipelineContext | None,
+) -> list[AuditFinding]:
+    selection = context.metadata.get("selection", {}) if context else {}
+    quiet_week = bool(selection.get("quiet_week")) if selection else False
+    if len(ledger) > 0:
+        return []
+    if quiet_week and context and context.metadata.get("allow_empty_quiet_week") is True:
+        return []
+    if "No candidate claims were found." not in markdown and markdown.strip():
+        return []
+    return [
+        AuditFinding(
+            finding_id="EMPTY_001",
+            severity="high",
+            finding_type="no_reportable_claims",
+            description="Pipeline produced a brief with zero reportable claims.",
+            recommendation="Add usable source inputs or explicitly mark this as an allowed empty quiet-week run.",
+        )
+    ]
 
 
 def _regex_rule_findings(markdown: str) -> list[AuditFinding]:

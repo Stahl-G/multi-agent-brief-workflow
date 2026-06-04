@@ -127,7 +127,7 @@ class InitProfile:
     forbidden_sources: list[str] = field(default_factory=list)
     cadence: str = "weekly"
     max_source_age_days: int = 14
-    selector_max_items: int = 24
+    selector_max_items: int = 8
     retrieval_enabled: bool = False
     retrieval_provider: str = "ollama"
     retrieval_model: str = "nomic-embed-text"

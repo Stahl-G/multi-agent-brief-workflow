@@ -102,7 +102,24 @@ def test_manual_provider_loads_json(tmp_path):
     assert items[0].url == "https://example.com"
 
 
-def test_manual_provider_url_entry():
+def test_manual_provider_url_entry(monkeypatch):
+    class FakeHeaders:
+        def get_content_charset(self):
+            return "utf-8"
+
+    class FakeResponse:
+        headers = FakeHeaders()
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc, tb):
+            return False
+
+        def read(self, max_bytes):
+            return b"<article>Trade journal reportable update.</article>"
+
+    monkeypatch.setattr("multi_agent_brief.sources.manual.urlopen", lambda req, timeout=10: FakeResponse())
     provider = ManualProvider()
     config = {"sources": [{"name": "Trade Journal", "url": "https://www.trade-journal.com/"}]}
     items = provider.collect(SourceQuery(), config)
@@ -110,6 +127,7 @@ def test_manual_provider_url_entry():
     assert len(items) == 1
     assert items[0].source_type == "manual_url"
     assert items[0].url == "https://www.trade-journal.com/"
+    assert "Trade journal reportable update" in items[0].content
 
 
 def test_manual_provider_skips_disabled():

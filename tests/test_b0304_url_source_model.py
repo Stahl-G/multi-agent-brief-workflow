@@ -1,6 +1,6 @@
 """Tests for PR2: URL source model and Source Candidate merge fixes (B03, B04, B05).
 
-B03 — Manual URL sources must not be treated as usable unless fetched.
+B03 — Manual URL sources must be fetched before use, or reported as diagnostics.
 B04 — Normal web page URLs must not be written to rss.feeds.
 B05 — Local input/ directory must be loaded even when URL sources are merged.
 """
@@ -19,13 +19,30 @@ from multi_agent_brief.core.schemas import PipelineContext
 from multi_agent_brief.agents.scout import _is_placeholder
 
 
-# ─── B03: Manual URL sources are placeholders, not usable ───
+# ─── B03: Manual URL sources are fetched or surfaced as errors ───
 
-class TestB03ManualUrlPlaceholder:
-    """Manual URL sources must be clear placeholders — not counted as usable."""
+class TestB03ManualUrlFetching:
+    """Manual URL sources must become fetched content or clear diagnostics."""
 
-    def test_url_entry_is_placeholder(self):
-        """_url_entry creates a placeholder with requires_fetch=True."""
+    def test_url_entry_fetches_content(self, monkeypatch):
+        """_url_entry fetches URL content instead of creating a placeholder."""
+        class FakeHeaders:
+            def get_content_charset(self):
+                return "utf-8"
+
+        class FakeResponse:
+            headers = FakeHeaders()
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, exc_type, exc, tb):
+                return False
+
+            def read(self, max_bytes):
+                return b"<html><body><h1>News</h1><p>Fetched reportable content.</p></body></html>"
+
+        monkeypatch.setattr("multi_agent_brief.sources.manual.urlopen", lambda req, timeout=10: FakeResponse())
         provider = ManualProvider()
         items = provider.collect(
             SourceQuery(),
@@ -34,11 +51,11 @@ class TestB03ManualUrlPlaceholder:
         assert len(items) == 1
         item = items[0]
         assert item.source_type == "manual_url"
-        assert item.metadata.get("requires_fetch") is True
-        assert item.metadata.get("ingestion_status") == "placeholder"
+        assert item.metadata.get("ingestion_status") == "fetched"
+        assert "Fetched reportable content" in item.content
 
     def test_scout_skips_placeholder_url(self):
-        """Scout's _is_placeholder must return True for URL placeholders."""
+        """Scout's _is_placeholder still skips legacy URL placeholders."""
         url_item = SourceItem(
             source_id="TEST_URL",
             source_name="Test URL",
@@ -54,7 +71,7 @@ class TestB03ManualUrlPlaceholder:
         )
 
     def test_placeholder_not_counted_as_usable(self):
-        """Placeholder URL source must NOT count as a usable source."""
+        """Legacy placeholder URL source must NOT count as a usable source."""
         url_item = SourceItem(
             source_id="TEST_URL",
             source_name="Test URL",

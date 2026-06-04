@@ -172,6 +172,18 @@ def load_local_sources(input_dir: Path) -> list[SourceItem]:
         if path.suffix.lower() == ".json":
             try:
                 parsed = json.loads(content)
+                if not isinstance(parsed, dict):
+                    sources.append(
+                        SourceItem(
+                            source_id=path.stem.upper().replace("-", "_"),
+                            source_name=path.stem.replace("_", " ").title(),
+                            source_type="local_file_error",
+                            title=f"Invalid JSON source: {path.name}",
+                            content=f"JSON source has unsupported top-level structure: {path}",
+                            metadata={"path": str(path), "error_type": "invalid_json_structure"},
+                        )
+                    )
+                    continue
                 url = str(parsed.get("source_url", ""))
                 published_at = str(parsed.get("published_at", ""))
                 source_tier = str(parsed.get("source_tier", ""))

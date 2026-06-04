@@ -63,6 +63,18 @@ def _resolve_manual_paths(manual: dict[str, Any], config_dir: str) -> dict[str, 
     return {**manual, "sources": resolved}
 
 
+def _resolve_cached_package_paths(cached_package: dict[str, Any], config_dir: str) -> dict[str, Any]:
+    """Resolve relative cached_package.paths[] against config_dir."""
+    if not config_dir or not cached_package.get("paths"):
+        return cached_package
+    base = Path(config_dir)
+    paths = []
+    for path in cached_package.get("paths", []):
+        p = Path(str(path))
+        paths.append(str(p if p.is_absolute() else base / p))
+    return {**cached_package, "paths": paths}
+
+
 def get_providers(source_config: SourceConfig) -> dict[str, SourceProvider]:
     """Instantiate enabled providers based on source config."""
     providers: dict[str, SourceProvider] = {}
@@ -103,6 +115,10 @@ def collect_all_sources(
 
     # Resolve relative manual source paths against config_dir
     manual_config = _resolve_manual_paths(source_config.manual, source_config.config_dir)
+    cached_package_config = _resolve_cached_package_paths(
+        source_config.cached_package,
+        source_config.config_dir,
+    )
 
     config_map = {
         "manual": manual_config,
@@ -112,7 +128,7 @@ def collect_all_sources(
         "filings": source_config.api,  # filings share the api config section
         "mcp": source_config.mcp,
         "cli": source_config.mcp,  # cli shares the mcp config section
-        "cached_package": source_config.cached_package,
+        "cached_package": cached_package_config,
     }
 
     # Run provider config validation before collecting (B08)
@@ -150,7 +166,7 @@ def collect_all_sources(
         else:
             usable.append(item)
 
-    recency = query.recency_days if query.recency_days > 0 else 14
+    recency = query.recency_days
     report_date = query.metadata.get("report_date", "")
     filtered = filter_by_recency(usable, recency, report_date=report_date)
 
@@ -187,15 +203,21 @@ def validate_all_providers(source_config: SourceConfig) -> list[str]:
                 f"Available: {', '.join(sorted(PROVIDER_CLASSES))}"
             )
 
+    manual_config = _resolve_manual_paths(source_config.manual, source_config.config_dir)
+    cached_package_config = _resolve_cached_package_paths(
+        source_config.cached_package,
+        source_config.config_dir,
+    )
+
     config_map = {
-        "manual": source_config.manual,
+        "manual": manual_config,
         "rss": source_config.rss,
         "web_search": source_config.web_search,
         "api": source_config.api,
         "filings": source_config.api,
         "mcp": source_config.mcp,
         "cli": source_config.mcp,
-        "cached_package": source_config.cached_package,
+        "cached_package": cached_package_config,
     }
 
     for name, provider in providers.items():

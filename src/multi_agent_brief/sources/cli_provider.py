@@ -16,7 +16,7 @@ class CliProvider(SourceProvider):
     def validate_config(self, config: dict[str, Any]) -> list[str]:
         if not config.get("enabled"):
             return []
-        errors: list[str] = []
+        errors: list[str] = ["cli: CLI source provider is configured but not implemented in this release"]
         scrapers = config.get("scrapers", [])
         for i, scraper in enumerate(scrapers):
             command = scraper.get("command", "")

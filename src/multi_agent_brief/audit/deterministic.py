@@ -17,9 +17,9 @@ def parse_date(value: str) -> date | None:
     if not value:
         return None
     text = value.strip()
-    for fmt in ("%Y-%m-%d", "%Y%m%d"):
+    for fmt, width in (("%Y-%m-%d", 10), ("%Y%m%d", 8)):
         try:
-            return datetime.strptime(text[: len(fmt)], fmt).date()
+            return datetime.strptime(text[:width], fmt).date()
         except ValueError:
             continue
     try:

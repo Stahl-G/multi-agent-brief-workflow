@@ -9,6 +9,7 @@ from multi_agent_brief.audit.deterministic import parse_date
 from multi_agent_brief.audit.interfaces import AuditAgentInterface, recompute_report_status
 from multi_agent_brief.core.claim_ledger import ClaimLedger
 from multi_agent_brief.core.schemas import AuditFinding, AuditReport, PipelineContext
+from multi_agent_brief.core.config import _as_bool
 
 
 CURRENT_FRAMING_PATTERN = re.compile(r"\b(this week|current|latest|newly|本周|本期|当前|最新|新增)\b", re.IGNORECASE)
@@ -90,7 +91,7 @@ def build_final_quality_config(
         harness_protocol=str(data.get("harness_protocol", base.harness_protocol)),
         min_markdown_chars=int(data.get("min_markdown_chars", base.min_markdown_chars)),
         min_docx_text_chars=int(data.get("min_docx_text_chars", base.min_docx_text_chars)),
-        quiet_week=bool(data.get("quiet_week", base.quiet_week)),
+        quiet_week=_as_bool(data.get("quiet_week"), base.quiet_week),
         expected_summary_bullets=data.get("expected_summary_bullets", base.expected_summary_bullets),
         summary_heading=str(data.get("summary_heading", base.summary_heading)),
         summary_bullet_marker=str(data.get("summary_bullet_marker", base.summary_bullet_marker)),
@@ -103,8 +104,11 @@ def build_final_quality_config(
         min_selected_claims=int(data.get("min_selected_claims", base.min_selected_claims)),
         min_zh_chars=int(data.get("min_zh_chars", base.min_zh_chars)),
         min_en_words=int(data.get("min_en_words", base.min_en_words)),
-        require_dates=bool(data.get("require_dates", base.require_dates)),
-        allow_quiet_week_exception=bool(data.get("allow_quiet_week_exception", base.allow_quiet_week_exception)),
+        require_dates=_as_bool(data.get("require_dates"), base.require_dates),
+        allow_quiet_week_exception=_as_bool(
+            data.get("allow_quiet_week_exception"),
+            base.allow_quiet_week_exception,
+        ),
     )
 
 

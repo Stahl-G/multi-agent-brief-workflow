@@ -4,6 +4,7 @@ from __future__ import annotations
 import hashlib
 import re
 from typing import Any
+from datetime import datetime, timezone
 
 from multi_agent_brief.sources.base import SourceItem
 
@@ -64,28 +65,31 @@ def filter_by_recency(items: list[SourceItem], recency_days: int, *, report_date
     """
     if recency_days <= 0:
         return items
-    from datetime import datetime, timezone
     if report_date:
         try:
-            now = datetime.fromisoformat(report_date)
+            now = _parse_datetime(report_date)
         except ValueError:
             now = datetime.now(timezone.utc)
     else:
         now = datetime.now(timezone.utc)
+    if now.tzinfo is None:
+        now = now.replace(tzinfo=timezone.utc)
     result: list[SourceItem] = []
     for item in items:
         if not item.published_at:
             result.append(item)
             continue
         try:
-            pub_str = item.published_at.replace("Z", "+00:00")
-            pub = datetime.fromisoformat(pub_str)
-            # Handle naive vs aware: if pub has no tz and now has tz, make pub aware
-            if pub.tzinfo is None and now.tzinfo is not None:
+            pub = _parse_datetime(item.published_at)
+            if pub.tzinfo is None:
                 pub = pub.replace(tzinfo=timezone.utc)
-            age = abs((now - pub).days)
-            if age <= recency_days:
+            age_days = (now - pub).days
+            if 0 <= age_days <= recency_days:
                 result.append(item)
         except (ValueError, TypeError):
             result.append(item)
     return result
+
+
+def _parse_datetime(value: str) -> datetime:
+    return datetime.fromisoformat(str(value).strip().replace("Z", "+00:00"))

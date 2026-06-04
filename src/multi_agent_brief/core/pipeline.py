@@ -54,7 +54,7 @@ class BriefPipeline:
         plan = create_source_plan(
             industry=source_config.industry,
             report_date=context.report_date,
-            recency_days=context.max_source_age_days or 14,
+            recency_days=14 if context.max_source_age_days is None else context.max_source_age_days,
             enabled_providers=source_config.enabled_providers,
         )
 

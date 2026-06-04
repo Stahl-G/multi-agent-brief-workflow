@@ -211,6 +211,13 @@ def merge_candidates_to_sources(
     if "rss" not in sources:
         sources["rss"] = {"enabled": True, "feeds": []}
 
+    if overwrite:
+        sources["manual"]["sources"] = [
+            src for src in sources["manual"].get("sources", [])
+            if src.get("category") == "local_files" or (src.get("path") and not src.get("url"))
+        ]
+        sources["rss"]["feeds"] = []
+
     existing_manual_urls = {s.get("url") for s in sources["manual"].get("sources", [])}
     existing_rss_urls = {f.get("url") for f in sources["rss"].get("feeds", [])}
 

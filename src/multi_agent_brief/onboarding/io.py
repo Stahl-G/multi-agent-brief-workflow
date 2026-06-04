@@ -4,10 +4,14 @@ from __future__ import annotations
 import json
 from pathlib import Path
 from typing import Any
+from dataclasses import fields
 
 from multi_agent_brief.onboarding.schema import OnboardingResult
 
-_DATACLASS_FIELDS = {f.name for f in OnboardingResult.__dataclass_fields__.values()}  # type: ignore[attr-defined]
+_DATACLASS_FIELDS = {f.name for f in fields(OnboardingResult)}
+_LIST_FIELDS = {"forbidden_sources", "must_watch", "missing"}
+_INT_FIELDS = {"max_items_per_brief", "source_age_days"}
+_BOOL_FIELDS = {"tavily_enabled"}
 
 
 def load_onboarding_result(path: str | Path) -> OnboardingResult:
@@ -23,8 +27,35 @@ def load_onboarding_result(path: str | Path) -> OnboardingResult:
             f"Onboarding JSON must be a JSON object, got {type(data).__name__}."
         )
     # Keep only known fields; ignore unknown keys.
-    known = {k: v for k, v in data.items() if k in _DATACLASS_FIELDS}
+    known = {k: _normalize_field(k, v) for k, v in data.items() if k in _DATACLASS_FIELDS}
     return OnboardingResult(**known)
+
+
+def _normalize_field(name: str, value: Any) -> Any:
+    if name in _LIST_FIELDS:
+        if value is None:
+            return []
+        if isinstance(value, list):
+            return [str(item).strip() for item in value if str(item).strip()]
+        if isinstance(value, str):
+            return [value.strip()] if value.strip() else []
+        raise ValueError(f"onboarding.{name} must be a string or list of strings")
+    if name in _INT_FIELDS:
+        if value in (None, ""):
+            return 0
+        try:
+            return int(value)
+        except (TypeError, ValueError) as exc:
+            raise ValueError(f"onboarding.{name} must be an integer") from exc
+    if name in _BOOL_FIELDS:
+        if isinstance(value, bool):
+            return value
+        if isinstance(value, str):
+            return value.strip().lower() in {"1", "true", "yes", "y", "on"}
+        return bool(value)
+    if isinstance(value, (str, int, float, bool)) or value is None:
+        return "" if value is None else str(value) if not isinstance(value, bool) else value
+    raise ValueError(f"onboarding.{name} must be a scalar value")
 
 
 def save_onboarding_result(result: OnboardingResult, path: str | Path) -> None:

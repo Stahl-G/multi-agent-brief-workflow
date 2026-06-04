@@ -4,6 +4,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 from typing import Any
+from urllib.error import HTTPError, URLError
+from urllib.request import Request, urlopen
 
 from multi_agent_brief.sources.base import SourceItem, SourceProvider, SourceQuery
 
@@ -82,6 +84,8 @@ class ManualProvider(SourceProvider):
         if path.suffix.lower() == ".json":
             try:
                 parsed = json.loads(content)
+                if not isinstance(parsed, dict):
+                    return self._json_error_item(path, "invalid_json_structure", src_config)
                 url = str(parsed.get("source_url", ""))
                 published_at = str(parsed.get("published_at", ""))
                 source_tier = str(parsed.get("source_tier", ""))
@@ -113,20 +117,62 @@ class ManualProvider(SourceProvider):
 
     def _url_entry(self, url: str, src_config: dict) -> SourceItem:
         source_id = src_config.get("name", url).upper().replace(" ", "_").replace("-", "_")[:32]
+        try:
+            req = Request(url, headers={"User-Agent": "multi-agent-brief/0.7"})
+            with urlopen(req, timeout=float(src_config.get("timeout", 10))) as response:
+                raw = response.read(int(src_config.get("max_bytes", 2_000_000)))
+                charset = response.headers.get_content_charset() or "utf-8"
+            html_or_text = raw.decode(charset, errors="replace")
+            content = _html_to_text(html_or_text)
+            if not content.strip():
+                return self._url_error_item(url, "empty_url_content", src_config)
+            return SourceItem(
+                source_id=source_id,
+                source_name=src_config.get("name", url),
+                source_type="manual_url",
+                title=src_config.get("name", url),
+                content=content,
+                url=url,
+                language=src_config.get("language", ""),
+                reliability=src_config.get("reliability", "medium"),
+                metadata={
+                    "category": src_config.get("category", ""),
+                    "ingestion_status": "fetched",
+                },
+            )
+        except (HTTPError, URLError, TimeoutError, OSError, ValueError) as exc:
+            return self._url_error_item(url, type(exc).__name__, src_config)
+
+    def _url_error_item(self, url: str, error_type: str, src_config: dict) -> SourceItem:
+        source_id = src_config.get("name", url).upper().replace(" ", "_").replace("-", "_")[:32]
         return SourceItem(
             source_id=source_id,
             source_name=src_config.get("name", url),
-            source_type="manual_url",
-            title=src_config.get("name", url),
-            content=f"Manual URL source: {url}",
+            source_type="manual_error",
+            title=f"Manual URL error: {error_type}",
+            content=f"URL not accessible: {url} ({error_type})",
             url=url,
             language=src_config.get("language", ""),
-            reliability=src_config.get("reliability", "medium"),
+            reliability="low",
             metadata={
                 "category": src_config.get("category", ""),
-                "note": "URL registered but not fetched in Phase 1. Add content to input/ directory.",
-                "ingestion_status": "placeholder",
-                "requires_fetch": True,
+                "error_type": error_type,
+            },
+        )
+
+    def _json_error_item(self, path: Path, error_type: str, src_config: dict) -> SourceItem:
+        source_id = path.stem.upper().replace("-", "_")
+        return SourceItem(
+            source_id=source_id,
+            source_name=src_config.get("name", path.stem),
+            source_type="manual_error",
+            title=f"Manual JSON error: {error_type}",
+            content=f"JSON source has unsupported top-level structure: {path}",
+            reliability="low",
+            metadata={
+                "path": str(path),
+                "error_type": error_type,
+                "category": src_config.get("category", ""),
             },
         )
 
@@ -147,3 +193,13 @@ class ManualProvider(SourceProvider):
                 "category": src_config.get("category", ""),
             },
         )
+
+
+def _html_to_text(content: str) -> str:
+    """Convert simple HTML or plain text into readable source text."""
+    import re
+
+    text = re.sub(r"(?is)<(script|style).*?>.*?</\1>", " ", content)
+    text = re.sub(r"(?s)<[^>]+>", " ", text)
+    text = re.sub(r"\s+", " ", text).strip()
+    return text

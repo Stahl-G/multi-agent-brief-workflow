@@ -16,7 +16,7 @@ class NewsApiProvider(SourceProvider):
     def validate_config(self, config: dict[str, Any]) -> list[str]:
         if not config.get("enabled"):
             return []
-        errors: list[str] = []
+        errors: list[str] = ["api: News API provider is configured but not implemented in this release"]
         for i, provider in enumerate(config.get("providers", [])):
             env_key = provider.get("api_key_env", "")
             if env_key and not os.environ.get(env_key):
