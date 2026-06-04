@@ -173,10 +173,10 @@ class TestDoctorTavilyGuidance:
 
 
 class TestRunTavilyGuidance:
-    """Run command Tavily key validation."""
+    """Run command redirects users to subagent workflow."""
 
     def test_run_surfaces_missing_key_error(self, tmp_path, monkeypatch, capsys):
-        """Run should surface clear error when Tavily enabled but key missing."""
+        """run command must redirect to subagent workflow, not check keys."""
         monkeypatch.delenv("TAVILY_API_KEY", raising=False)
 
         ws = tmp_path / "ws"
@@ -200,20 +200,14 @@ class TestRunTavilyGuidance:
             "--tavily",
         ]) == 0
 
-        # Add a source file
-        (ws / "input" / "news.md").write_text(
-            "- Solar manufacturing capacity expanded by 15 percent.\n", encoding="utf-8"
-        )
-
-        # Run should complete but surface the error
         exit_code = main(["run", "--config", str(ws / "config.yaml")])
         captured = capsys.readouterr()
-        assert "TAVILY_API_KEY" in captured.out
-        assert "not set" in captured.out.lower() or "missing" in captured.out.lower()
-        assert "Do not paste" in captured.out
+        assert exit_code == 1
+        assert "does not produce real briefs" in captured.out
+        assert "/generate-brief" in captured.out
 
     def test_run_surfaces_exa_missing_key_error(self, tmp_path, monkeypatch, capsys):
-        """Run should use the configured backend env var, not Tavily's default."""
+        """run command redirects to subagent workflow regardless of backend."""
         import yaml
 
         monkeypatch.delenv("EXA_API_KEY", raising=False)
@@ -245,14 +239,8 @@ class TestRunTavilyGuidance:
         sources["web_search"] = {"enabled": True, "backend": "exa"}
         sources_path.write_text(yaml.safe_dump(sources, sort_keys=False), encoding="utf-8")
 
-        (ws / "input" / "news.md").write_text(
-            "- Solar manufacturing capacity expanded by 15 percent.\n",
-            encoding="utf-8",
-        )
-
         exit_code = main(["run", "--config", str(ws / "config.yaml")])
         captured = capsys.readouterr()
         assert exit_code == 1
-        assert "exa" in captured.out.lower()
-        assert "EXA_API_KEY" in captured.out
-        assert "TAVILY_API_KEY" not in captured.out
+        assert "does not produce real briefs" in captured.out
+        assert "subagent" in captured.out.lower() or "/generate-brief" in captured.out

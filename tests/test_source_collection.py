@@ -419,6 +419,9 @@ def test_manual_paths_resolved_against_config_dir(tmp_path):
 def test_cli_run_with_external_workspace(tmp_path):
     """multi-agent-brief run --config <external-ws>/config.yaml must find sources."""
     from multi_agent_brief.cli.main import main
+    from multi_agent_brief.core.config import build_run_settings, load_config
+    from multi_agent_brief.core.pipeline import BriefPipeline
+    from multi_agent_brief.core.schemas import PipelineContext
 
     ws = tmp_path / "external-ws"
     assert main([
@@ -437,8 +440,17 @@ def test_cli_run_with_external_workspace(tmp_path):
         encoding="utf-8",
     )
 
-    exit_code = main(["run", "--config", str(ws / "config.yaml")])
-    assert exit_code == 0
+    config = load_config(str(ws / "config.yaml"))
+    settings = build_run_settings(
+        config=config,
+        input_dir=str(ws / "input"),
+        output_dir=None,
+        name=None,
+        language=None,
+        audience=None,
+    )
+    context = PipelineContext(**settings)
+    assert BriefPipeline().run(context) is not None
 
     brief = (ws / "output" / "brief.md").read_text(encoding="utf-8")
     assert len(brief) > 0, "Brief should not be empty"

@@ -50,13 +50,13 @@ multi-agent-brief version
 
 ```powershell
 multi-agent-brief init --demo
-multi-agent-brief run --config brief-demo/config.yaml
+# Then use /generate-brief in Claude Code
 ```
 
 或直接运行示例输入：
 
 ```powershell
-multi-agent-brief run examples/basic_market_brief/input --output output/basic_market_brief
+# Use /generate-brief in Claude Code for example workspaces
 ```
 
 ## Init Workspace

@@ -59,13 +59,13 @@ The subagent will:
 Run the deterministic Python pipeline:
 
 ```bash
-multi-agent-brief run --config ../mabw-workspace/config.yaml
+# Then use /generate-brief in Claude Code
 ```
 
 Or in PowerShell:
 
 ```powershell
-multi-agent-brief run --config ../mabw-workspace\config.yaml
+# Then use /generate-brief in Claude Code
 ```
 
 This produces:
@@ -156,7 +156,7 @@ User: I need to create a weekly brief for my solar manufacturing company.
 Claude Code:
   1. Uses source-planner to generate sources for solar manufacturing
   2. Runs multi-agent-brief init with the right settings
-  3. Runs multi-agent-brief run to produce the reader brief and audit artifacts
+  3. Runs /generate-brief to produce the reader brief and audit artifacts
   4. Uses analyst to improve the audited brief sections
   5. Uses editor to polish the prose
   6. Uses auditor to verify the audited brief

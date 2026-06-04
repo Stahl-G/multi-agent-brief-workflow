@@ -225,7 +225,15 @@ bash scripts/setup.sh
 source .venv/bin/activate
 
 multi-agent-brief init ../mabw-workspace
-multi-agent-brief run --config ../mabw-workspace/config.yaml
+```
+
+然后打开 Claude Code 或 Codex，输入 `/generate-brief ../mabw-workspace`，agent 会完成来源发现、简报生成、审计和输出格式化的完整流程。
+
+或者你也可以手动分步执行：
+
+```bash
+multi-agent-brief sources decide --config ../mabw-workspace/config.yaml   # 发现来源
+multi-agent-brief sources decide --config ../mabw-workspace/config.yaml --merge
 ```
 
 PowerShell:
@@ -237,21 +245,18 @@ cd multi-agent-brief-workflow
 .\.venv\Scripts\Activate.ps1
 
 multi-agent-brief init ../mabw-workspace
-multi-agent-brief run --config ../mabw-workspace\config.yaml
 ```
 
-运行后查看：
+然后打开 Claude Code 或 Codex，输入 `/generate-brief ../mabw-workspace`，agent 会完成来源发现、简报生成、审计和输出格式化的完整流程。
 
-```text
-../mabw-workspace/output/brief.md
-../mabw-workspace/output/intermediate/audited_brief.md
-../mabw-workspace/output/intermediate/claim_ledger.json
-../mabw-workspace/output/intermediate/audit_report.json
-../mabw-workspace/output/intermediate/source_map.md
-../mabw-workspace/output/intermediate/draft_brief.md
+或者你也可以手动分步执行：
+
+```powershell
+multi-agent-brief sources decide --config ../mabw-workspace\config.yaml
+multi-agent-brief sources decide --config ../mabw-workspace\config.yaml --merge
 ```
 
-> 注意：`multi-agent-brief run` 生成的是可审计草稿和中间产物，不等于可直接分发的正式简报。真实工作中建议再经过 Claude Code / Codex 辅助改写、审计和人工确认。
+> 注意：`multi-agent-brief run` 命令已移除。正式简报应通过 Claude Code / Codex 的 `/generate-brief` 工作流生成，详见 [Claude Code 工作流](docs/claude-code-workflow.md)。
 
 ---
 
@@ -275,10 +280,12 @@ multi-agent-brief init ../mabw-workspace
 multi-agent-brief doctor --config ../mabw-workspace/config.yaml
 ```
 
-运行工作流：
+生成简报：
+
+在 Claude Code 或 Codex 中输入 `/generate-brief ../mabw-workspace`。或者手动分步执行：
 
 ```bash
-multi-agent-brief run --config ../mabw-workspace/config.yaml
+multi-agent-brief sources decide --config ../mabw-workspace/config.yaml
 ```
 
 ---

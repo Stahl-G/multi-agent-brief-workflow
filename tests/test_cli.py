@@ -1,6 +1,12 @@
+"""Tests for CLI commands. Pipeline tests use BriefPipeline directly."""
+from __future__ import annotations
+
 from pathlib import Path
 
 from multi_agent_brief.cli.main import main
+from multi_agent_brief.core.config import build_run_settings, load_config
+from multi_agent_brief.core.pipeline import BriefPipeline
+from multi_agent_brief.core.schemas import PipelineContext
 
 
 def complete_init_args(workspace, *, language="zh-CN", industry="finance", extra=None):
@@ -27,6 +33,24 @@ def complete_init_args(workspace, *, language="zh-CN", industry="finance", extra
     return args
 
 
+def _run_pipeline(workspace: Path, output_dir: str | None = None):
+    """Helper: run BriefPipeline directly (formerly tested via CLI run)."""
+    config_path = workspace / "config.yaml"
+    config = load_config(str(config_path)) if config_path.exists() else None
+    input_dir = str(workspace / "input") if (workspace / "input").exists() else None
+    settings = build_run_settings(
+        config=config,
+        input_dir=input_dir,
+        output_dir=output_dir,
+        name=None,
+        language=None,
+        audience=None,
+    )
+    context = PipelineContext(**settings)
+    BriefPipeline().run(context)
+    return context
+
+
 def test_cli_init_and_run(tmp_path):
     workspace = tmp_path / "ws"
 
@@ -38,7 +62,7 @@ def test_cli_init_and_run(tmp_path):
     (workspace / "input").mkdir(exist_ok=True)
     (workspace / "input" / "news.md").write_text("- Test signal for weekly brief.\n", encoding="utf-8")
 
-    assert main(["run", "--config", str(workspace / "config.yaml")]) == 0
+    _run_pipeline(workspace)
     assert (workspace / "output" / "brief.md").exists()
     assert (workspace / "output" / "intermediate" / "draft_brief.md").exists()
     assert (workspace / "output" / "intermediate" / "claim_ledger.json").exists()
@@ -51,7 +75,7 @@ def test_cli_run_with_industry(tmp_path):
     (workspace / "input").mkdir(exist_ok=True)
     (workspace / "input" / "data.md").write_text("- Financial earnings report shows growth.\n", encoding="utf-8")
 
-    assert main(["run", "--config", str(workspace / "config.yaml"), "--industry", "finance"]) == 0
+    _run_pipeline(workspace)
     assert (workspace / "output" / "brief.md").exists()
 
 
@@ -64,7 +88,7 @@ def test_cli_run_accepts_workspace_directory_with_config(tmp_path):
     )
 
     output_dir = tmp_path / "out"
-    assert main(["run", str(workspace), "--output", str(output_dir)]) == 0
+    _run_pipeline(workspace, output_dir=str(output_dir))
     assert (output_dir / "brief.md").exists()
 
 
@@ -73,7 +97,7 @@ def test_cli_audit_existing_brief(tmp_path):
     main(complete_init_args(workspace))
     (workspace / "input").mkdir(exist_ok=True)
     (workspace / "input" / "news.md").write_text("- Test signal for audit.\n", encoding="utf-8")
-    main(["run", "--config", str(workspace / "config.yaml")])
+    _run_pipeline(workspace)
 
     audit_output = tmp_path / "audit.json"
     exit_code = main(
@@ -102,47 +126,14 @@ def test_cli_version(capsys):
     assert captured.out.strip()
 
 
-def test_cli_run_returns_2_on_audit_fail(tmp_path):
-    """When audit_status is fail, run must return exit code 2."""
-    from unittest.mock import patch
-    from multi_agent_brief.core.schemas import AuditReport, AuditFinding
-
-    workspace = tmp_path / "ws"
-    main(complete_init_args(workspace))
-    (workspace / "input").mkdir(exist_ok=True)
-    (workspace / "input" / "news.md").write_text(
-        "- Test signal for audit fail scenario.\n", encoding="utf-8"
-    )
-
-    fail_report = AuditReport(
-        audit_status="fail",
-        audit_score=0,
-        findings=[
-            AuditFinding(
-                finding_id="TEST_FAIL_001",
-                severity="high",
-                finding_type="test",
-                description="Forced high-severity finding for testing.",
-                recommendation="Fix it.",
-            )
-        ],
-        metadata={},
-    )
-
-    original_run = None
-
-    def mock_audit_run(self, context, ledger):
-        context.report_state.audit_report = fail_report
-        from multi_agent_brief.core.schemas import AgentOutput
-        return AgentOutput(agent_name=self.name, summary="Audit forced fail.")
-
-    with patch.object(
-        __import__(
-            "multi_agent_brief.agents.auditor", fromlist=["AuditorAgent"]
-        ).AuditorAgent,
-        "run",
-        mock_audit_run,
-    ):
-        exit_code = main(["run", "--config", str(workspace / "config.yaml")])
-
-    assert exit_code == 2, f"Expected exit code 2 on audit fail, got {exit_code}"
+def test_cli_run_command_prints_error_and_redirects(capsys):
+    """run command must reject calls and point users to subagent workflow."""
+    import tempfile
+    d = tempfile.mkdtemp()
+    config = Path(d) / "config.yaml"
+    config.write_text("project:\n  name: test\n", encoding="utf-8")
+    exit_code = main(["run", "--config", str(config)])
+    captured = capsys.readouterr()
+    assert exit_code == 1
+    assert "does not produce real briefs" in captured.out
+    assert "/generate-brief" in captured.out

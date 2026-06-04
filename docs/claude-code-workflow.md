@@ -9,7 +9,7 @@ This repository has two distinct layers:
 The Python CLI provides deterministic, testable, API-key-optional pipeline execution:
 
 ```text
-multi-agent-brief init → multi-agent-brief run → output artifacts
+multi-agent-brief init → /generate-brief (Claude Code) → output artifacts
 ```
 
 - **Deterministic pipeline**: Scout → Screener → Claim Ledger → Analyst → Auditor → Editor → Formatter
@@ -50,7 +50,7 @@ Claude Code subagents complement the Python CLI — they do not replace it.
 │    → generates source_candidates.yaml               │
 │         │                                           │
 │         ▼                                           │
-│  multi-agent-brief run --config config.yaml         │
+│  /generate-brief (Claude Code subagent workflow)  │
 │    → Python CLI executes deterministic pipeline     │
 │    → produces reader brief + intermediate audit set │
 │         │                                           │
@@ -145,7 +145,7 @@ Claude Code subagents complement the Python CLI — they do not replace it.
 ```text
 1. User runs multi-agent-brief init
 2. User adds source files to input/
-3. User runs multi-agent-brief run
+3. User runs /generate-brief in Claude Code
 4. User reviews output/ artifacts
 ```
 
@@ -154,7 +154,7 @@ Claude Code subagents complement the Python CLI — they do not replace it.
 ```text
 1. User runs multi-agent-brief init (Python CLI)
 2. User asks Claude Code source-planner to refine sources
-3. User runs multi-agent-brief run (Python CLI)
+3. User runs /generate-brief in Claude Code
 4. User asks Claude Code auditor to review output
 ```
 

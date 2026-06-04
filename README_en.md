@@ -110,7 +110,7 @@ This project provides the following tools and capabilities:
 - Claim Ledger records source-grounded evidence
 - Deterministic audit checks missing claims, unsupported numbers, duplicate claims, redaction risks, and stale sources
 - Quality harness checks for placeholders, low-confidence sources, process residue, stale filler, and unit risks
-- `multi-agent-brief run` prepares `output/brief.md` plus intermediate audit artifacts: `audited_brief.md`, `draft_brief.md`, `claim_ledger.json`, `audit_report.json`, `source_map.md`
+- `/generate-brief <workspace>` in Claude Code orchestrates the full subagent workflow (analyst → editor → auditor → formatter) to produce `output/brief.md`, `claim_ledger.json`, `audit_report.json`, `source_map.md`
 
 **Agent-Assisted (Claude Code / Codex):**
 - Claude Code subagents (analyst, editor, auditor) write the final brief from Claim Ledger
@@ -192,8 +192,9 @@ echo "- Industry news summary" > ../mabw-workspace/input/news.md
 # 3. Check config
 multi-agent-brief doctor --config ../mabw-workspace/config.yaml
 
-# 4. Run pipeline
-multi-agent-brief run --config ../mabw-workspace/config.yaml
+# 4. Generate brief via Claude Code or Codex subagents:
+#    /generate-brief ../mabw-workspace
+#    Or manually step through: analyst → editor → auditor → formatter
 
 # View output
 cat ../mabw-workspace/output/brief.md
@@ -201,7 +202,7 @@ cat ../mabw-workspace/output/brief.md
 cat ../mabw-workspace/output/intermediate/audited_brief.md
 ```
 
-> **Note:** `multi-agent-brief run` produces a deterministic draft, not a final brief. For a polished user-facing brief, Claude Code subagents (analyst → editor → auditor → formatter) must be orchestrated after the CLI run. Use `/generate-brief <workspace>` for the full workflow.
+> **Note:** Use `/generate-brief <workspace>` in Claude Code for the full subagent workflow (analyst → editor → auditor → formatter). The Python CLI no longer runs the brief generation pipeline. See [docs/claude-code-workflow.md](docs/claude-code-workflow.md).
 
 Windows 10/11 should use native PowerShell 5.1 or PowerShell 7. WSL/Git Bash is optional, not required. CMD is not the primary support target.
 
@@ -214,13 +215,13 @@ cd multi-agent-brief-workflow
 multi-agent-brief init ../mabw-workspace
 echo "- Industry news summary" > ../mabw-workspace\input\news.md
 multi-agent-brief doctor --config ../mabw-workspace\config.yaml
-multi-agent-brief run --config ../mabw-workspace\config.yaml
+# Then: /generate-brief ../mabw-workspace in Claude Code
 ```
 
 You can also use the built-in example for a quick check:
 
 ```bash
-multi-agent-brief run examples/basic_market_brief/input --output output/basic_market_brief
+# Example: /generate-brief examples/basic_market_brief in Claude Code
 ```
 
 The example config enables a strict weekly reporting window:
@@ -249,13 +250,13 @@ output/basic_market_brief/intermediate/source_map.md
 Run the synthetic earnings-season peer demo:
 
 ```bash
-multi-agent-brief run --config examples/earnings_season_peer_demo/config.yaml
+# Use /generate-brief in Claude Code for the demo workspace
 ```
 
 PowerShell:
 
 ```powershell
-multi-agent-brief run --config examples/earnings_season_peer_demo/config.yaml
+# Use /generate-brief in Claude Code for the demo workspace
 ```
 
 This demo uses only fictional peer names and synthetic source data. It is designed to show how public-safe earnings, competitor, policy, and market signals flow through the Claim Ledger and audit report.
@@ -294,7 +295,8 @@ cat ../mabw-workspace/source_candidates.yaml
 multi-agent-brief sources decide --config ../mabw-workspace/config.yaml --merge
 
 # 5. Run pipeline
-multi-agent-brief run --config ../mabw-workspace/config.yaml
+multi-agent-brief sources decide --config ../mabw-workspace/config.yaml
+# Then /generate-brief ../mabw-workspace in Claude Code
 ```
 
 The llm_decide mode does not block pipeline execution — if you skip `sources decide`, the pipeline continues with local `input/` files and prints a warning.
@@ -396,14 +398,16 @@ web_search:
 
 ```bash
 export TAVILY_API_KEY=tvly-your-key-here
-multi-agent-brief run --config ../mabw-workspace/config.yaml
+multi-agent-brief sources decide --config ../mabw-workspace/config.yaml
+# Then /generate-brief ../mabw-workspace in Claude Code
 ```
 
 PowerShell:
 
 ```powershell
 $env:TAVILY_API_KEY = Read-Host "Enter your Tavily API key"
-multi-agent-brief run --config ../mabw-workspace/config.yaml
+multi-agent-brief sources decide --config ../mabw-workspace/config.yaml
+# Then /generate-brief ../mabw-workspace in Claude Code
 ```
 
 3. Check configuration health:
@@ -426,14 +430,16 @@ Create a synthetic demo workspace:
 
 ```bash
 multi-agent-brief init ../mabw-workspace --demo
-multi-agent-brief run --config ../mabw-workspace/config.yaml
+multi-agent-brief sources decide --config ../mabw-workspace/config.yaml
+# Then /generate-brief ../mabw-workspace in Claude Code
 ```
 
 PowerShell:
 
 ```powershell
 multi-agent-brief init ../mabw-workspace --demo
-multi-agent-brief run --config ../mabw-workspace/config.yaml
+multi-agent-brief sources decide --config ../mabw-workspace/config.yaml
+# Then /generate-brief ../mabw-workspace in Claude Code
 ```
 
 Audit an existing brief:
@@ -550,7 +556,8 @@ Subagent definitions live in `.claude/agents/`:
 "Use the scout subagent to extract claims from the latest search results."
 
 # Run pipeline
-multi-agent-brief run --config ../mabw-workspace/config.yaml
+multi-agent-brief sources decide --config ../mabw-workspace/config.yaml
+# Then /generate-brief ../mabw-workspace in Claude Code
 
 # Analyst improvement
 "Use the analyst subagent to improve the brief while preserving citations."

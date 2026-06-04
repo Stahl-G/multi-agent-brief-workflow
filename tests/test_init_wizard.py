@@ -174,12 +174,28 @@ def test_workspace_gitignore_excludes_private_and_generated_paths(tmp_path):
 
 
 def test_generated_input_readme_is_not_treated_as_source(tmp_path):
+    from multi_agent_brief.core.config import build_run_settings, load_config
+    from multi_agent_brief.core.pipeline import BriefPipeline
+    from multi_agent_brief.core.schemas import PipelineContext
+
     workspace = tmp_path / "workspace"
 
     main(complete_init_args(workspace))
-    assert main(["run", "--config", str(workspace / "config.yaml")]) == 2
+    config = load_config(str(workspace / "config.yaml"))
+    settings = build_run_settings(
+        config=config,
+        input_dir=str(workspace / "input"),
+        output_dir=None,
+        name=None,
+        language=None,
+        audience=None,
+    )
+    context = PipelineContext(**settings)
+    BriefPipeline().run(context)
 
-    ledger = (workspace / "output" / "intermediate/claim_ledger.json").read_text(encoding="utf-8")
+    ledger_path = workspace / "output" / "intermediate" / "claim_ledger.json"
+    assert ledger_path.exists()
+    ledger = ledger_path.read_text(encoding="utf-8")
     assert ledger.strip() == "[]"
 
 
@@ -227,10 +243,27 @@ def test_llm_decide_does_not_call_llm(tmp_path):
 
 
 def test_llm_decide_user_md_not_treated_as_source(tmp_path):
+    from multi_agent_brief.core.config import build_run_settings, load_config
+    from multi_agent_brief.core.pipeline import BriefPipeline
+    from multi_agent_brief.core.schemas import PipelineContext
+
     workspace = tmp_path / "workspace"
     main(complete_init_args(workspace, source_profile="llm_decide"))
-    assert main(["run", "--config", str(workspace / "config.yaml")]) == 2
-    ledger = (workspace / "output" / "intermediate/claim_ledger.json").read_text(encoding="utf-8")
+    config = load_config(str(workspace / "config.yaml"))
+    settings = build_run_settings(
+        config=config,
+        input_dir=str(workspace / "input"),
+        output_dir=None,
+        name=None,
+        language=None,
+        audience=None,
+    )
+    context = PipelineContext(**settings)
+    BriefPipeline().run(context)
+
+    ledger_path = workspace / "output" / "intermediate" / "claim_ledger.json"
+    assert ledger_path.exists()
+    ledger = ledger_path.read_text(encoding="utf-8")
     assert ledger.strip() == "[]"
 
 
