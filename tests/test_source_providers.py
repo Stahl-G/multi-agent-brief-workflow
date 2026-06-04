@@ -11,7 +11,9 @@ from multi_agent_brief.sources.manual import ManualProvider
 from multi_agent_brief.sources.rss import RssProvider
 from multi_agent_brief.sources.web_search import WebSearchProvider
 from multi_agent_brief.sources.api_news import NewsApiProvider
+from multi_agent_brief.sources.api_filings import FilingsProvider
 from multi_agent_brief.sources.mcp_provider import McpProvider
+from multi_agent_brief.sources.cli_provider import CliProvider
 from multi_agent_brief.sources.normalizer import normalize_source_item, dedupe_sources, filter_by_recency
 from multi_agent_brief.sources.registry import load_sources_config, collect_all_sources, validate_all_providers
 from multi_agent_brief.sources.doctor import run_doctor, format_doctor_report
@@ -197,20 +199,114 @@ def test_web_search_enabled_without_backend_returns_registry_error():
     assert any("no backend" in e.get("message", "").lower() for e in errors)
 
 
-# --- Stubs ---
+# --- Non-stub providers (api_news, filings, mcp, cli) ---
 
-def test_news_api_stub_returns_empty():
+def test_news_api_disabled_returns_empty():
     provider = NewsApiProvider()
+    config = {"enabled": False, "providers": []}
+    items = provider.collect(SourceQuery(), config)
+    assert items == []
+
+
+def test_news_api_no_api_key_returns_empty(monkeypatch):
+    monkeypatch.delenv("NEWSAPI_API_KEY", raising=False)
+    provider = NewsApiProvider()
+    config = {"enabled": True, "providers": [{"name": "newsapi"}]}
+    items = provider.collect(SourceQuery(keywords=["test"]), config)
+    assert items == []
+
+
+def test_news_api_validate_config_no_providers():
+    provider = NewsApiProvider()
+    errors = provider.validate_config({"enabled": True, "providers": []})
+    assert any("no providers configured" in e for e in errors)
+
+
+def test_filings_disabled_returns_empty():
+    provider = FilingsProvider()
+    config = {"enabled": False}
+    items = provider.collect(SourceQuery(keywords=["AAPL"]), config)
+    assert items == []
+
+
+def test_filings_no_keywords_returns_empty():
+    provider = FilingsProvider()
     config = {"enabled": True, "providers": []}
     items = provider.collect(SourceQuery(), config)
     assert items == []
 
 
-def test_mcp_stub_returns_empty():
+def test_filings_validate_config_no_providers():
+    provider = FilingsProvider()
+    errors = provider.validate_config({"enabled": True, "providers": []})
+    assert any("no providers configured" in e for e in errors)
+
+
+def test_filings_validate_config_no_user_agent():
+    provider = FilingsProvider()
+    errors = provider.validate_config({
+        "enabled": True,
+        "providers": [{"name": "sec"}],
+    })
+    assert any("missing 'user_agent'" in e for e in errors)
+
+
+def test_mcp_disabled_returns_empty():
+    provider = McpProvider()
+    config = {"enabled": False}
+    items = provider.collect(SourceQuery(), config)
+    assert items == []
+
+
+def test_mcp_no_servers_returns_empty():
     provider = McpProvider()
     config = {"enabled": True, "servers": []}
     items = provider.collect(SourceQuery(), config)
     assert items == []
+
+
+def test_mcp_validate_config_no_servers():
+    provider = McpProvider()
+    errors = provider.validate_config({"enabled": True, "servers": []})
+    assert any("no servers configured" in e for e in errors)
+
+
+def test_mcp_validate_config_bad_command():
+    provider = McpProvider()
+    errors = provider.validate_config({
+        "enabled": True,
+        "servers": [{"name": "bad", "command": "nonexistent_command_xyz"}],
+    })
+    assert any("not found in PATH" in e for e in errors)
+
+
+def test_cli_disabled_returns_empty():
+    provider = CliProvider()
+    config = {"enabled": False}
+    items = provider.collect(SourceQuery(), config)
+    assert items == []
+
+
+def test_cli_no_scrapers_returns_empty():
+    provider = CliProvider()
+    config = {"enabled": True, "scrapers": []}
+    items = provider.collect(SourceQuery(), config)
+    assert items == []
+
+
+def test_cli_validate_config_no_scrapers():
+    provider = CliProvider()
+    errors = provider.validate_config({"enabled": True, "scrapers": []})
+    assert any("no scrapers configured" in e for e in errors)
+
+
+def test_cli_validate_config_bad_command():
+    provider = CliProvider()
+    errors = provider.validate_config({
+        "enabled": True,
+        "scrapers": [{"name": "bad", "command": "nonexistent_cli_tool"}],
+    })
+    assert any("not found in PATH" in e for e in errors)
 
 
 # --- Normalizer ---

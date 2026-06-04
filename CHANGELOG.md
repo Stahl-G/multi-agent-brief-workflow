@@ -12,11 +12,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Interactive onboarding now enforces required business fields — no more silent defaults for agent/CI environments.
 - `InitOnboardingRequired` exception and `missing_required_direct_init_args()` validation ensure all 7 business fields (language, company, industry, title, audience, cadence, source_profile) must be explicit in developer-only direct CLI init.
 - New test coverage for non-interactive init rejection, partial-arg failure, and `--tavily`-alone validation.
+- **api_news (NewsAPI)**: full implementation using `/v2/everything` endpoint, urllib (zero extra dependencies), keyword/date/language/sortBy/domains filtering.
+- **api_filings (SEC EDGAR)**: full implementation using `data.sec.gov` submissions API + `company_tickers.json` for ticker→CIK lookup, form-type filtering (10-K/10-Q/8-K), rate-limit compliance (≤10 req/s), User-Agent enforcement.
+- **mcp_provider (MCP protocol)**: full implementation over stdio JSON-RPC 2.0 — initialize handshake, tool discovery, tool execution, subprocess lifecycle management.
+- **cli_provider (Local scripts)**: full implementation via `subprocess.run()`, JSON array and plain text output parsing, error handling on non-zero exit.
 
 ### Changed
 
 - `has_noninteractive_profile_args()` renamed to `has_direct_init_args()` for clarity.
 - Quick-start guides in README and docs updated: init command is now `multi-agent-brief init <workspace>` (no flags) for interactive mode.
+- **validate_config() migrated from stub to real**: all 4 previously-stub providers now check for actual configuration errors (missing providers, missing API keys, missing user-agent, bad commands).
 
 ## [0.1.0] — 2026-06-04
 
