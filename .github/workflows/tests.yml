@@ -32,6 +32,7 @@ jobs:
         run: bash scripts/setup.sh
 
       - name: Install
+        shell: bash
         run: |
           set -x
           python -V
@@ -61,7 +62,7 @@ jobs:
           echo "OS: ${{ matrix.os }}"
           echo "Python: ${{ matrix.python-version }}"
           python -V || true
-          python -m pip list --format=columns 2>/dev/null || true
+          python -m pip list --format=columns || true
           echo "=== end diagnostics ==="
 
       - name: CLI smoke
