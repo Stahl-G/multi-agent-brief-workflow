@@ -53,20 +53,37 @@ def dedupe_sources(items: list[SourceItem]) -> list[SourceItem]:
     return result
 
 
-def filter_by_recency(items: list[SourceItem], recency_days: int) -> list[SourceItem]:
-    """Keep items that are within recency_days or have no parseable date."""
+def filter_by_recency(items: list[SourceItem], recency_days: int, *, report_date: str = "") -> list[SourceItem]:
+    """Keep items that are within recency_days of report_date, or have no parseable date.
+
+    Args:
+        items: Source items to filter.
+        recency_days: Maximum allowed age in days (0 = no filter).
+        report_date: Reference date for recency (ISO 8601, e.g. '2026-06-02').
+                     When empty, uses system current time.
+    """
     if recency_days <= 0:
         return items
     from datetime import datetime, timezone
-    now = datetime.now(timezone.utc)
+    if report_date:
+        try:
+            now = datetime.fromisoformat(report_date)
+        except ValueError:
+            now = datetime.now(timezone.utc)
+    else:
+        now = datetime.now(timezone.utc)
     result: list[SourceItem] = []
     for item in items:
         if not item.published_at:
             result.append(item)
             continue
         try:
-            pub = datetime.fromisoformat(item.published_at.replace("Z", "+00:00"))
-            age = (now - pub).days
+            pub_str = item.published_at.replace("Z", "+00:00")
+            pub = datetime.fromisoformat(pub_str)
+            # Handle naive vs aware: if pub has no tz and now has tz, make pub aware
+            if pub.tzinfo is None and now.tzinfo is not None:
+                pub = pub.replace(tzinfo=timezone.utc)
+            age = abs((now - pub).days)
             if age <= recency_days:
                 result.append(item)
         except (ValueError, TypeError):

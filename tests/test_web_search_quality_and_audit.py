@@ -408,7 +408,7 @@ class TestAuditWebSearchDatePolicy:
         assert report.metadata.get("web_search_missing_published_at", 0) == 1
 
     def test_web_search_missing_published_at_no_medium_finding(self):
-        """web_search missing published_at should not create medium severity finding."""
+        """web_search missing published_at should generate low-severity finding (not medium)."""
         ledger = ClaimLedger(
             [
                 Claim(
@@ -431,7 +431,11 @@ class TestAuditWebSearchDatePolicy:
         )
 
         date_findings = [f for f in report.findings if f.finding_type == "missing_source_date"]
-        assert len(date_findings) == 0
+        # B15 fix: web_search missing date now generates low-severity finding
+        assert len(date_findings) == 1
+        assert date_findings[0].severity == "low", (
+            f"web_search missing date should be low severity, got {date_findings[0].severity}"
+        )
 
     def test_local_file_missing_published_at_still_warns(self):
         """local_file missing published_at should still get medium severity warning."""

@@ -63,6 +63,8 @@ class BriefPipeline:
             recency_days=plan.recency_days,
             max_results=100,
         )
+        # Pass report_date through for consistent recency filtering (B14)
+        query.metadata["report_date"] = context.report_date
 
         # Bridge planner search_tasks into web_search config as separate tasks
         if plan.search_tasks and "web_search" in source_config.enabled_providers:

@@ -120,10 +120,13 @@ def build_run_settings(
         "language": language or language_config.get("output") or project.get("language") or "zh-CN",
         "audience": audience or project.get("audience") or "management",
         "report_date": str(raw_date),
-        "max_source_age_days": int(report["max_source_age_days"]) if report.get("max_source_age_days") else None,
+        "max_source_age_days": int(report["max_source_age_days"]) if "max_source_age_days" in report else None,
         "fail_on_stale_source": bool(report.get("fail_on_stale_source", False)),
         "previous_report_dir": str(previous.get("path", "")),
-        "max_claims": int(selector.get("max_items") or selection.get("max_claims") or 160),
+        "max_claims": (
+            int(selector["max_items"]) if selector.get("max_items") is not None
+            else int(selection.get("max_claims", 160))
+        ),
         "quiet_week_min_claims": int(selection.get("quiet_week_min_claims", 5)),
         "output_formats": output_config.get("formats", ["markdown"]),
         "output_footer": output_config.get("footer", ""),

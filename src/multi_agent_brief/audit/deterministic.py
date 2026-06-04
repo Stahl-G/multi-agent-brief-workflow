@@ -114,8 +114,19 @@ def run_deterministic_audit(
             published_at = str(claim.metadata.get("published_at", ""))
             source_day = parse_date(published_at)
             if source_day is None:
-                # web_search sources often lack published_at — downgrade to low severity
+                # web_search sources often lack published_at — flag it at low severity (B15)
                 if claim.source_type == "web_search":
+                    findings.append(
+                        AuditFinding(
+                            finding_id=f"DATE_{len(findings)+1:03d}",
+                            severity="low",
+                            finding_type="missing_source_date",
+                            related_claim_id=claim.claim_id,
+                            description="Web search claim is missing a parseable published_at date.",
+                            recommendation="Mark the source as retrieved_only or provide published_at.",
+                            evidence=claim.statement,
+                        )
+                    )
                     web_search_missing_date_count += 1
                 else:
                     findings.append(

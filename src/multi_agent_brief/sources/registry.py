@@ -151,7 +151,8 @@ def collect_all_sources(
             usable.append(item)
 
     recency = query.recency_days if query.recency_days > 0 else 14
-    filtered = filter_by_recency(usable, recency)
+    report_date = query.metadata.get("report_date", "")
+    filtered = filter_by_recency(usable, recency, report_date=report_date)
 
     return dedupe_sources(filtered), errors
 
