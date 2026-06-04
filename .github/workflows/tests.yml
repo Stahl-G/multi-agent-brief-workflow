@@ -33,6 +33,7 @@ jobs:
 
       - name: Install
         run: |
+          set -x
           python -V
           python -m pip --version
           python -m pip install --upgrade pip
