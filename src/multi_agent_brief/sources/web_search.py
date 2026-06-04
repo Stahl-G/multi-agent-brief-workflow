@@ -22,6 +22,8 @@ def _register_known_backends() -> None:
     _KNOWN_BACKENDS["exa"] = ExaBackend
     from multi_agent_brief.sources.search_backends.brave import BraveBackend
     _KNOWN_BACKENDS["brave"] = BraveBackend
+    from multi_agent_brief.sources.search_backends.firecrawl import FirecrawlBackend
+    _KNOWN_BACKENDS["firecrawl"] = FirecrawlBackend
 
 
 class WebSearchProvider(SourceProvider):
