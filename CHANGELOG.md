@@ -7,32 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Fixed
+_No unreleased changes yet._
 
-- **MCP Provider**: Fixed `text=True` + bytes write type error — writes are now text strings. Added `_readline_timeout()` using `select.select()` with `MCP_TIMEOUT_SECONDS=30` so blocking reads don't hang. Added real JSON-RPC lifecycle tests (initialize → tools/list → tools/call).
-- **NewsAPI validate_config**: Now filters providers by `name == "newsapi"` before checking API key, preventing false positives when `sec` or other providers share the same config section.
-- **CLI Provider**: Non-zero exit items now set `metadata.error_type = "CliExecutionError"`, causing `registry._is_error_or_placeholder()` to filter them from the pipeline.
+## [0.1.2] — 2026-06-04
 
 ### Added
 
-- New tests: `test_mcp_jsonrpc_communication`, `test_mcp_jsonrpc_init_failure_returns_empty`, `test_news_api_validate_skips_non_newsapi_providers`, `test_cli_nonzero_exit_has_error_type`.
+- **Feishu bidirectional integration via lark-cli**: New `FeishuProvider` (sources/feishu_provider.py) pulls data from Feishu Docs, Meeting Minutes, Base tables, Spreadsheets, Calendar, and Approval tasks. `FeishuDeliveryConnector` (delivery/feishu.py) sends briefs to Feishu chat, creates Feishu documents, and uploads files to Drive.
+- `.env.example` now lists all 5 search backends (Tavily, Exa, Brave, Firecrawl, Serper) with comments — generated on every workspace init, not just when Tavily is enabled.
+- **Free-text onboarding**: `audience`, `role`, `industry`, `cadence` all changed from numbered-choice (`ask_choice`) to free-text input (`ask_text`). Users can type "市场团队" or "solar" directly instead of being forced to pick from a numbered menu.
+- **New tests**: 13 new tests covering MCP JSON-RPC lifecycle, NewsAPI name filtering, CLI error_type, FeishuProvider validation/collection/delivery.
 
-### Added (feishu bidirectional integration)
+### Changed
 
-- **FeishuProvider** (`sources/feishu_provider.py`): New source provider that uses lark-cli to pull data from Feishu Docs, Meeting Minutes, Base, Spreadsheets, Calendar, and Approval tasks.
-- **FeishuDeliveryConnector** (`delivery/feishu.py`): Filled from stub to working implementation — sends briefs to Feishu chat, creates Feishu documents, and uploads files to Drive via lark-cli.
-- **SourceConfig**: Added `feishu` field to `SourceConfig` and `from_dict()`.
-- **Registry**: `feishu` provider registered in `PROVIDER_CLASSES` and `config_map`.
-- **Tests**: 9 new tests covering FeishuProvider (disabled, no sources, validate, registration, item creation) and FeishuDeliveryConnector (missing lark-cli).
-- **Documentation**: `docs/feishu-integration.md` covers setup, source configuration, delivery usage, and security notes.
+- **Agent onboarding hardening**: Removed "choose sensible defaults" from all agent instructions. All 6 `normalize_*` functions in `onboarding/mapper.py` no longer silently convert sentinel values to defaults. CLI validates company/industry/title after `--from-onboarding`.
+- **`multi-agent-brief run` removed**: The deterministic Python pipeline no longer runs via CLI. Users are redirected to `/generate-brief <workspace>` in Claude Code. Pipeline code (`BriefPipeline`, agents, audit) remains for internal testing.
+- **doctor error messages** now point to `.env.example` instead of vague "set environment variable".
 
-### Changed (agent onboarding hardening)
+### Fixed
 
-- **Agent rules**: Removed "choose sensible defaults" from all agent instructions. Added hard rule: "Do not infer or silently choose onboarding values. Generic requests such as 'start', 'run', 'initialize' do not authorize default values."
-- **`onboarding/mapper.py`**: Removed sentinel value mapping ("default"/"unknown" → en-US) from all 6 `normalize_*` functions. The agent path (`--from-onboarding`) now passes unknown values through instead of silently converting to defaults.
-- **`onboarding/mapper.py`**: Removed `company = "... or "Sample Company"` fallback — empty company now stays empty and triggers a validation error.
-- **`cli/main.py`**: Added validation after `map_onboarding_to_profile()` — if company, industry, or title are empty, init fails with a clear error.
-- **`CLAUDE.md`**: Manually synchronized onboarding policy to match the hardened rules.
+- **MCP Provider**: Fixed `text=True` + bytes write type error; added `_readline_timeout()` with `select.select()` for real timeout enforcement.
+- **NewsAPI validate_config**: Now filters providers by `name == "newsapi"` before checking API key — no longer false-positives when `sec` or other providers share the config section.
+- **CLI Provider**: Non-zero exit items now set `metadata.error_type = "CliExecutionError"`, caught by `registry._is_error_or_placeholder()`.
+- **Feishu validate_config**: Removed early return when lark-cli is missing (fixes CI). Removed `--format json` from `auth status` calls (flag not supported by lark-cli).
 
 ## [0.1.1] — 2026-06-04
 

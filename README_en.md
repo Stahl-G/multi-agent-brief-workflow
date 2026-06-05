@@ -331,18 +331,18 @@ If `python-docx` is not installed, the pipeline continues without interruption b
 
 ## Feishu / Lark Integration
 
-Bidirectional Feishu integration via the official [lark-cli](https://github.com/larksuite/cli) tool. Use Feishu Docs, meeting minutes, Base tables, sheets, calendar, and approval tasks as source inputs, or deliver generated briefs to Feishu chats, docs, and Drive.
+Bidirectional Feishu integration via the official [lark-cli](https://github.com/larksuite/cli) tool. Pull data from Feishu Docs, meeting minutes, Base tables, sheets, calendar, and approval tasks as source inputs — or deliver generated briefs to Feishu chats, docs, and Drive.
 
-### Install lark-cli
+### Install & Authenticate
 
 ```bash
-npx @larksuite/cli@latest install      # install
+npx @larksuite/cli@latest install      # one-time install
 lark-cli config init                    # configure app credentials
 lark-cli auth login --recommend         # log in with recommended scopes
 lark-cli auth status                    # verify
 ```
 
-### Source (input)
+### Using Feishu as Source (Input)
 
 Add to `sources.yaml`:
 
@@ -351,15 +351,60 @@ feishu:
   enabled: true
   sources:
     - name: "meeting-notes"
-      token: "..."            # from feishu doc URL
-      type: minutes           # doc | minutes | base | sheet | agenda | approval
+      token: "V1Mdjflk..."       # token from the Feishu doc/minutes URL
+      type: minutes               # see supported types below
 ```
 
-### Delivery (output)
+**Supported source types:**
 
-Send briefs from Python:
+| Type | What it fetches | How to get the token |
+|------|----------------|---------------------|
+| `doc` | Feishu Document (Markdown) | Open doc, copy token from URL `.../doc/<token>` |
+| `minutes` | Meeting minutes with AI summary/todos | Open minutes, token from URL `.../minutes/<token>` |
+| `base` | Base table records | Open Base, token from URL `.../base/<token>`. Also set `table_id`. |
+| `sheet` | Spreadsheet values | Open sheet, token from URL `.../sheet/<token>` |
+| `agenda` | Today's calendar events | No token required |
+| `approval` | Pending approval tasks | No token required |
+
+### Using Feishu as Delivery (Output)
+
+**Send to chat:**
 
 ```python
+from multi_agent_brief.delivery.feishu import FeishuDeliveryConnector
+from multi_agent_brief.delivery.base import DeliveryArtifact, DeliveryTarget
+
+connector = FeishuDeliveryConnector()
+connector.deliver(
+    DeliveryArtifact(path="output/brief.md", title="Daily Brief"),
+    DeliveryTarget(channel="chat", recipient="oc_your_chat_id"),
+)
+```
+
+Get `chat_id` from the group chat URL (`.../?chat_id=oc_xxxxxxxxxxx`) or group info page.
+
+**Create a Feishu document:**
+
+```python
+connector.deliver(
+    DeliveryArtifact(path="output/brief.md", title="Weekly Report"),
+    DeliveryTarget(channel="doc"),
+)
+```
+
+**Upload file to Drive:**
+
+```python
+connector.deliver(
+    DeliveryArtifact(path="output/brief.docx", title="Weekly Report"),
+    DeliveryTarget(channel="drive"),
+)
+```
+
+### Typical Workflow
+
+```python
+# After /generate-brief my-workspace in Claude Code:
 from multi_agent_brief.delivery.feishu import FeishuDeliveryConnector
 from multi_agent_brief.delivery.base import DeliveryArtifact, DeliveryTarget
 
@@ -587,32 +632,16 @@ This project can help structure research and briefing workflows, but it does not
 
 See [CHANGELOG.md](CHANGELOG.md) for the full version history.
 
-Current version: **v0.1.1** — Source layer completion: 4 stub providers now functional
+Current version: **v0.1.2** — Feishu bidirectional integration
 
-Previously `api_news`, `api_filings` (SEC EDGAR), `mcp_provider`, and `cli_provider`
-were empty interfaces — enabling them silently returned 0 results.
-v0.1.1 fills all four with working implementations:
+Bidirectional Feishu support via [lark-cli](https://github.com/larksuite/cli):
+pull data from Feishu Docs, meeting minutes, Base tables, sheets, calendar,
+and approval tasks — or deliver generated briefs to Feishu chats, docs, and Drive.
 
-| Provider | What it does now |
-|----------|-----------------|
-| **NewsAPI** | Search news by keyword, date range, language, and source domains; returns structured article items |
-| **SEC EDGAR** | Input company name or ticker, auto-resolve CIK, fetch recent 10-K/10-Q/8-K filings |
-| **MCP Protocol** | Connect to local MCP servers over stdio JSON-RPC 2.0, discover and execute tools |
-| **CLI Scripts** | Run local shell commands, auto-parse JSON arrays or plain text output as source items |
+v0.1.1 previously filled 4 stub providers (NewsAPI / SEC EDGAR / MCP / CLI)
+and hardened agent onboarding (free-text input, no more "choose sensible defaults").
 
-All implementations use Python stdlib only (urllib / subprocess) — zero additional dependencies.
-
-**Latest unreleased: Agent onboarding hardening — remove sensible defaults**
-
-Previously, agent instructions allowed "choose sensible defaults" when the user said
-"default" / "unknown". This meant trivial requests like "start" would skip onboarding
-and create a workspace with incorrect settings.
-
-This fix:
-- Removed all "choose sensible defaults" language from agent instructions; replaced with:
-  "Do not infer or silently choose onboarding values."
-- Deleted sentinel→default mapping from all 6 `normalize_*` functions in `onboarding/mapper.py`
-  ("default" no longer becomes en-US, "Sample Company", etc.)
+[View full changelog →](CHANGELOG.md)
 - `multi-agent-brief init --from-onboarding` now validates company/industry/title are
   non-empty and fails with a clear error if missing
 - Generic requests like "start", "run", "initialize" no longer trigger default values

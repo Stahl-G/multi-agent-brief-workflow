@@ -335,37 +335,44 @@ multi-agent-brief init ../mabw-workspace
 
 通过官方 [lark-cli](https://github.com/larksuite/cli) 实现双向飞书集成——既可以从飞书文档、会议、表格、日程、审批采集数据，也可以把生成的简报发送到飞书。
 
-### 安装 lark-cli
+### 安装 + 配置
 
 ```bash
-npx @larksuite/cli@latest install      # 安装
+npx @larksuite/cli@latest install      # 安装（仅首次）
 lark-cli config init                    # 配置应用凭证
 lark-cli auth login --recommend         # 登录授权
-lark-cli auth status                    # 验证
+lark-cli auth status                    # 验证是否成功
 ```
 
-### 配置
+### 从飞书采集数据（输入）
 
-在 `sources.yaml` 中添加飞书数据源：
+在工作区 `sources.yaml` 中添加飞书数据源：
 
 ```yaml
-source_strategy:
-  enabled_providers:
-    - feishu
-
 feishu:
   enabled: true
   sources:
     - name: "周例会纪要"
-      token: "..."            # 从飞书文档 URL 获取
-      type: minutes           # doc | minutes | base | sheet | agenda | approval
+      token: "V1Mdjflk..."       # 飞书文档/妙记 URL 中的 token
+      type: minutes               # 可选类型见下表
 ```
 
-### 使用
+**支持的数据源类型：**
 
-**采集（输入）：** 飞书文档、会议纪要、多维表格、电子表格、日程、审批任务会自动进入来源收集流程。
+| 类型 | 说明 | 获取方式 |
+|------|------|---------|
+| `doc` | 飞书文档 | 打开文档，URL 中的 `.../doc/V1Mdjflk...` |
+| `minutes` | 会议妙记（含 AI 摘要/待办） | 打开妙记，URL 中的 `.../minutes/V1Mdjflk...` |
+| `base` | 多维表格 | 打开 Base，URL 中的 `.../base/V1Mdjflk...`。还需在 config 填 `table_id` |
+| `sheet` | 电子表格 | 打开表格，URL 中的 `.../sheet/V1Mdjflk...` |
+| `agenda` | 今日日程 | 无需 token |
+| `approval` | 审批任务 | 无需 token |
 
-**发送（输出）：** 把生成好的简报推送到飞书聊天：
+采集的数据会自动进入来源收集流程，与其他来源（manual、RSS、web search）一起被处理。
+
+### 把简报发到飞书（输出）
+
+**发送到聊天群：**
 
 ```python
 from multi_agent_brief.delivery.feishu import FeishuDeliveryConnector
@@ -374,8 +381,51 @@ from multi_agent_brief.delivery.base import DeliveryArtifact, DeliveryTarget
 connector = FeishuDeliveryConnector()
 connector.deliver(
     DeliveryArtifact(path="output/brief.md", title="每日简报"),
-    DeliveryTarget(channel="chat", recipient="oc_你的群聊ID"),
+    DeliveryTarget(channel="chat", recipient="oc_your_chat_id"),
 )
+```
+
+`chat_id` 从飞书群聊 URL 中的 `.../?chat_id=oc_xxxxxxxxxxx` 获取，或者在群聊信息中查看。
+
+**创建飞书文档：**
+
+```python
+connector.deliver(
+    DeliveryArtifact(path="output/brief.md", title="周报"),
+    DeliveryTarget(channel="doc"),
+)
+```
+
+**上传文件到云空间：**
+
+```python
+connector.deliver(
+    DeliveryArtifact(path="output/brief.docx", title="周报"),
+    DeliveryTarget(channel="drive"),
+)
+```
+
+### 典型工作流
+
+```bash
+# 1. 初始化工作区
+multi-agent-brief init my-workspace
+
+# 2. 检查配置
+multi-agent-brief doctor --config my-workspace/config.yaml
+
+# 3. 在 Claude Code 中运行简报生成
+#    /generate-brief my-workspace
+
+# 4. 简报生成完毕后，发送到飞书群
+python -c "
+from multi_agent_brief.delivery.feishu import FeishuDeliveryConnector
+from multi_agent_brief.delivery.base import DeliveryArtifact, DeliveryTarget
+FeishuDeliveryConnector().deliver(
+    DeliveryArtifact(path='my-workspace/output/brief.md', title='周报'),
+    DeliveryTarget(channel='chat', recipient='oc_your_chat_id'),
+)
+"
 ```
 
 详细说明见 [docs/feishu-integration.md](docs/feishu-integration.md)。
@@ -542,30 +592,17 @@ connector.deliver(
 
 完整的版本历史和变更说明请参见 [CHANGELOG.md](CHANGELOG.md)。
 
-当前版本：**v0.1.1** — 来源层补齐：4 个 Source Provider 从接口变为可用
+当前版本：**v0.1.2** — 飞书双向集成
 
-此前 `api_news`（新闻搜索）、`api_filings`（SEC 财报）、`mcp_provider`（MCP 协议）、`cli_provider`（本地脚本）
-四个来源提供者只有空接口，启用后返回 0 条结果。v0.1.1 全部实现为可工作的来源通道：
+通过 [lark-cli](https://github.com/larksuite/cli) 实现双向飞书通道。
+既可以从飞书文档、会议妙记、多维表格、电子表格、日程、审批采集数据，
+也可以把生成的简报发送到飞书聊天、创建飞书文档、上传云空间。
 
-| 提供者 | 现在能做什么 |
-|--------|------------|
-| **NewsAPI** | 通过关键字、日期范围、语言、来源域名搜索新闻，返回结构化文章条目 |
-| **SEC EDGAR** | 输入公司名或 ticker，自动查找 CIK，拉取 10-K/10-Q/8-K 等近期申报 |
-| **MCP 协议** | 连接本地 MCP 服务器，通过 JSON-RPC 2.0 发现工具并执行，采集返回内容 |
-| **CLI 脚本** | 执行本地命令行脚本，自动解析 JSON 数组或纯文本输出为来源条目 |
+此前 v0.1.1 已补齐 4 个 Source Provider（NewsAPI / SEC EDGAR / MCP / CLI），
+Agent 引导加固也已完成：所有 onboarding 字段改为自由文本输入，不再强制编号选择；
+Agent 指令中 "choose sensible defaults" 已全部删除。
 
-所有实现均使用 Python 标准库（urllib / subprocess），无额外依赖。
-
-**最新未发布：Agent 引导加固 — 彻底去除静默默认值**
-
-此前 Agent 指令允许用户说 "default" / "unknown" 时使用所谓"合理的默认值"创建 workspace，
-导致用户只说"开始"就被跳过了交互式问答，直接生成一个错误的 workspace。
-
-本次修复：
-- 删除 Agent 指令中所有 "choose sensible defaults" 的字样，改为硬性禁止："不许推断或静默选择 onboarding 值"
-- `onboarding/mapper.py` 中 6 个字段的 sentinel→默认值映射全部删除（"default" 不再自动变成 en-US、"Sample Company" 等）
-- `multi-agent-brief init --from-onboarding` 命令现在会校验 company/industry/title 三个必填字段，空值直接报错
-- `"start"` / `"run"` / `"initialize"` 等通用请求不再触发默认值
+[查看完整变更日志 →](CHANGELOG.md)
 
 [查看完整变更日志 →](CHANGELOG.md)
 
