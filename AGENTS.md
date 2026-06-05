@@ -205,6 +205,30 @@ Windows (PowerShell):
 python scripts/generate_agent_configs.py --check
 ```
 
+Generate OpenCode configs:
+
+```bash
+python scripts/generate_agent_configs.py --target opencode --write
+```
+
+Windows (PowerShell):
+
+```powershell
+python scripts/generate_agent_configs.py --target opencode --write
+```
+
+Check OpenCode configs:
+
+```bash
+python scripts/generate_agent_configs.py --target opencode --check
+```
+
+Windows (PowerShell):
+
+```powershell
+python scripts/generate_agent_configs.py --target opencode --check
+```
+
 ## Repository Rules
 
 - Do not commit credentials, tokens, webhooks, raw internal logs, private reports, customer names, confidential files, internal paths, or company-specific prompts.
