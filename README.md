@@ -434,7 +434,7 @@ FeishuDeliveryConnector().deliver(
 
 ## 可选：启用 SEC Filing 解析（disclosure-filing-resolver）
 
-通过 [disclosure-filing-resolver](https://github.com/Stahl-G/disclosure-filing-resolver) 集成 SEC EDGAR 公开披露文件自动获取和 XBRL 财务数据提取。适用于跟踪上市公司（如 TOYO、TSLA、CSIQ 等美国上市的中概股、外资股或美国本土公司）的季度报告、年度报告和重大事件披露。
+通过 [disclosure-filing-resolver](https://github.com/Stahl-G/disclosure-filing-resolver) 集成 SEC EDGAR 公开披露文件自动获取和 XBRL 财务数据提取。适用于跟踪美国上市公司（中概股、外资股或美国本土公司）的季度报告、年度报告和重大事件披露。
 
 ### 它能做什么
 
@@ -460,8 +460,8 @@ pip install disclosure-filing-resolver
 filing_resolver:
   enabled: true
   tickers:
-    - TOYO      # 公司 ticker
-    - CSIQ
+    - AAPL      # 替换为你实际跟踪的公司 ticker
+    - MSFT
   filing_types:
     - 10-K      # 年报
     - 10-Q      # 季报
@@ -525,7 +525,7 @@ multi-agent-brief sources decide --config ../mabw-workspace/config.yaml --merge
 简报中会自动包含来自 SEC 文件的财务数据，例如：
 
 ```markdown
-- TOYO reported revenue of $150.0M for Q1 2026, up 12% year-over-year. [src:FILING_TOYO_10Q]
+- ACME Corp reported revenue of $150.0M for Q1 2026, up 12% year-over-year. [src:FILING_ACME_10Q]
 ```
 
 详细说明见 [disclosure-filing-resolver 文档](https://github.com/Stahl-G/disclosure-filing-resolver)。

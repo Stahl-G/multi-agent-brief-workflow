@@ -418,7 +418,7 @@ See [docs/feishu-integration.md](docs/feishu-integration.md) for full details.
 
 ## SEC Filing Resolution (disclosure-filing-resolver)
 
-Integrate with [disclosure-filing-resolver](https://github.com/Stahl-G/disclosure-filing-resolver) for automatic SEC EDGAR filing acquisition and XBRL financial data extraction. Ideal for tracking publicly listed companies (e.g. TOYO, TSLA, CSIQ — foreign private issuers, ADRs, or US-listed companies).
+Integrate with [disclosure-filing-resolver](https://github.com/Stahl-G/disclosure-filing-resolver) for automatic SEC EDGAR filing acquisition and XBRL financial data extraction. Ideal for tracking US-listed companies (foreign private issuers, ADRs, or domestic US companies).
 
 ### What It Does
 
@@ -444,8 +444,8 @@ Add `filing_resolver` to your workspace `sources.yaml`:
 filing_resolver:
   enabled: true
   tickers:
-    - TOYO      # company ticker
-    - CSIQ
+    - AAPL      # replace with your target company ticker
+    - MSFT
   filing_types:
     - 10-K      # annual report
     - 10-Q      # quarterly report
@@ -509,7 +509,7 @@ multi-agent-brief sources decide --config ../mabw-workspace/config.yaml --merge
 The brief will automatically include SEC-sourced financial data:
 
 ```markdown
-- TOYO reported revenue of $150.0M for Q1 2026, up 12% year-over-year. [src:FILING_TOYO_10Q]
+- ACME Corp reported revenue of $150.0M for Q1 2026, up 12% year-over-year. [src:FILING_ACME_10Q]
 ```
 
 See [disclosure-filing-resolver docs](https://github.com/Stahl-G/disclosure-filing-resolver) for full details.
