@@ -163,7 +163,7 @@ def render_agents_md(manifest: dict) -> str:
         "   - In this mode, `user.md` is user context, and only `input/` contains source evidence.\n"
         "   - Do not treat repository README, examples, agent docs, or generated config files as source evidence.\n"
         "\n"
-        "Before running `multi-agent-brief run`, identify which mode you are in.\n"
+        "Before running `multi-agent-brief prepare`, identify which mode you are in.\n"
     )
 
     return (
@@ -237,7 +237,7 @@ def render_agents_md(manifest: dict) -> str:
         f"### Step 5: Run deterministic pipeline\n"
         f"\n"
         f"```bash\n"
-        f"multi-agent-brief run --config ../mabw-workspace/config.yaml\n"
+        f"multi-agent-brief prepare --config ../mabw-workspace/config.yaml\n"
         f"```\n"
         f"\n"
         f"Output files will be in `../mabw-workspace/output/`.\n"
@@ -245,7 +245,7 @@ def render_agents_md(manifest: dict) -> str:
         f"\n"
         f"### Step 6: Analyst subagent\n"
         f"\n"
-        f"Use the `analyst` subagent to rewrite `output/brief.md` from `claim_ledger.json` and `user.md`.\n"
+        f"Use the `analyst` subagent to rewrite `output/intermediate/audited_brief.md` from `claim_ledger.json` and `user.md`.\n"
         f"- Write in the workspace output language.\n"
         f"- Use only claims in `claim_ledger.json`.\n"
         f"- Preserve all valid `[src:CLAIM_ID]` citations.\n"
@@ -328,7 +328,7 @@ def render_agents_md(manifest: dict) -> str:
         f"\n"
         f"```bash\n"
         f"multi-agent-brief init ../mabw-workspace --demo\n"
-        f"multi-agent-brief run --config ../mabw-workspace/config.yaml\n"
+        f"multi-agent-brief prepare --config ../mabw-workspace/config.yaml\n"
         f"```\n"
         f"\n"
         f"Generate agent configs:\n"
@@ -353,6 +353,30 @@ def render_agents_md(manifest: dict) -> str:
         f"\n"
         f"```powershell\n"
         f"python scripts/generate_agent_configs.py --check\n"
+        f"```\n"
+        f"\n"
+        f"Generate OpenCode configs:\n"
+        f"\n"
+        f"```bash\n"
+        f"python scripts/generate_agent_configs.py --target opencode --write\n"
+        f"```\n"
+        f"\n"
+        f"Windows (PowerShell):\n"
+        f"\n"
+        f"```powershell\n"
+        f"python scripts/generate_agent_configs.py --target opencode --write\n"
+        f"```\n"
+        f"\n"
+        f"Check OpenCode configs:\n"
+        f"\n"
+        f"```bash\n"
+        f"python scripts/generate_agent_configs.py --target opencode --check\n"
+        f"```\n"
+        f"\n"
+        f"Windows (PowerShell):\n"
+        f"\n"
+        f"```powershell\n"
+        f"python scripts/generate_agent_configs.py --target opencode --check\n"
         f"```\n"
         f"\n"
         f"## Repository Rules\n"
@@ -633,6 +657,7 @@ def render_docs(manifest: dict) -> dict[str, str]:
         | Codex agents | `.codex/agents/*.toml` | TOML |
         | Codex skills | `.agents/skills/*/SKILL.md` | Markdown + YAML frontmatter |
         | Claude Code | `.claude/agents/*.md` | Markdown + YAML frontmatter |
+        | OpenCode | `.opencode/agents/*.md` | Markdown + YAML frontmatter |
         | Project instructions | `AGENTS.md` | Markdown |
     """)
 
@@ -708,6 +733,41 @@ def render_docs(manifest: dict) -> dict[str, str]:
         ## Worktree Isolation
 
         By default, subagents do not use `isolation: worktree`. For risky parallel implementation tasks, users can enable worktree isolation in the agent definition or at invocation time.
+    """)
+
+    # docs/agents/opencode.md
+    opencode_roles = "\n".join(
+        f"- `brief-{name}.md` — {role['description']}"
+        for name, role in roles.items()
+    )
+    opencode = textwrap.dedent(f"""\
+        {AUTOGEN_HEADER_MD}
+
+        # OpenCode Agent Configuration
+
+        ## Agents
+
+        Located in `.opencode/agents/` with `brief-` prefix:
+
+        {opencode_roles}
+
+        Each agent Markdown file has YAML frontmatter with:
+
+        - `description`
+        - `mode`: primary (brief-orchestrator) or subagent
+        - `hidden`: true for pipeline-internal roles
+        - `permission`: mapped from tool_profiles (edit, bash, network, task)
+
+        ## Command
+
+        `/generate-brief` is defined in `.opencode/commands/generate-brief.md`.
+
+        ## Generation
+
+        ```bash
+        python scripts/generate_agent_configs.py --target opencode --write
+        python scripts/generate_agent_configs.py --target opencode --check
+        ```
     """)
 
     # docs/agents/harness-subagents.md
@@ -865,14 +925,217 @@ def render_docs(manifest: dict) -> dict[str, str]:
         "docs/agents/README.md": readme.strip() + "\n",
         "docs/agents/codex.md": codex.strip() + "\n",
         "docs/agents/claude-code.md": claude.strip() + "\n",
+        "docs/agents/opencode.md": opencode.strip() + "\n",
         "docs/agents/harness-subagents.md": harness.strip() + "\n",
         "docs/agents/manifest.md": manifest_doc.strip() + "\n",
     }
 
 
-# ---------------------------------------------------------------------------
-# File writing / checking
-# ---------------------------------------------------------------------------
+def _opencode_agent_name(role_name: str) -> str:
+    """Map a role name to an OpenCode-safe agent name with brief- prefix."""
+    return f"brief-{role_name}"
+
+
+def _opencode_visible_roles() -> set[str]:
+    """Roles that are visible (not hidden) in OpenCode agent list."""
+    return {
+        "orchestrator",
+        "source-provider",
+        "source-planner",
+        "analyst",
+        "auditor",
+        "market-competitor-planner",
+        "market-competitor-analyst",
+        "market-competitor-auditor",
+    }
+
+
+def _opencode_tool_profile_to_permission(tp: dict, role_name: str) -> dict:
+    """Map a tool_profile to OpenCode permission block.
+
+    Returns a dict suitable for YAML serialisation as the 'permission' field.
+    For read-only profiles, restrict edit access. For edit profiles, allow.
+    """
+    may_edit = tp.get("may_edit", False)
+    tools = tp.get("claude_tools", [])
+    has_network = "WebFetch" in tools
+
+    perm: dict[str, Any] = {}
+
+    # Edit permission
+    if may_edit:
+        edit_allow: list[str] = []
+        if role_name in ("formatter",):
+            edit_allow.append("output/**")
+        elif role_name in ("auditor", "draft-audit-harness", "final-quality-harness", "rendered-output-harness"):
+            edit_allow.append("output/intermediate/audit_report.json")
+            edit_allow.append("output/intermediate/audited_brief.md")
+        elif role_name in ("source-provider", "source-planner"):
+            edit_allow.append("source_candidates.yaml")
+            edit_allow.append("sources.yaml")
+        else:
+            edit_allow.append("*")
+        # Deny everything else, allow specific paths
+        perm["edit"] = {"*": "deny"}
+        for path in edit_allow:
+            perm["edit"][path] = "allow"
+    else:
+        perm["edit"] = {"*": "deny"}
+
+    # Bash permission — allow for all, but ask for read-only roles
+    if may_edit:
+        perm["bash"] = {"*": "allow"}
+    else:
+        perm["bash"] = {"*": "ask"}
+
+    # Network — only source roles get network
+    if role_name in ("source-provider", "source-planner"):
+        perm["network"] = {"*": "allow"}
+    else:
+        perm["network"] = {"*": "deny"}
+
+    # Task — orchestrator alone gets to invoke subagents
+    if role_name == "orchestrator":
+        perm["task"] = {"*": "deny", "brief-*": "allow"}
+    else:
+        perm["task"] = {"*": "deny"}
+
+    return perm
+
+
+def render_opencode_agent(role_name: str, role: dict, manifest: dict) -> str:
+    """Render an OpenCode agent in .opencode/agents/<name>.md format."""
+    profiles = manifest["tool_profiles"]
+    tp = profiles[role["tool_profile"]]
+    agent_name = _opencode_agent_name(role_name)
+
+    desc = role["description"]
+    trigger = role["trigger"]
+    opencode_mode = "primary" if role_name == "orchestrator" else "subagent"
+    hidden = role_name not in _opencode_visible_roles()
+
+    resp = "\n".join(f"- {r}" for r in role["responsibilities"])
+    rules = "\n".join(f"- {r}" for r in role["hard_rules"])
+
+    # Build permission block
+    permission = _opencode_tool_profile_to_permission(tp, role_name)
+    permission_yaml = yaml.dump(permission, default_flow_style=False, sort_keys=False).strip()
+
+    lines = ["---"]
+    lines.append(f"description: {desc}")
+    lines.append(f"mode: {opencode_mode}")
+    if hidden:
+        lines.append("hidden: true")
+    lines.append("permission:")
+    # Indent the permission YAML
+    for perm_line in permission_yaml.splitlines():
+        lines.append(f"  {perm_line}")
+    lines.append("---")
+    lines.append("")
+    lines.append(f"You are the {desc}")
+    lines.append("")
+    lines.append("Pipeline:")
+    lines.append("")
+    lines.append("```text")
+    lines.append(PIPELINE_TEXT)
+    lines.append("```")
+    lines.append("")
+    lines.append("When to use:")
+    lines.append(trigger)
+    lines.append("")
+    lines.append("Responsibilities:")
+    lines.append(resp)
+    lines.append("")
+    lines.append("Hard rules:")
+    lines.append(rules)
+
+    return "\n".join(lines) + "\n"
+
+
+def render_opencode_agents(manifest: dict) -> dict[str, str]:
+    """Render all OpenCode agent files. Returns {rel_path: content}."""
+    roles = manifest["roles"]
+    result: dict[str, str] = {}
+    for name, role in roles.items():
+        rel = f".opencode/agents/{_opencode_agent_name(name)}.md"
+        result[rel] = render_opencode_agent(name, role, manifest)
+    return result
+
+
+def render_opencode_command_generate_brief(manifest: dict) -> str:
+    """Render the /generate-brief command for OpenCode."""
+    _ = manifest  # used for future workflow extraction
+    return (
+        "---\n"
+        "description: Generate a real source-grounded and audited brief\n"
+        "agent: brief-orchestrator\n"
+        "subtask: false\n"
+        "---\n"
+        "\n"
+        "You are generating a real user-facing brief for workspace: $ARGUMENTS\n"
+        "\n"
+        "The Python CLI prepares deterministic reader-facing files and intermediate audit artifacts. "
+        "A polished final brief should still be reviewed by OpenCode subagents or a human "
+        "using the Claim Ledger and audit outputs.\n"
+        "\n"
+        "Follow this sequence exactly:\n"
+        "\n"
+        "1. Read:\n"
+        "   - $ARGUMENTS/config.yaml\n"
+        "   - $ARGUMENTS/user.md\n"
+        "   - $ARGUMENTS/sources.yaml\n"
+        "\n"
+        "2. **Source discovery gate (llm_decide only):**\n"
+        "   If `sources.yaml` has `source.mode: llm_decide` and `source_candidates.yaml` "
+        "does not exist or has not been merged, resolve sources before running the pipeline:\n"
+        "   - Run: `multi-agent-brief sources decide --config $ARGUMENTS/config.yaml`\n"
+        "   - Review the generated `$ARGUMENTS/source_candidates.yaml`.\n"
+        "   - Run: `multi-agent-brief sources decide --config $ARGUMENTS/config.yaml --merge`\n"
+        "\n"
+        "3. **Prepare deterministic pipeline artifacts:**\n"
+        "   - Run: `multi-agent-brief doctor --config $ARGUMENTS/config.yaml`\n"
+        "   - Fix any issues before proceeding.\n"
+        "   - Run: `multi-agent-brief prepare --config $ARGUMENTS/config.yaml`\n"
+        "\n"
+        "4. Read:\n"
+        "   - $ARGUMENTS/output/intermediate/claim_ledger.json\n"
+        "   - $ARGUMENTS/output/intermediate/audited_brief.md\n"
+        "   - $ARGUMENTS/user.md\n"
+        "\n"
+        "5. Invoke the **brief-analyst** subagent:\n"
+        "   - Write the final brief from claim_ledger.json and user.md.\n"
+        "   - Use only claim_ledger.json as source evidence.\n"
+        "   - Preserve all valid [src:CLAIM_ID] citations.\n"
+        "   - Write the auditable brief to $ARGUMENTS/output/intermediate/audited_brief.md.\n"
+        "\n"
+        "6. Invoke the **brief-editor** subagent:\n"
+        "   - Polish for management / research team readability.\n"
+        "   - Preserve valid [src:CLAIM_ID] in audited_brief.md.\n"
+        "\n"
+        "7. Invoke the **brief-auditor** subagent:\n"
+        "   - Audit $ARGUMENTS/output/intermediate/audited_brief.md against "
+        "$ARGUMENTS/output/intermediate/claim_ledger.json.\n"
+        "\n"
+        "8. Regenerate DOCX:\n"
+        "   - Regenerate $ARGUMENTS/output/brief.md by stripping [src:CLAIM_ID] from the audited brief.\n"
+        "\n"
+        "9. Final response:\n"
+        "   - Report artifact paths.\n"
+        "   - Report audit status.\n"
+        "   - Do not claim success if audit failed.\n"
+    )
+
+
+def render_opencode_jsonc() -> str:
+    """Render opencode.jsonc configuration."""
+    return (
+        "{\n"
+        '  // OpenCode configuration for multi-agent-brief-workflow\n'
+        '  // Generated by scripts/generate_agent_configs.py\n'
+        '  "agentPaths": [".opencode/agents"],\n'
+        '  "commandPaths": [".opencode/commands"]\n'
+        "}\n"
+    )
 
 def write_or_check(path: Path, content: str, check: bool) -> bool:
     """Write content to path, or check if it matches. Returns True if OK."""
@@ -909,7 +1172,7 @@ def generate_all(manifest: dict, check: bool = False, target: str | None = None)
     profiles = manifest["tool_profiles"]
     ok = True
 
-    targets = {"agents_md", "codex", "claude", "skills", "docs"} if target is None else {target}
+    targets = {"agents_md", "codex", "claude", "skills", "docs", "opencode"} if target is None else {target}
 
     # AGENTS.md
     if "agents_md" in targets:
@@ -955,6 +1218,24 @@ def generate_all(manifest: dict, check: bool = False, target: str | None = None)
             if not write_or_check(path, content, check):
                 ok = False
 
+    # OpenCode
+    if "opencode" in targets:
+        agents = render_opencode_agents(manifest)
+        for rel_path, content in agents.items():
+            path = ROOT / rel_path
+            if not write_or_check(path, content, check):
+                ok = False
+
+        cmd_path = ROOT / ".opencode" / "commands" / "generate-brief.md"
+        cmd_content = render_opencode_command_generate_brief(manifest)
+        if not write_or_check(cmd_path, cmd_content, check):
+            ok = False
+
+        jsonc_path = ROOT / "opencode.jsonc"
+        jsonc_content = render_opencode_jsonc()
+        if not write_or_check(jsonc_path, jsonc_content, check):
+            ok = False
+
     return ok
 
 
@@ -970,7 +1251,7 @@ def main(argv: list[str] | None = None) -> int:
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument("--write", action="store_true", help="Generate all files")
     group.add_argument("--check", action="store_true", help="Check if generated files are up to date")
-    parser.add_argument("--target", choices=["codex", "claude", "skills", "docs", "agents_md"],
+    parser.add_argument("--target", choices=["codex", "claude", "skills", "docs", "agents_md", "opencode"],
                         help="Generate only a specific target")
     parser.add_argument("--manifest", type=Path, default=MANIFEST_PATH,
                         help="Path to agent_roles.yaml")

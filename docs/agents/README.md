@@ -60,4 +60,5 @@
         | Codex agents | `.codex/agents/*.toml` | TOML |
         | Codex skills | `.agents/skills/*/SKILL.md` | Markdown + YAML frontmatter |
         | Claude Code | `.claude/agents/*.md` | Markdown + YAML frontmatter |
+        | OpenCode | `.opencode/agents/*.md` | Markdown + YAML frontmatter |
         | Project instructions | `AGENTS.md` | Markdown |
