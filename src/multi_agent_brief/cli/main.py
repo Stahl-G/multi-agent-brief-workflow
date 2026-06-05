@@ -105,6 +105,12 @@ def build_parser() -> argparse.ArgumentParser:
 
     subparsers.add_parser("version", help="Print package version.")
 
+    # features subcommand
+    features_parser = subparsers.add_parser("features", help="Show all available features and their status.")
+    features_parser.add_argument("workspace", nargs="?", help="Optional workspace path to check provider status.")
+    features_parser.add_argument("--info", metavar="ID", help="Show details for a specific capability.")
+    features_parser.add_argument("--json", action="store_true", dest="json_output", help="Output as JSON.")
+
     # competitors subcommand group
     comp_parser = subparsers.add_parser("competitors", help="Market & competitor universe management.")
     comp_sub = comp_parser.add_subparsers(dest="competitors_action", required=True)
@@ -132,6 +138,132 @@ def _print_tavily_guidance() -> None:
     print("  Keys should be stored in environment variables only.")
     print()
     print("  Check configuration: multi-agent-brief doctor --config <workspace>/config.yaml")
+
+
+def run_features_from_args(args: argparse.Namespace) -> int:
+    """Show all available features with status indicators."""
+    import json as json_mod
+
+    from multi_agent_brief.capabilities.catalog import CAPABILITIES, get_capability, list_capabilities
+    from multi_agent_brief.capabilities.detect import assess_capability
+
+    # --info mode: single capability detail
+    if args.info:
+        cap = get_capability(args.info)
+        if cap is None:
+            print(f"[error] Unknown capability: {args.info}")
+            print(f"        Available IDs: {', '.join(c.id for c in CAPABILITIES)}")
+            return 1
+
+        enabled_providers = None
+        if args.workspace:
+            from multi_agent_brief.sources.registry import load_sources_config
+            sources_path = Path(args.workspace) / "sources.yaml"
+            if sources_path.exists():
+                sc = load_sources_config(sources_path)
+                enabled_providers = set(sc.enabled_providers)
+
+        status = assess_capability(cap.id, args.workspace, enabled_providers)
+
+        if args.json_output:
+            print(json_mod.dumps({
+                "id": cap.id,
+                "name": cap.name,
+                "summary": cap.summary,
+                "category": cap.category,
+                "visibility": cap.visibility,
+                "maturity": cap.maturity,
+                "state": status.state,
+                "notes": status.notes,
+                "options": [{"id": o.id, "name": o.name, "description": o.description} for o in cap.options],
+                "requirements": cap.requirements,
+            }, ensure_ascii=False, indent=2))
+        else:
+            print(f"\n  {cap.name.get('en', cap.id)} ({cap.id})")
+            print(f"  {cap.summary.get('en', '')}")
+            print(f"  Category: {cap.category}  |  Visibility: {cap.visibility}  |  Maturity: {cap.maturity}")
+            print(f"  Status: {status.state}")
+            if status.notes:
+                print(f"  Notes: {status.notes}")
+            if cap.options:
+                print(f"\n  Options:")
+                for o in cap.options:
+                    print(f"    {o.name:16s}  {o.description}")
+            if cap.requirements:
+                print(f"\n  Requirements:")
+                for r in cap.requirements:
+                    print(f"    - {r}")
+            print()
+        return 0
+
+    # --json mode
+    if args.json_output:
+        enabled_providers = None
+        if args.workspace:
+            from multi_agent_brief.sources.registry import load_sources_config
+            sources_path = Path(args.workspace) / "sources.yaml"
+            if sources_path.exists():
+                sc = load_sources_config(sources_path)
+                enabled_providers = set(sc.enabled_providers)
+
+        items = []
+        for cap in CAPABILITIES:
+            status = assess_capability(cap.id, args.workspace, enabled_providers)
+            items.append({
+                "id": cap.id,
+                "name": cap.name.get("en", cap.id),
+                "category": cap.category,
+                "visibility": cap.visibility,
+                "state": status.state,
+                "notes": status.notes,
+            })
+        print(json_mod.dumps(items, ensure_ascii=False, indent=2))
+        return 0
+
+    # Default: human-readable table
+    enabled_providers = None
+    if args.workspace:
+        from multi_agent_brief.sources.registry import load_sources_config
+        sources_path = Path(args.workspace) / "sources.yaml"
+        if sources_path.exists():
+            sc = load_sources_config(sources_path)
+            enabled_providers = set(sc.enabled_providers)
+
+    symbols = {
+        "ENABLED_READY": "✓",
+        "ENABLED_NEEDS_SETUP": "!",
+        "AVAILABLE": "○",
+        "UNAVAILABLE": "—",
+    }
+
+    # Group by category
+    categories: dict[str, list] = {}
+    for cap in CAPABILITIES:
+        categories.setdefault(cap.category, []).append(cap)
+
+    category_labels = {
+        "source": "Source Providers",
+        "processing": "Processing",
+        "analysis": "Analysis Modules",
+        "output": "Output Formats",
+        "integration": "Integration",
+    }
+
+    print()
+    for cat, caps in categories.items():
+        label = category_labels.get(cat, cat.title())
+        print(f"━━━ {label} ━━━")
+        for cap in caps:
+            status = assess_capability(cap.id, args.workspace, enabled_providers)
+            sym = symbols.get(status.state, "?")
+            name = cap.name.get("en", cap.id)
+            note = f"  — {status.notes}" if status.notes else ""
+            print(f"  {sym} {name:40s}{note}")
+        print()
+
+    print("Run 'multi-agent-brief features --info <id>' for details on any feature.")
+    print("Run 'multi-agent-brief features <workspace>' to check status against a workspace.")
+    return 0
 
 
 def run_pipeline_from_args(args: argparse.Namespace) -> int:
@@ -550,6 +682,8 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "version":
         print(__version__)
         return 0
+    if args.command == "features":
+        return run_features_from_args(args)
     return 1
 
 

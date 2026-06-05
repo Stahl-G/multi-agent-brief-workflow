@@ -165,3 +165,63 @@ class TestCIGate:
     def test_capability_ids_unique(self):
         ids = [c.id for c in CAPABILITIES]
         assert len(ids) == len(set(ids))
+
+
+class TestFeaturesCommand:
+    """CLI 'features' command tests."""
+
+    def test_features_prints_table(self, capsys):
+        from multi_agent_brief.cli.main import main
+        assert main(["features"]) == 0
+        out = capsys.readouterr().out
+        assert "Source Providers" in out
+        assert "Manual Inputs" in out
+
+    def test_features_json_output(self, capsys):
+        import json
+        from multi_agent_brief.cli.main import main
+        assert main(["features", "--json"]) == 0
+        out = capsys.readouterr().out
+        data = json.loads(out)
+        assert isinstance(data, list)
+        assert len(data) >= 14
+        assert any(c["id"] == "manual" for c in data)
+
+    def test_features_info_single(self, capsys):
+        from multi_agent_brief.cli.main import main
+        assert main(["features", "--info", "web_search"]) == 0
+        out = capsys.readouterr().out
+        assert "Web Search" in out
+        assert "Tavily" in out
+        assert "Options:" in out
+
+    def test_features_info_json(self, capsys):
+        import json
+        from multi_agent_brief.cli.main import main
+        assert main(["features", "--info", "mineru", "--json"]) == 0
+        out = capsys.readouterr().out
+        data = json.loads(out)
+        assert data["id"] == "mineru"
+        assert len(data["options"]) == 3
+
+    def test_features_info_unknown_returns_error(self, capsys):
+        from multi_agent_brief.cli.main import main
+        assert main(["features", "--info", "nonexistent"]) == 1
+
+    def test_features_with_workspace(self, tmp_path, capsys):
+        from multi_agent_brief.cli.main import main
+        ws = tmp_path / "ws"
+        main([
+            "init", str(ws),
+            "--language", "en-US",
+            "--company", "Test",
+            "--industry", "mfg",
+            "--title", "Brief",
+            "--audience", "mgmt",
+            "--cadence", "weekly",
+            "--source-profile", "research",
+        ])
+        assert main(["features", str(ws)]) == 0
+        out = capsys.readouterr().out
+        # manual is enabled in research profile
+        assert "Manual Inputs" in out
