@@ -5,7 +5,6 @@ and generates source_candidates.yaml for user review before merging.
 """
 from __future__ import annotations
 
-import json
 from pathlib import Path
 from typing import Any
 
@@ -14,7 +13,6 @@ try:
 except ModuleNotFoundError:
     yaml = None  # type: ignore[assignment]
 
-from multi_agent_brief.sources.base import SourceConfig
 
 
 def _load_yaml(path: Path) -> dict[str, Any]:
@@ -46,7 +44,6 @@ def build_search_queries(discovery: dict[str, Any]) -> list[str]:
     company = discovery.get("company", "")
     industry = discovery.get("industry", "")
     focus_areas = discovery.get("focus_areas", [])
-    cadence = discovery.get("cadence", "weekly")
 
     queries = []
 
@@ -97,15 +94,6 @@ def generate_source_candidates(
         "recommended_sources": [],
     }
 
-    # Categorize search results into source tiers
-    tier_map = {
-        "official": "company_official",
-        "gov": "government_regulator",
-        "research": "research_institution",
-        "news": "industry_media",
-        "default": "industry_media",
-    }
-
     if search_results:
         for sr in search_results:
             query = sr.get("query", "")
@@ -136,6 +124,11 @@ def generate_source_candidates(
     template_sources = _get_template_sources(industry, language)
     candidates["template_sources"] = template_sources
 
+    # Add filing sources for companies that likely have SEC/public filings
+    filing_sources = _get_filing_sources(discovery)
+    if filing_sources:
+        candidates["filing_sources"] = filing_sources
+
     return candidates
 
 
@@ -159,6 +152,33 @@ def _get_template_sources(industry: str, language: str) -> list[dict[str, Any]]:
         ],
     }
     return templates.get(industry, templates.get("finance", []))
+
+
+def _get_filing_sources(discovery: dict[str, Any]) -> list[dict[str, Any]]:
+    """Suggest filing-resolver sources for companies with public disclosure filings.
+
+    Returns a list of filing source candidates. Each entry represents a ticker/entity
+    that disclosure-filing-resolver can fetch SEC EDGAR filings for.
+    Only generates suggestions when company info is available.
+    """
+    company = discovery.get("company", "").strip()
+    if not company:
+        return []
+
+    # Simple heuristic: suggest SEC EDGAR as a filing source for the company.
+    # The actual ticker/CIK resolution happens at pipeline time via filing-resolver.
+    # Users can edit tickers in source_candidates.yaml before merging.
+    sources = []
+    sources.append({
+        "name": f"{company} — SEC EDGAR filings",
+        "provider": "filing_resolver",
+        "tickers": [company],  # placeholder; user should refine to actual ticker
+        "filing_types": ["10-K", "10-Q", "8-K"],
+        "category": "company_official",
+        "enabled": True,
+    })
+
+    return sources
 
 
 def merge_candidates_to_sources(
@@ -253,10 +273,38 @@ def merge_candidates_to_sources(
         providers.append("web_search")
     sources["source_strategy"]["enabled_providers"] = providers
 
+    # Merge filing_sources into filing_resolver config
+    filing_sources = [
+        s for s in candidates.get("filing_sources", []) if s.get("enabled", True)
+    ]
+    added_filing = 0
+    if filing_sources:
+        if "filing_resolver" not in sources:
+            sources["filing_resolver"] = {"enabled": True, "tickers": [], "filing_types": ["10-K", "10-Q", "8-K"]}
+        fr = sources["filing_resolver"]
+        fr.setdefault("tickers", [])
+        fr.setdefault("filing_types", ["10-K", "10-Q", "8-K"])
+        existing_tickers = set(fr["tickers"])
+        for fs in filing_sources:
+            for ticker in fs.get("tickers", []):
+                if ticker not in existing_tickers:
+                    fr["tickers"].append(ticker)
+                    existing_tickers.add(ticker)
+                    added_filing += 1
+            # Merge filing_types if provided
+            for ft in fs.get("filing_types", []):
+                if ft not in fr["filing_types"]:
+                    fr["filing_types"].append(ft)
+        # Add filing_resolver to enabled_providers
+        if "filing_resolver" not in providers:
+            providers.append("filing_resolver")
+            sources["source_strategy"]["enabled_providers"] = providers
+
     # Mark candidates as merged
     candidates["metadata"]["status"] = "merged"
     candidates["metadata"]["merged_manual"] = added_manual
     candidates["metadata"]["merged_rss"] = added_rss
+    candidates["metadata"]["merged_filing"] = added_filing
 
     _save_yaml(sources_path, sources)
     _save_yaml(candidates_path, candidates)
@@ -264,6 +312,7 @@ def merge_candidates_to_sources(
     return {
         "added_manual": added_manual,
         "added_rss": added_rss,
+        "added_filing": added_filing,
         "total_enabled": len(enabled),
         "total_disabled": len(recommended) - len(enabled),
     }

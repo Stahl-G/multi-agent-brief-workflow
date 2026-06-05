@@ -1,8 +1,6 @@
 """Tests for source decider (llm_decide execution)."""
 from __future__ import annotations
 
-import json
-import tempfile
 from pathlib import Path
 
 import pytest
@@ -153,3 +151,122 @@ def test_merge_candidates_idempotent(workspace_with_sources: Path):
 
     updated = yaml.safe_load(sources_path.read_text(encoding="utf-8"))
     assert len(updated["manual"]["sources"]) == 1  # not duplicated
+
+
+# ---- filing_sources integration tests ----
+
+
+def test_generate_source_candidates_includes_filing_sources():
+    """generate_source_candidates should include filing_sources when company is set."""
+    discovery = {"company": "Acme Corp", "industry": "manufacturing", "language": "en"}
+    candidates = generate_source_candidates(discovery)
+    assert "filing_sources" in candidates
+    fs = candidates["filing_sources"]
+    assert len(fs) == 1
+    assert fs[0]["provider"] == "filing_resolver"
+    assert "Acme Corp" in fs[0]["name"]
+    assert fs[0]["tickers"] == ["Acme Corp"]
+    assert fs[0]["enabled"] is True
+
+
+def test_generate_source_candidates_no_filing_when_no_company():
+    """filing_sources should be absent when company is empty."""
+    discovery = {"industry": "technology", "language": "en"}
+    candidates = generate_source_candidates(discovery)
+    assert "filing_sources" not in candidates
+
+
+def test_merge_candidates_merges_filing_sources(workspace_with_sources: Path):
+    """Merging candidates with filing_sources should enable filing_resolver provider."""
+    sources_path = workspace_with_sources / "sources.yaml"
+    discovery = load_source_discovery(sources_path)
+    candidates = generate_source_candidates(discovery)
+    # The fixture has company="测试公司", so filing_sources should be present
+    assert "filing_sources" in candidates
+
+    candidates_path = workspace_with_sources / "source_candidates.yaml"
+    with open(candidates_path, "w", encoding="utf-8") as f:
+        yaml.dump(candidates, f, allow_unicode=True)
+
+    result = merge_candidates_to_sources(sources_path, candidates_path)
+
+    assert result["added_filing"] == 1
+
+    updated = yaml.safe_load(sources_path.read_text(encoding="utf-8"))
+    assert "filing_resolver" in updated
+    assert updated["filing_resolver"]["enabled"] is True
+    assert "测试公司" in updated["filing_resolver"]["tickers"]
+    assert "10-K" in updated["filing_resolver"]["filing_types"]
+    assert "filing_resolver" in updated["source_strategy"]["enabled_providers"]
+
+
+def test_merge_candidates_filing_sources_disabled(workspace_with_sources: Path):
+    """Disabled filing_sources should not be merged."""
+    sources_path = workspace_with_sources / "sources.yaml"
+    discovery = load_source_discovery(sources_path)
+    candidates = generate_source_candidates(discovery)
+    # Disable the filing source
+    for fs in candidates.get("filing_sources", []):
+        fs["enabled"] = False
+
+    candidates_path = workspace_with_sources / "source_candidates.yaml"
+    with open(candidates_path, "w", encoding="utf-8") as f:
+        yaml.dump(candidates, f, allow_unicode=True)
+
+    result = merge_candidates_to_sources(sources_path, candidates_path)
+
+    assert result["added_filing"] == 0
+
+    updated = yaml.safe_load(sources_path.read_text(encoding="utf-8"))
+    # filing_resolver should NOT be added to enabled_providers
+    assert "filing_resolver" not in updated.get("source_strategy", {}).get("enabled_providers", [])
+
+
+def test_merge_candidates_filing_idempotent(workspace_with_sources: Path):
+    """Merging same filing_sources twice should not duplicate tickers."""
+    sources_path = workspace_with_sources / "sources.yaml"
+    discovery = load_source_discovery(sources_path)
+    candidates = generate_source_candidates(discovery)
+
+    candidates_path = workspace_with_sources / "source_candidates.yaml"
+    with open(candidates_path, "w", encoding="utf-8") as f:
+        yaml.dump(candidates, f, allow_unicode=True)
+
+    merge_candidates_to_sources(sources_path, candidates_path)
+    merge_candidates_to_sources(sources_path, candidates_path)
+
+    updated = yaml.safe_load(sources_path.read_text(encoding="utf-8"))
+    assert updated["filing_resolver"]["tickers"].count("测试公司") == 1
+
+
+def test_merge_candidates_filing_merges_tickers(workspace_with_sources: Path):
+    """Merging filing_sources with additional tickers should append, not replace."""
+    sources_path = workspace_with_sources / "sources.yaml"
+
+    # First merge: just the default from discovery
+    discovery = load_source_discovery(sources_path)
+    candidates = generate_source_candidates(discovery)
+    candidates_path = workspace_with_sources / "source_candidates.yaml"
+    with open(candidates_path, "w", encoding="utf-8") as f:
+        yaml.dump(candidates, f, allow_unicode=True)
+    merge_candidates_to_sources(sources_path, candidates_path)
+
+    # Second merge: add another ticker
+    candidates2 = generate_source_candidates(discovery)
+    candidates2["filing_sources"].append({
+        "name": "Peer Corp — SEC EDGAR filings",
+        "provider": "filing_resolver",
+        "tickers": ["PEER"],
+        "filing_types": ["10-K"],
+        "category": "company_official",
+        "enabled": True,
+    })
+    candidates2_path = workspace_with_sources / "source_candidates2.yaml"
+    with open(candidates2_path, "w", encoding="utf-8") as f:
+        yaml.dump(candidates2, f, allow_unicode=True)
+    merge_candidates_to_sources(sources_path, candidates2_path)
+
+    updated = yaml.safe_load(sources_path.read_text(encoding="utf-8"))
+    tickers = updated["filing_resolver"]["tickers"]
+    assert "测试公司" in tickers
+    assert "PEER" in tickers

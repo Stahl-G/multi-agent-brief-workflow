@@ -561,6 +561,13 @@ def build_sources(profile: InitProfile) -> dict[str, Any]:
             "enabled": False,
             "servers": [],
         },
+        "filing_resolver": {
+            "enabled": False,
+            "tickers": [],
+            "filing_types": ["10-K", "10-Q", "8-K"],
+            "xbrl": True,
+            "note": "Disabled by default. Set enabled: true and add tickers to activate SEC filing resolution.",
+        },
     }
 
 
@@ -570,6 +577,7 @@ def _build_llm_decide_sources(profile: InitProfile) -> dict[str, Any]:
 
     # Build enabled_providers: always include manual and web_search
     enabled_providers = ["manual", "web_search"]
+    # filing_resolver is available but disabled by default; enable via sources decide --merge
 
     return {
         "source_strategy": {
@@ -658,6 +666,13 @@ def _build_llm_decide_sources(profile: InitProfile) -> dict[str, Any]:
         ),
         "api": {"enabled": False, "providers": []},
         "mcp": {"enabled": False, "servers": []},
+        "filing_resolver": {
+            "enabled": False,
+            "tickers": [],
+            "filing_types": ["10-K", "10-Q", "8-K"],
+            "xbrl": True,
+            "note": "Disabled by default. Enable via 'multi-agent-brief sources decide --merge' after reviewing source_candidates.yaml filing_sources.",
+        },
     }
 
 

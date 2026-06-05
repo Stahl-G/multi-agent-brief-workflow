@@ -327,7 +327,6 @@ def test_cli_run_loads_industry_from_init_workspace(tmp_path):
     ]) == 0
 
     # Run the pipeline and check that source-collection sees industry=manufacturing
-    from multi_agent_brief.cli.main import main as cli_main
     import yaml
     from multi_agent_brief.sources.base import SourceConfig
 
@@ -369,7 +368,6 @@ def test_pipeline_context_gets_industry_from_source_config(tmp_path):
 def test_industry_fallback_when_sources_yaml_missing_field(tmp_path):
     """If sources.yaml exists but has no industry, run_pipeline_from_args should use project.industry."""
     import yaml
-    from multi_agent_brief.sources.base import SourceConfig
 
     workspace = tmp_path / "ws"
     workspace.mkdir()
@@ -595,3 +593,48 @@ def test_pipeline_fails_when_tavily_key_missing(tmp_path, monkeypatch):
     # Pipeline should fail-fast
     exit_code = main(["run", "--config", str(workspace / "config.yaml")])
     assert exit_code != 0
+
+
+def test_llm_decide_init_includes_filing_resolver_section(tmp_path):
+    """llm_decide sources.yaml must include filing_resolver section (disabled by default)."""
+    workspace = tmp_path / "ws"
+    assert main([
+        "init", str(workspace),
+        "--language", "en-US",
+        "--company", "Test",
+        "--industry", "manufacturing",
+        "--title", "Test Brief",
+        "--audience", "management",
+        "--cadence", "weekly",
+        "--source-profile", "llm_decide",
+    ]) == 0
+
+    import yaml
+    sources = yaml.safe_load((workspace / "sources.yaml").read_text(encoding="utf-8"))
+    assert "filing_resolver" in sources
+    fr = sources["filing_resolver"]
+    assert fr["enabled"] is False
+    # Custom to_yaml serializes [] as null; accept both
+    assert not fr["tickers"]
+    assert "10-K" in fr["filing_types"]
+    assert "xbrl" in fr
+
+
+def test_research_init_includes_filing_resolver_section(tmp_path):
+    """Non-llm_decide profiles also include filing_resolver section."""
+    workspace = tmp_path / "ws"
+    assert main([
+        "init", str(workspace),
+        "--language", "en-US",
+        "--company", "Test",
+        "--industry", "manufacturing",
+        "--title", "Test Brief",
+        "--audience", "management",
+        "--cadence", "weekly",
+        "--source-profile", "research",
+    ]) == 0
+
+    import yaml
+    sources = yaml.safe_load((workspace / "sources.yaml").read_text(encoding="utf-8"))
+    assert "filing_resolver" in sources
+    assert sources["filing_resolver"]["enabled"] is False
