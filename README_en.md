@@ -155,6 +155,43 @@ The audit report records whether the draft is distribution-ready:
 
 ## Getting Started (for Humans)
 
+Install the CLI first.
+
+macOS users can install with Homebrew:
+
+```bash
+brew tap Stahl-G/multi-agent-brief-workflow https://github.com/Stahl-G/multi-agent-brief-workflow
+brew install Stahl-G/multi-agent-brief-workflow/multi-agent-brief
+```
+
+To install the latest code from `main`:
+
+```bash
+brew install --HEAD Stahl-G/multi-agent-brief-workflow/multi-agent-brief
+```
+
+macOS / Linux / WSL users can also use the curl installer without cloning the repository:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Stahl-G/multi-agent-brief-workflow/main/scripts/install.sh | bash
+```
+
+Windows PowerShell:
+
+```powershell
+irm https://raw.githubusercontent.com/Stahl-G/multi-agent-brief-workflow/main/scripts/install.ps1 | iex
+```
+
+Then start interactive onboarding:
+
+```bash
+multi-agent-brief init my-workspace
+```
+
+Open Claude Code or Codex and run `/generate-brief my-workspace` to complete source discovery, drafting, audit, and output formatting.
+
+You can also ask an agent to clone and initialize the project for you:
+
 Open your Claude Code or Codex, and type:
 
 ```text
@@ -173,7 +210,7 @@ Other search backends (Exa, Brave, Firecrawl, Serper) are also supported. See [d
 
 ---
 
-## Quick Start (Developer / Manual)
+## Quick Start (Contributors / Source Checkout)
 
 macOS / Linux / WSL:
 
@@ -202,6 +239,8 @@ cat ../mabw-workspace/output/brief.md
 cat ../mabw-workspace/output/intermediate/audited_brief.md
 ```
 
+`scripts/setup.sh` is the contributor entry point. It creates a repository-local `.venv` and installs development/test dependencies. End users should prefer Homebrew, curl, or the PowerShell installer.
+
 > **Note:** Use `/generate-brief <workspace>` in Claude Code for the full subagent workflow (analyst → editor → auditor → formatter). The Python CLI no longer runs the brief generation pipeline. See [docs/claude-code-workflow.md](docs/claude-code-workflow.md).
 
 Windows 10/11 should use native PowerShell 5.1 or PowerShell 7. WSL/Git Bash is optional, not required. CMD is not the primary support target.
@@ -217,6 +256,8 @@ echo "- Industry news summary" > ../mabw-workspace\input\news.md
 multi-agent-brief doctor --config ../mabw-workspace\config.yaml
 # Then: /generate-brief ../mabw-workspace in Claude Code
 ```
+
+`scripts/setup.ps1` is the Windows contributor entry point. It creates a repository-local `.venv` and installs development/test dependencies. End users should prefer the PowerShell installer.
 
 You can also use the built-in example for a quick check:
 
@@ -748,22 +789,15 @@ This project can help structure research and briefing workflows, but it does not
 
 See [CHANGELOG.md](CHANGELOG.md) for the full version history.
 
-Current version: **v0.3.0** — Market & Competitor Intelligence Analysis Module
+Current version: **v0.3.4** — Capability Center, provider setup helpers, and source workflow fixes
 
-First pluggable AnalysisModule: competitor discovery & confirmation workflow,
-competitor-aware targeted search, EntityEventEnricher deterministic entity tagging,
-MarketEvent aggregation, cross-period state tracking, 6 specialist audit checks.
-Generic AnalysisModule interface + Registry architecture reusable for future
-earnings/policy/patent modules.
+Recent releases added the Capability Center, setup/recommend commands, all configured
+search API key placeholders, and source workflow fixes. Earlier v0.3.0 introduced the
+Market & Competitor Intelligence Analysis Module.
 
 Previously v0.2.0 integrated SEC Filing Resolution, MinerU Remote API, and
 bidirectional Feishu support; v0.1.1 filled 4 Source Providers (NewsAPI / SEC EDGAR /
 MCP / CLI) and hardened agent onboarding (free-text input).
-
-[View full changelog →](CHANGELOG.md)
-- `multi-agent-brief init --from-onboarding` now validates company/industry/title are
-  non-empty and fails with a clear error if missing
-- Generic requests like "start", "run", "initialize" no longer trigger default values
 
 [View full changelog →](CHANGELOG.md)
 
