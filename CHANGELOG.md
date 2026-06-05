@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- User install entry points: `scripts/install.sh` for curl-based macOS/Linux/WSL installation, `scripts/install.ps1` for Windows PowerShell installation, and a Homebrew formula for the core CLI.
+- README install guidance now separates end-user CLI installation from contributor source checkout setup.
+
 ## [0.3.4] — 2026-06-05
 
 ### Added
