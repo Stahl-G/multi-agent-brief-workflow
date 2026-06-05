@@ -5,6 +5,42 @@ from typing import Any
 
 
 INDUSTRY_PACKS: dict[str, dict[str, Any]] = {
+    "solar": {
+        "name": "Solar / Photovoltaic",
+        "rss_feeds": [],
+        "search_tasks": [
+            {"query": "US solar policy ITC investment tax credit 2026", "topic": "policy", "domains": []},
+            {"query": "FERC interconnection queue solar grid", "topic": "policy", "domains": []},
+            {"query": "solar panel installation capacity US market", "topic": "market", "domains": []},
+            {"query": "energy storage battery solar-plus-storage", "topic": "market", "domains": []},
+            {"query": "Canadian Solar CSIQ earnings announcement", "topic": "company", "domains": []},
+            {"query": "solar tariff trade policy anti-dumping", "topic": "policy", "domains": []},
+        ],
+    },
+    "photovoltaic": {
+        "name": "Photovoltaic / Solar PV",
+        "rss_feeds": [],
+        "search_tasks": [
+            {"query": "US solar policy ITC investment tax credit 2026", "topic": "policy", "domains": []},
+            {"query": "FERC interconnection queue solar grid", "topic": "policy", "domains": []},
+            {"query": "solar panel installation capacity US market", "topic": "market", "domains": []},
+            {"query": "energy storage battery solar-plus-storage", "topic": "market", "domains": []},
+            {"query": "Canadian Solar CSIQ earnings announcement", "topic": "company", "domains": []},
+            {"query": "solar tariff trade policy anti-dumping", "topic": "policy", "domains": []},
+        ],
+    },
+    "pv": {
+        "name": "Photovoltaic / Solar PV",
+        "rss_feeds": [],
+        "search_tasks": [
+            {"query": "US solar policy ITC investment tax credit 2026", "topic": "policy", "domains": []},
+            {"query": "FERC interconnection queue solar grid", "topic": "policy", "domains": []},
+            {"query": "solar panel installation capacity US market", "topic": "market", "domains": []},
+            {"query": "energy storage battery solar-plus-storage", "topic": "market", "domains": []},
+            {"query": "Canadian Solar CSIQ earnings announcement", "topic": "company", "domains": []},
+            {"query": "solar tariff trade policy anti-dumping", "topic": "policy", "domains": []},
+        ],
+    },
     "manufacturing": {
         "name": "Manufacturing / Industrial",
         "rss_feeds": [],
