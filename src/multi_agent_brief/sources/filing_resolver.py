@@ -2,9 +2,31 @@
 from __future__ import annotations
 
 import hashlib
+import re
+from pathlib import Path
 from typing import Any
 
 from multi_agent_brief.sources.base import SourceItem, SourceProvider, SourceQuery, _utc_now_iso
+
+# Key XBRL concepts to extract from Inline XBRL when enrichment provider returns 0 observations.
+# Maps us-gaap tag names to human-readable category labels.
+_KEY_XBRL_TAGS: dict[str, str] = {
+    "us-gaap:RevenueFromContractWithCustomerExcludingAssessedTax": "revenue",
+    "us-gaap:Revenues": "revenue",
+    "us-gaap:SalesRevenueNet": "revenue",
+    "us-gaap:NetIncomeLoss": "net_income",
+    "us-gaap:GrossProfit": "gross_profit",
+    "us-gaap:OperatingIncomeLoss": "operating_income",
+    "us-gaap:EarningsPerShareBasic": "eps_basic",
+    "us-gaap:EarningsPerShareDiluted": "eps_diluted",
+    "us-gaap:CashAndCashEquivalentsAtCarryingValue": "cash",
+    "us-gaap:Assets": "total_assets",
+    "us-gaap:Liabilities": "total_liabilities",
+    "us-gaap:StockholdersEquity": "stockholders_equity",
+    "us-gaap:NetCashProvidedByUsedInOperatingActivities": "operating_cash_flow",
+    "us-gaap:NetCashProvidedByUsedInInvestingActivities": "investing_cash_flow",
+    "us-gaap:NetCashProvidedByUsedInFinancingActivities": "financing_cash_flow",
+}
 
 
 class FilingResolverProvider(SourceProvider):
@@ -97,10 +119,17 @@ class FilingResolverProvider(SourceProvider):
             item = self._source_to_item(src, now)
             items.append(item)
 
-        # Add XBRL observations as separate structured items
-        if include_xbrl and evidence.observations:
-            for obs in evidence.observations:
-                items.append(self._observation_to_item(obs, evidence.entity.legal_name, now))
+        # Add XBRL observations as separate structured items.
+        # First try the enrichment provider's observations; if empty,
+        # fall back to extracting iXBRL facts from downloaded HTML files.
+        if include_xbrl:
+            entity_name = evidence.entity.legal_name
+            if evidence.observations:
+                for obs in evidence.observations:
+                    items.append(self._observation_to_item(obs, entity_name, now))
+            elif out_dir:
+                ixbrl_items = self._extract_ixbrl_from_html(out_dir, entity_name, now)
+                items.extend(ixbrl_items)
 
         return items
 
@@ -192,6 +221,144 @@ class FilingResolverProvider(SourceProvider):
     def _make_id(*parts: str) -> str:
         raw = "|".join(str(p) for p in parts)
         return f"FR_{hashlib.sha1(raw.encode()).hexdigest()[:12]}"
+
+    def _extract_ixbrl_from_html(
+        self, out_dir: str, entity_name: str, now: str,
+    ) -> list[SourceItem]:
+        """Extract key financial facts from Inline XBRL tags in downloaded HTML files.
+
+        This is a fallback when the enrichment provider returns 0 observations.
+        It reads HTML files from the output directory, parses ix:nonFraction tags,
+        and extracts the most important financial metrics.
+        """
+        items: list[SourceItem] = []
+        html_dir = Path(out_dir)
+        if not html_dir.is_dir():
+            return items
+
+        # Parse all HTML files for iXBRL facts
+        facts: dict[str, dict[str, Any]] = {}  # key: "tag_name|contextRef" → fact
+        contexts: dict[str, dict[str, str]] = {}  # contextRef → date info
+
+        for html_file in html_dir.glob("*.htm*"):
+            try:
+                html_text = html_file.read_text(encoding="utf-8", errors="ignore")
+            except Exception:
+                continue
+
+            # Skip files without XBRL markers
+            if "ix:nonfraction" not in html_text.lower() and "ix:nonNumeric" not in html_text.lower():
+                continue
+
+            # Extract context date info
+            for ctx_match in re.finditer(
+                r'<(?:xbrli:)?context\s+id="([^"]+)">(.*?)</(?:xbrli:)?context>',
+                html_text, re.DOTALL | re.IGNORECASE,
+            ):
+                ctx_id = ctx_match.group(1)
+                ctx_body = ctx_match.group(2)
+                start = re.search(r'<(?:xbrli:)?startDate>([^<]+)<', ctx_body)
+                end = re.search(r'<(?:xbrli:)?endDate>([^<]+)<', ctx_body)
+                instant = re.search(r'<(?:xbrli:)?instant>([^<]+)<', ctx_body)
+                contexts[ctx_id] = {
+                    "start": start.group(1) if start else "",
+                    "end": end.group(1) if end else "",
+                    "instant": instant.group(1) if instant else "",
+                }
+
+            # Extract ix:nonFraction tags
+            for tag_match in re.finditer(
+                r'<ix:nonFraction\s+([^>]+)/>',
+                html_text, re.IGNORECASE,
+            ):
+                attrs_str = tag_match.group(1)
+                name_m = re.search(r'name="([^"]+)"', attrs_str)
+                ctx_m = re.search(r'contextRef="([^"]+)"', attrs_str)
+                scale_m = re.search(r'scale="([^"]+)"', attrs_str)
+                sign_m = re.search(r'sign="([^"]+)"', attrs_str)
+                unit_m = re.search(r'unitRef="([^"]+)"', attrs_str)
+
+                if not name_m or not ctx_m:
+                    continue
+
+                tag_name = name_m.group(1).lower()
+                if tag_name not in _KEY_XBRL_TAGS:
+                    continue
+
+                ctx_ref = ctx_m.group(1)
+                # Get the text value between open and close tags
+                # For self-closing tags, value is empty; try the text content pattern
+                val_match = re.search(
+                    r'<ix:nonFraction\s+' + re.escape(attrs_str) + r'>([^<]*)</ix:nonFraction>',
+                    html_text, re.IGNORECASE,
+                )
+                if val_match:
+                    val_text = val_match.group(1).strip()
+                else:
+                    continue
+
+                if not val_text:
+                    continue
+
+                try:
+                    value = float(val_text.replace(",", "").replace("(", "-").replace(")", ""))
+                except ValueError:
+                    continue
+
+                scale = scale_m.group(1) if scale_m else "0"
+                if scale and scale != "0":
+                    value *= 10 ** int(scale)
+                if sign_m and sign_m.group(1) == "-":
+                    value = -value
+
+                fact_key = f"{tag_name}|{ctx_ref}"
+                if fact_key not in facts:
+                    facts[fact_key] = {
+                        "tag": tag_name,
+                        "category": _KEY_XBRL_TAGS[tag_name],
+                        "value": value,
+                        "unit": unit_m.group(1) if unit_m else "",
+                        "context_ref": ctx_ref,
+                        "source_file": html_file.name,
+                    }
+
+        # Convert facts to SourceItems
+        for fact in facts.values():
+            ctx = contexts.get(fact["context_ref"], {})
+            period = ctx.get("end") or ctx.get("instant") or ""
+            value_str = self._format_value(fact["value"], fact.get("unit"))
+
+            statement = f"{entity_name} reported {fact['category']} of {value_str}"
+            if period:
+                statement += f" for period ending {period}"
+
+            source_id = self._make_id(f"ixbrl:{fact['category']}", fact["context_ref"])
+            items.append(SourceItem(
+                source_id=source_id,
+                source_name=f"SEC iXBRL {fact['category']}",
+                source_type="filing_resolver",
+                title=f"{entity_name} — iXBRL: {fact['category']} = {value_str} ({period})",
+                content=statement,
+                url="",
+                published_at=period,
+                retrieved_at=now,
+                reliability="high",
+                dedupe_key=source_id,
+                metadata={
+                    "source_tier": "T1",
+                    "claim_type": "number",
+                    "ixbrl_tag": fact["tag"],
+                    "ixbrl_category": fact["category"],
+                    "ixbrl_value": fact["value"],
+                    "ixbrl_unit": fact.get("unit", ""),
+                    "ixbrl_period": period,
+                    "ixbrl_context_ref": fact["context_ref"],
+                    "source_file": fact["source_file"],
+                    "extraction_method": "inline_xbrl_fallback",
+                },
+            ))
+
+        return items
 
     @staticmethod
     def _error_item(title: str, detail: str) -> SourceItem:
