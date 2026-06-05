@@ -19,6 +19,7 @@ VALID_CONFIDENCE = {"low", "medium", "high"}
 VALID_MATERIALITY = {"low", "medium", "high"}
 
 
+@SchemaRegistry.register
 class MarketEventContract(Contract):
     """Contract for MarketEvent (used by market_competitor module)."""
 
@@ -80,6 +81,7 @@ class MarketEventContract(Contract):
         return dict(data)
 
 
+@SchemaRegistry.register
 class AnalysisCardContract(Contract):
     """Contract for AnalysisCard (used by market_competitor module)."""
 
