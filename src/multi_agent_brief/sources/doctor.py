@@ -156,6 +156,12 @@ def run_doctor(
     # 12. Available but unconfigured providers
     _add_available_info(results, source_config)
 
+    # 13. Capability status summary
+    _add_capability_status(results, source_config, p.parent)
+
+    # 14. Recommendations based on workspace
+    _add_recommendations(results, source_config, p.parent)
+
     return results
 
 
@@ -204,3 +210,66 @@ def format_doctor_report(results: list[CheckResult]) -> str:
         lines.append(f"Result: all {oks} checks passed")
 
     return "\n".join(lines)
+
+
+def _add_capability_status(
+    results: list[CheckResult],
+    source_config: SourceConfig,
+    workspace_dir: str | Path,
+) -> None:
+    """Add capability status summary to doctor output."""
+    try:
+        from multi_agent_brief.capabilities.catalog import CAPABILITIES
+        from multi_agent_brief.capabilities.detect import assess_capability
+    except ImportError:
+        return  # capabilities package not available
+
+    enabled = set(source_config.enabled_providers)
+
+    ready = []
+    needs_setup = []
+    available = []
+
+    for cap in CAPABILITIES:
+        status = assess_capability(cap.id, workspace_dir, enabled)
+        if status.state == "ENABLED_READY":
+            ready.append((cap, status))
+        elif status.state == "ENABLED_NEEDS_SETUP":
+            needs_setup.append((cap, status))
+        elif status.state == "AVAILABLE":
+            available.append((cap, status))
+
+    if needs_setup:
+        results.append(CheckResult("OK", ""))
+        results.append(CheckResult("OK", "Capabilities needing setup:"))
+        for cap, status in needs_setup:
+            name = cap.name.get("en", cap.id)
+            results.append(CheckResult("WARN", f"  {name}: {status.notes}"))
+
+    if ready:
+        results.append(CheckResult("OK", ""))
+        results.append(CheckResult("OK", "Active capabilities:"))
+        for cap, status in ready:
+            name = cap.name.get("en", cap.id)
+            results.append(CheckResult("OK", f"  ✓ {name}"))
+
+
+def _add_recommendations(
+    results: list[CheckResult],
+    source_config: SourceConfig,
+    workspace_dir: str | Path,
+) -> None:
+    """Add capability recommendations based on workspace context."""
+    try:
+        from multi_agent_brief.capabilities.recommend import recommend_from_input_dir
+    except ImportError:
+        return
+
+    input_dir = Path(workspace_dir) / "input"
+    recs = recommend_from_input_dir(input_dir, set(source_config.enabled_providers))
+
+    if recs:
+        results.append(CheckResult("OK", ""))
+        results.append(CheckResult("OK", "Recommendations:"))
+        for rec in recs:
+            results.append(CheckResult("OK", f"  → {rec.capability_id}: {rec.reason}"))
