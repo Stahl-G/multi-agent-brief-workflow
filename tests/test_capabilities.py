@@ -225,3 +225,88 @@ class TestFeaturesCommand:
         out = capsys.readouterr().out
         # manual is enabled in research profile
         assert "Manual Inputs" in out
+
+
+class TestRecommendCommand:
+    """CLI 'recommend' command tests."""
+
+    def test_recommend_with_text(self, capsys):
+        from multi_agent_brief.cli.main import main
+        assert main(["recommend", "--text", "Track competitors and earnings"]) == 0
+        out = capsys.readouterr().out
+        assert "market_competitor" in out
+        assert "filing_resolver" in out
+
+    def test_recommend_json_output(self, capsys):
+        import json
+        from multi_agent_brief.cli.main import main
+        assert main(["recommend", "--text", "competitor analysis", "--json"]) == 0
+        out = capsys.readouterr().out
+        data = json.loads(out)
+        assert "capabilities" in data
+        assert len(data["capabilities"]) >= 1
+
+    def test_recommend_no_match(self, capsys):
+        from multi_agent_brief.cli.main import main
+        assert main(["recommend", "--text", "hello world"]) == 0
+        out = capsys.readouterr().out
+        assert "No capability recommendations" in out
+
+    def test_recommend_with_workspace(self, tmp_path, capsys):
+        from multi_agent_brief.cli.main import main
+        ws = tmp_path / "ws"
+        main([
+            "init", str(ws),
+            "--language", "en-US",
+            "--company", "Tesla",
+            "--industry", "automotive",
+            "--title", "Competitor Analysis",
+            "--audience", "mgmt",
+            "--cadence", "weekly",
+            "--source-profile", "research",
+        ])
+        assert main(["recommend", str(ws)]) == 0
+        out = capsys.readouterr().out
+        assert "market_competitor" in out
+
+
+class TestSetupCommand:
+    """CLI 'setup' command tests."""
+
+    def test_setup_dry_run(self, tmp_path, capsys):
+        from multi_agent_brief.cli.main import main
+        ws = tmp_path / "ws"
+        main([
+            "init", str(ws),
+            "--language", "en-US",
+            "--company", "Tesla",
+            "--industry", "automotive",
+            "--title", "Competitor Analysis",
+            "--audience", "mgmt",
+            "--cadence", "weekly",
+            "--source-profile", "research",
+        ])
+        assert main(["setup", str(ws), "--dry-run"]) == 0
+        out = capsys.readouterr().out
+        assert "dry-run" in out.lower()
+
+    def test_setup_applies_changes(self, tmp_path, capsys):
+        from multi_agent_brief.cli.main import main
+        ws = tmp_path / "ws"
+        main([
+            "init", str(ws),
+            "--language", "en-US",
+            "--company", "Tesla",
+            "--industry", "automotive",
+            "--title", "Competitor Analysis",
+            "--audience", "mgmt",
+            "--cadence", "weekly",
+            "--source-profile", "research",
+        ])
+        assert main(["setup", str(ws)]) == 0
+        out = capsys.readouterr().out
+        assert "change(s) applied" in out
+
+    def test_setup_nonexistent_workspace(self, capsys):
+        from multi_agent_brief.cli.main import main
+        assert main(["setup", "/nonexistent/path"]) == 1
