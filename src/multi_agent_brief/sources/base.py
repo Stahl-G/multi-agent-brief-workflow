@@ -59,6 +59,7 @@ class SourceConfig:
     mcp: dict[str, Any] = field(default_factory=dict)
     feishu: dict[str, Any] = field(default_factory=dict)
     mineru: dict[str, Any] = field(default_factory=dict)
+    opencli: dict[str, Any] = field(default_factory=dict)
     cached_package: dict[str, Any] = field(default_factory=dict)
     filing_resolver: dict[str, Any] = field(default_factory=dict)
     local_signal: dict[str, Any] = field(default_factory=dict)
@@ -79,7 +80,7 @@ class SourceConfig:
             )
 
         # Validate provider sections are dicts
-        for section_name in ["manual", "rss", "web_search", "api", "mcp", "feishu", "mineru", "cached_package", "filing_resolver", "local_signal"]:
+        for section_name in ["manual", "rss", "web_search", "api", "mcp", "feishu", "mineru", "opencli", "cached_package", "filing_resolver", "local_signal"]:
             section = data.get(section_name, {})
             if not isinstance(section, dict):
                 raise ValueError(
@@ -97,6 +98,7 @@ class SourceConfig:
             mcp=data.get("mcp", {}),
             feishu=data.get("feishu", {}),
             mineru=data.get("mineru", {}),
+            opencli=data.get("opencli", {}),
             cached_package=data.get("cached_package", {}),
             filing_resolver=data.get("filing_resolver", {}),
             local_signal=data.get("local_signal", {}),

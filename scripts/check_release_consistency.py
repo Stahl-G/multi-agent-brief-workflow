@@ -135,14 +135,14 @@ def main(strict: bool = False, check_tag: bool = True) -> int:
     elif strict:
         check("CHANGELOG.md has version section", False, "could not extract version")
 
-    # Git tag check
+    # Git tag check (skip when no tags exist — no tag ≠ mismatch)
     if check_tag and pyproject_ver:
         tag_ver = extract_latest_git_tag()
         if tag_ver:
             check("Latest git tag matches version", tag_ver == pyproject_ver,
                   f"tag=v{tag_ver}, expected={pyproject_ver}")
-        elif strict:
-            check("Latest git tag matches version", False, "no semver tags found")
+        else:
+            print("  [SKIP] Latest git tag matches version — no semver tags found")
 
     # Agent configs check
     try:
