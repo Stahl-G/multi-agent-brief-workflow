@@ -30,16 +30,16 @@ Ask at most 12 questions:
    Recommended default: company + industry + policy + competitors + risk events.
 
 4. Who will read it?
-   Recommended default: management / leadership team.
+   Recommended default: management / leadership team/marketing/investment team /Research.
 
 5. How broad should sources be?
    Recommended default: reliable public sources + industry media.
 
 6. What language and cadence?
-   Recommended default: English, weekly.
+   Recommended default: Chinese, weekly.
 
 7. What specific focus areas are most important?
-   Recommended default: based on industry (e.g., for automotive: sales data, autonomous driving, policy, supply chain, product launches).
+   Recommended default: based on industry (e.g., for automotive: sales data, AI, policy, supply chain, product launches).
 
 8. Enable live web search?
    Options: yes (then select from available backends), no (local files only).
@@ -47,7 +47,7 @@ Ask at most 12 questions:
    Recommended default: configure later.
 
 9. How many items should each brief contain?
-   Recommended default: 8 items.
+   Recommended default: 20 items.
 
 10. What is the maximum age for source materials (in days)?
     Recommended default: 14 days.
