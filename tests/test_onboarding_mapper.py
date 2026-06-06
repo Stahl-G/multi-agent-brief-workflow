@@ -221,3 +221,58 @@ def test_onboarding_explicit_none_disables_tavily():
     )
     profile = map_onboarding_to_profile(result)
     assert profile.tavily_enabled is False
+
+
+def test_onboarding_configure_later_sets_correct_mode():
+    """configure_later should set web_search_mode to configure_later."""
+    result = OnboardingResult(
+        target="workspace",
+        company_or_org="Sample Company",
+        industry_or_theme="manufacturing",
+        search_backend_plain="configure_later",
+    )
+    profile = map_onboarding_to_profile(result)
+    assert profile.web_search_enabled is True
+    assert profile.web_search_mode == "configure_later"
+    assert profile.tavily_enabled is False
+
+
+def test_onboarding_runtime_websearch_sets_correct_mode():
+    """runtime_websearch should set web_search_mode to runtime_tool."""
+    result = OnboardingResult(
+        target="workspace",
+        company_or_org="Sample Company",
+        industry_or_theme="manufacturing",
+        search_backend_plain="runtime_websearch",
+    )
+    profile = map_onboarding_to_profile(result)
+    assert profile.web_search_enabled is True
+    assert profile.web_search_mode == "runtime_tool"
+    assert profile.tavily_enabled is False
+
+
+def test_onboarding_exa_sets_external_api_mode():
+    """exa backend should set web_search_mode to external_api with search_backend."""
+    result = OnboardingResult(
+        target="workspace",
+        company_or_org="Sample Company",
+        industry_or_theme="manufacturing",
+        search_backend_plain="exa",
+    )
+    profile = map_onboarding_to_profile(result)
+    assert profile.web_search_enabled is True
+    assert profile.web_search_mode == "external_api"
+    assert profile.search_backend == "exa"
+
+
+def test_onboarding_search_backend_chinese_configure_later():
+    """Chinese '稍后配置' should map to configure_later."""
+    result = OnboardingResult(
+        target="workspace",
+        company_or_org="Sample Company",
+        industry_or_theme="manufacturing",
+        search_backend_plain="稍后配置",
+    )
+    profile = map_onboarding_to_profile(result)
+    assert profile.web_search_enabled is True
+    assert profile.web_search_mode == "configure_later"

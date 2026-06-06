@@ -196,6 +196,14 @@ def normalize_source_profile(text: str) -> str:
 
 _SEARCH_BACKEND_MAP: dict[str, str] = {
     "tavily": "tavily",
+    "exa": "exa",
+    "brave": "brave",
+    "firecrawl": "firecrawl",
+    "serper": "serper",
+    "runtime_websearch": "runtime_websearch",
+    "configure_later": "configure_later",
+    "稍后配置": "configure_later",
+    "稍后": "configure_later",
     "none": "none",
     "无": "none",
     "不启用": "none",

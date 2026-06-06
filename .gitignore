@@ -47,3 +47,6 @@ reasonix.toml
 notes/
 TODO.md
 .cache/
+
+# Draft implementation plans
+docs/impl-plan-v0.5.1-history-retrieval-lite.md
