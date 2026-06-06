@@ -5,7 +5,7 @@ The public repo keeps the quality-control idea from local workflow prototypes, b
 ## Current Audit Stack
 
 ```text
-AuditorAgent
+auditor subagent
   -> CompositeAuditAgent
        -> DeterministicAuditAgent
        -> QualityHarnessAuditAgent

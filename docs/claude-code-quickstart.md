@@ -28,18 +28,15 @@ The `examples/reference_workflow_demo/` workspace exercises the full official pa
 ```bash
 # Run the CI smoke test
 python scripts/ci/smoke_reference_workflow.py examples/reference_workflow_demo
-
-# Or run the pipeline directly
-multi-agent-brief prepare --config examples/reference_workflow_demo/config.yaml
 ```
 
 PowerShell:
 
 ```powershell
 python scripts\ci\smoke_reference_workflow.py examples\reference_workflow_demo
-
-multi-agent-brief prepare --config examples\reference_workflow_demo\config.yaml
 ```
+
+For the full subagent workflow, use `/generate-brief examples/reference_workflow_demo` in Claude Code.
 
 Expected artifacts after a successful run:
 

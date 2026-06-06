@@ -321,17 +321,21 @@ def missing_required_direct_init_args(args: Any) -> list[str]:
 
 def create_demo_workspace(target: Path, *, force: bool = False) -> None:
     input_dir = target / "input"
+    sources_dir = input_dir / "sources"
     output_dir = target / "output"
     output_dir.mkdir(parents=True, exist_ok=True)
-    input_dir.mkdir(parents=True, exist_ok=True)
+    sources_dir.mkdir(parents=True, exist_ok=True)
+    # Create non-evidence subdirectories (empty, for user organization)
+    for subdir in ("feedback", "instructions", "context"):
+        (input_dir / subdir).mkdir(parents=True, exist_ok=True)
     files = {
         target / "config.yaml": DEMO_CONFIG,
         target / "sources.yaml": DEMO_SOURCES,
         target / "user.md": DEMO_USER_MD,
         target / ".gitignore": WORKSPACE_GITIGNORE,
         target / ".env.example": _build_env_example(),
-        input_dir / "news.json": json.dumps(_build_demo_news(), indent=2),
-        input_dir / "market_data.json": json.dumps(_build_demo_market_data(), indent=2),
+        sources_dir / "news.json": json.dumps(_build_demo_news(), indent=2),
+        sources_dir / "market_data.json": json.dumps(_build_demo_market_data(), indent=2),
     }
     _write_files(files, force=force)
 
@@ -342,10 +346,15 @@ def create_workspace(target: Path, profile: InitProfile, *, force: bool = False)
         profile.source_decision_mode = "agent_decide"
 
     input_dir = target / "input"
+    sources_dir = input_dir / "sources"
     output_dir = target / "output"
     output_dir.mkdir(parents=True, exist_ok=True)
-    input_dir.mkdir(parents=True, exist_ok=True)
+    sources_dir.mkdir(parents=True, exist_ok=True)
+    # Create non-evidence subdirectories with README
+    for subdir in ("feedback", "instructions", "context"):
+        (input_dir / subdir).mkdir(parents=True, exist_ok=True)
 
+    lang = profile.interface_language
     files = {
         target / "config.yaml": to_yaml(build_config(profile)),
         target / "profile.yaml": to_yaml(build_profile(profile)),
@@ -354,7 +363,10 @@ def create_workspace(target: Path, profile: InitProfile, *, force: bool = False)
         target / "user.md": build_user_md(profile),
         target / ".gitignore": WORKSPACE_GITIGNORE,
         target / ".env.example": _build_env_example(),
-        input_dir / "README.md": build_input_readme(profile.interface_language),
+        sources_dir / "README.md": _build_sources_readme(lang),
+        input_dir / "feedback" / "README.md": _build_feedback_readme(lang),
+        input_dir / "instructions" / "README.md": _build_instructions_readme(lang),
+        input_dir / "context" / "README.md": _build_context_readme(lang),
     }
     _write_files(files, force=force)
 
@@ -742,8 +754,8 @@ def build_sources(profile: InitProfile) -> dict[str, Any]:
     # Base: always include manual local inputs
     manual_sources = [
         {
-            "name": "Local Input Directory",
-            "path": "input/",
+            "name": "Local Evidence Sources",
+            "path": "input/sources/",
             "category": "local_files",
             "language": profile.output_language.split("-")[0] if "-" in profile.output_language else profile.output_language,
             "enabled": True,
@@ -970,6 +982,70 @@ def build_input_readme(language: str) -> str:
     if language == "bilingual":
         return INPUT_README_ZH + "\n---\n\n" + INPUT_README_EN
     return INPUT_README_EN
+
+
+def _build_sources_readme(language: str) -> str:
+    if language == "zh-CN":
+        return (
+            "# 外部证据来源\n\n"
+            "将外部事实来源文件放在此目录：新闻、行业报告、SEC 文件、RSS 导出等。\n\n"
+            "支持格式：`.json`（推荐）、`.md`、`.txt`\n\n"
+            "此目录中的文件会被 Scout 提取为 Claim Ledger 中的事实声明。\n"
+        )
+    return (
+        "# External Evidence Sources\n\n"
+        "Place external factual source files here: news, industry reports, SEC filings, RSS exports, etc.\n\n"
+        "Supported formats: `.json` (recommended), `.md`, `.txt`\n\n"
+        "Files in this directory are extracted by Scout into the Claim Ledger as factual claims.\n"
+    )
+
+
+def _build_feedback_readme(language: str) -> str:
+    if language == "zh-CN":
+        return (
+            "# 用户批注与反馈\n\n"
+            "将批注、修改意见、上一版反馈放在此目录。\n\n"
+            "此目录中的文件**不会**被当作事实来源进入 Claim Ledger，\n"
+            "只会作为 Editor 修改方向的参考。\n"
+        )
+    return (
+        "# User Feedback & Annotations\n\n"
+        "Place annotations, revision notes, and previous-version feedback here.\n\n"
+        "Files in this directory are **NOT** treated as factual evidence for the Claim Ledger.\n"
+        "They are only used as editorial direction for the Editor.\n"
+    )
+
+
+def _build_instructions_readme(language: str) -> str:
+    if language == "zh-CN":
+        return (
+            "# 用户任务要求\n\n"
+            "将任务说明、需求文档、prompt 草稿放在此目录。\n\n"
+            "此目录中的文件**不会**被当作事实来源进入 Claim Ledger，\n"
+            "只会影响任务配置和报告方向。\n"
+        )
+    return (
+        "# User Instructions\n\n"
+        "Place task requirements, briefing notes, and prompt drafts here.\n\n"
+        "Files in this directory are **NOT** treated as factual evidence for the Claim Ledger.\n"
+        "They only influence task configuration and report direction.\n"
+    )
+
+
+def _build_context_readme(language: str) -> str:
+    if language == "zh-CN":
+        return (
+            "# 背景资料\n\n"
+            "将背景资料、参考材料、历史数据放在此目录。\n\n"
+            "此目录中的文件**不会**被当作事实来源进入 Claim Ledger，\n"
+            "可作为 Analyst 写作时的背景参考。\n"
+        )
+    return (
+        "# Background Context\n\n"
+        "Place background materials, reference documents, and historical data here.\n\n"
+        "Files in this directory are **NOT** treated as factual evidence for the Claim Ledger.\n"
+        "They serve as background reference for the Analyst.\n"
+    )
 
 
 def build_user_md(profile: InitProfile) -> str:

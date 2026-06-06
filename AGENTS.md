@@ -16,7 +16,7 @@ This repository has two modes:
    - In this mode, `user.md` is user context, and only `input/` contains source evidence.
    - Do not treat repository README, examples, agent docs, or generated config files as source evidence.
 
-Before running `multi-agent-brief prepare`, identify which mode you are in.
+Before running any brief generation command, identify which mode you are in.
 
 ## Quick Start (for agents)
 
@@ -79,39 +79,53 @@ multi-agent-brief doctor --config ../mabw-workspace/config.yaml
 
 Fix any issues before proceeding.
 
-### Step 5: Run deterministic pipeline
+### Step 5: Invoke scout subagent
 
-```bash
-multi-agent-brief prepare --config ../mabw-workspace/config.yaml
-```
+Use the `scout` subagent to read approved source materials, evidence inputs, and cached packages.
+- Extract candidate reportable items.
+- Write `output/intermediate/candidate_claims.json`.
+- Do not write final prose.
 
-Output files will be in `../mabw-workspace/output/`.
-This produces a deterministic draft — it is NOT the final brief.
+### Step 6: Invoke screener subagent
 
-### Step 6: Analyst subagent
+Use the `screener` subagent to dedupe, rank, freshness-check, and cap candidates.
+- Write `output/intermediate/screened_candidates.json`.
 
-Use the `analyst` subagent to rewrite `output/intermediate/audited_brief.md` from `claim_ledger.json` and `user.md`.
+### Step 7: Invoke claim-ledger subagent
+
+Use the `claim-ledger` subagent to convert screened candidates into source-grounded claims.
+- Write `output/intermediate/claim_ledger.json`.
+
+### Step 8: Invoke analyst subagent
+
+Use the `analyst` subagent to write the final brief from `claim_ledger.json` and `user.md`.
 - Write in the workspace output language.
 - Use only claims in `claim_ledger.json`.
 - Preserve all valid `[src:CLAIM_ID]` citations.
 - Include source dates where available.
+- Write the auditable brief to `output/intermediate/audited_brief.md`.
 
-### Step 7: Editor subagent
+### Step 9: Invoke editor subagent
 
 Use the `editor` subagent to polish the final brief.
 - Remove process residue and invalid citation markers.
 - Preserve valid `[src:CLAIM_ID]`.
 
-### Step 8: Final auditor subagent
+### Step 10: Invoke auditor subagent
 
-Use the `auditor` subagent to audit the final `brief.md` against `claim_ledger.json`.
-This is the final delivery audit — distinct from the Python pipeline's draft-level audit.
+Use the `auditor` subagent to audit the final `audited_brief.md` against `claim_ledger.json`.
+- Check orphan citations, unsupported facts, unsupported numbers, missing dates, advice language, and process residue.
+- Write/update `output/intermediate/audit_report.json`.
 
-### Step 9: Formatter / DOCX refresh
+### Step 11: Finalize
 
-Re-run formatter or DOCX conversion so `brief.docx` reflects the edited final Markdown.
+```bash
+multi-agent-brief finalize --config ../mabw-workspace/config.yaml
+```
 
-### Step 10: Report artifacts
+This generates reader-facing `brief.md` (with `[src:CLAIM_ID]` stripped) and DOCX if configured.
+
+### Step 12: Report artifacts
 
 Summarize final artifacts to the user. Do not claim success if audit failed.
 
@@ -178,8 +192,9 @@ Run demo:
 
 ```bash
 multi-agent-brief init ../mabw-workspace --demo
-multi-agent-brief prepare --config ../mabw-workspace/config.yaml
 ```
+
+Then use `/generate-brief ../mabw-workspace` in Claude Code to run the full subagent-first workflow.
 
 Generate agent configs:
 

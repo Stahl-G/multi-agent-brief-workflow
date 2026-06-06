@@ -1,31 +1,26 @@
 # Claude Code Agent Workflow
 
-## Two-Layer Architecture
+## Architecture
 
-This repository has two distinct layers:
-
-### Layer 1: Python CLI (Deterministic Preparation)
-
-The Python CLI provides deterministic, testable, API-key-optional preparation tools:
+MABW uses a subagent-first workflow. Python CLI commands provide setup, source discovery, input governance, audit checks, and final rendering. Subagents produce the actual brief.
 
 ```text
 multi-agent-brief init → /generate-brief (Claude Code) → output artifacts
 ```
 
-- **Deterministic pipeline**: Scout → Screener → Claim Ledger → Analyst → Editor → Auditor → Formatter
-- **Audit harness**: DeterministicAuditAgent, QualityHarnessAuditAgent, CompositeAuditAgent
-- **Output contract**: `brief.md` for readers, plus `output/intermediate/audited_brief.md`, `claim_ledger.json`, `audit_report.json`, and `source_map.md` for audit/review
-- **No API keys required**: runs entirely with local Python
-- **Testable**: `python -m pytest -q` covers all pipeline stages
+### CLI Tools
 
-The Python CLI produces intermediate artifacts (draft brief, claim ledger, audit report). The final user-facing brief is written by Claude Code / Codex subagents using these artifacts.
+- `multi-agent-brief init` — create workspace
+- `multi-agent-brief doctor` — check configuration health
+- `multi-agent-brief sources decide` — resolve llm_decide source policy
+- `multi-agent-brief inputs classify` — classify inputs as evidence/non-evidence
+- `multi-agent-brief finalize` — render reader-facing Markdown/DOCX from audited_brief.md
+- `multi-agent-brief audit` — run deterministic audit checks
 
-### Layer 2: Claude Code Subagent Orchestration
-
-Claude Code subagents provide interactive, model-assisted workflow orchestration:
+### Subagent Workflow
 
 ```text
-source-planner → scout → analyst → editor → auditor → formatter
+scout → screener → claim-ledger → analyst → editor → auditor → finalize
 ```
 
 - **Subagent definitions**: `.claude/agents/*.md` (Markdown + YAML frontmatter)
@@ -34,9 +29,7 @@ source-planner → scout → analyst → editor → auditor → formatter
 - **Source grounding**: all subagents respect Claim Ledger and citation contracts
 - **No SDK dependency**: subagents are pure Markdown prompts, not Python code
 
-Claude Code subagents complement the Python CLI — they do not replace it.
-
-## How The Layers Interact
+## How The Workflow Executes
 
 ```text
 ┌─────────────────────────────────────────────────────┐
@@ -45,19 +38,32 @@ Claude Code subagents complement the Python CLI — they do not replace it.
 │  User: "Generate a weekly brief for my company"     │
 │         │                                           │
 │         ▼                                           │
-│  source-planner subagent                            │
-│    → reads user.md, config.yaml, sources.yaml       │
-│    → generates source_candidates.yaml               │
+│  source discovery (if llm_decide)                   │
+│    → sources decide + merge                         │
 │         │                                           │
 │         ▼                                           │
-│  /generate-brief (Claude Code subagent workflow)  │
-│    → Python CLI executes deterministic pipeline     │
-│    → produces reader brief + intermediate audit set │
+│  doctor gate                                        │
+│    → fix config issues                              │
+│         │                                           │
+│         ▼                                           │
+│  scout subagent                                     │
+│    → reads sources, extracts candidates             │
+│    → writes candidate_claims.json                   │
+│         │                                           │
+│         ▼                                           │
+│  screener subagent                                  │
+│    → dedupe, rank, freshness-check                  │
+│    → writes screened_candidates.json                │
+│         │                                           │
+│         ▼                                           │
+│  claim-ledger subagent                              │
+│    → converts to source-grounded claims             │
+│    → writes claim_ledger.json                       │
 │         │                                           │
 │         ▼                                           │
 │  analyst subagent                                   │
 │    → reads claim_ledger.json and user.md            │
-│    → improves brief sections                        │
+│    → writes audited_brief.md                        │
 │    → preserves all [src:CLAIM_ID] citations         │
 │         │                                           │
 │         ▼                                           │
@@ -68,11 +74,12 @@ Claude Code subagents complement the Python CLI — they do not replace it.
 │         ▼                                           │
 │  auditor subagent                                   │
 │    → reviews audited_brief.md against ledger        │
-│    → runs python deterministic audit commands       │
 │    → reports findings and recommends fixes          │
-│                                                     │
-│  formatter/final handoff                            │
-│    → strips [src:CLAIM_ID] only for brief.md        │
+│         │                                           │
+│         ▼                                           │
+│  finalize                                           │
+│    → strips [src:CLAIM_ID] for brief.md             │
+│    → generates DOCX if configured                   │
 └─────────────────────────────────────────────────────┘
 ```
 
@@ -89,70 +96,52 @@ Claude Code subagents complement the Python CLI — they do not replace it.
 | `editor` | pipeline | Improve readability without adding facts |
 | `auditor` | pipeline | Review final brief against ledger and audit report |
 | `formatter` | pipeline | Write final output artifacts |
-| `orchestrator` | coordination | Coordinate multi-step pipeline work |
+| `orchestrator` | coordination | Coordinate multi-step work |
 | `draft-audit-harness` | harness | Draft-level audit checks |
 | `final-quality-harness` | harness | Final text quality gates |
 | `rendered-output-harness` | harness | DOCX/PDF rendering fidelity checks |
 
 ## Key Design Decisions
 
-### Why Two Layers?
+### Why Subagent-First?
 
-1. **Testability**: The Python CLI has 100+ tests covering every pipeline stage. Subagent behavior is inherently non-deterministic and harder to test.
-2. **Portability**: The Python CLI runs anywhere Python 3.9+ is available, without Claude Code.
+1. **Testability**: CLI tools have 100+ tests covering setup, source discovery, audit, and finalize. Subagent behavior is validated through audit gates.
+2. **Flexibility**: Subagents can adapt to different workspace configurations, languages, and audience profiles.
 3. **Auditability**: Deterministic audit gates in Python are repeatable. Model-assisted checks are complementary.
 4. **No SDK lock-in**: Subagents are pure Markdown — no Anthropic SDK dependency in the Python package.
 
-### Why Not Embed Model Calls in Python?
+### What Stays in Python CLI
 
-- Model calls inside the Python pipeline would make tests non-deterministic.
-- API key management would complicate the CLI.
-- The Python pipeline should remain runnable without any API keys.
-- Claude Code subagents handle model interaction externally.
-
-### What Stays in Python
-
-- Pipeline orchestration logic
+- Workspace initialization and configuration
+- Source discovery and provider management
+- Input governance and classification
 - Deterministic audit checks
-- Output file formatting and validation
-- Source provider configuration and collection
-- Claim Ledger data structure
-- CLI commands (init, prepare, doctor, audit, sources decide, competitors init/list/merge)
+- Final rendering (finalize)
 
 ### What Stays in Subagents
 
-- Source planning and discovery
-- Claim extraction from unstructured text
+- Source scouting and candidate extraction
+- Screening and deduplication
+- Claim ledger construction
 - Brief section drafting
 - Prose editing and readability improvement
 - Final review and recommendation
 
 ## Usage Patterns
 
-### Pattern 1: Full Agent-Assisted Workflow
+### Pattern 1: Full Agent Workflow
 
 ```text
 1. User asks Claude Code to generate a brief
-2. source-planner creates/refines sources
-3. Python CLI runs the pipeline
-4. analyst improves the draft
-5. editor polishes the prose
-6. auditor verifies the final output
+2. CLI resolves sources and checks config
+3. Subagents produce the brief through scout → screener → claim-ledger → analyst → editor → auditor
+4. CLI finalizes reader-facing output
 ```
 
-### Pattern 2: Python CLI Only
+### Pattern 2: Hybrid
 
 ```text
-1. User runs multi-agent-brief init
-2. User adds source files to input/
-3. User runs /generate-brief in Claude Code
-4. User reviews output/ artifacts
-```
-
-### Pattern 3: Hybrid
-
-```text
-1. User runs multi-agent-brief init (Python CLI)
+1. User runs multi-agent-brief init (CLI)
 2. User asks Claude Code source-planner to refine sources
 3. User runs /generate-brief in Claude Code
 4. User asks Claude Code auditor to review output
@@ -162,5 +151,5 @@ Claude Code subagents complement the Python CLI — they do not replace it.
 
 - [docs/claude-code-quickstart.md](claude-code-quickstart.md) — Command guide with sample prompts
 - [docs/agents/claude-code.md](agents/claude-code.md) — Subagent configuration reference
-- [docs/architecture.md](architecture.md) — Pipeline architecture
+- [docs/architecture.md](architecture.md) — Architecture overview
 - [docs/harness.md](harness.md) — Audit harness design

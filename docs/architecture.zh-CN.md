@@ -59,17 +59,17 @@ report:
 
 超过窗口的来源会被标记为 `stale_source`；在严格模式下，它会成为高严重度问题。
 
-流水线层面的 `AuditorAgent` 会委托给 `AuditAgentInterface` 后端：
+auditor subagent 会委托给 `AuditAgentInterface` 后端：
 
 ```text
-AuditorAgent
+auditor subagent
   -> CompositeAuditAgent
        -> DeterministicAuditAgent
        -> QualityHarnessAuditAgent
        -> optional SemanticAuditAgent
 ```
 
-这样可以保持流水线中的 agent 步骤稳定，同时替换不同审计实现。
+这样可以保持工作流中的审计步骤稳定，同时替换不同审计实现。
 
 ### Formatter 格式转换器
 

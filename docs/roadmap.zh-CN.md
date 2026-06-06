@@ -83,7 +83,7 @@ v0.5 之后的候选扩展：
 
 范围：
 
-- 冻结单一正式主路径：交互初始化 → 来源发现与确认 → doctor → prepare → Analyst → Editor → Final Auditor → Markdown / DOCX → Human Review。
+- 冻结单一正式主路径：交互初始化 → 来源发现与确认 → doctor → scout → screener → claim-ledger → analyst → editor → auditor → finalize → Markdown / DOCX → Human Review。
 - Reference Workflow：一个维护者本地参考工作流，加一个 public-safe synthetic demo。
 - Audience Profiles：至少支持 management、research、IR、legal-compliance，并定义必需章节、禁用风格和审计要求。
 - DOCX 模板：支持 Executive Brief、Research Note、Formal Internal Report 三种模板，并做基础 layout validation。

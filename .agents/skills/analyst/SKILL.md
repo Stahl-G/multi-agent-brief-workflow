@@ -1,6 +1,6 @@
 ---
 name: analyst
-description: Drafts executive-readable brief sections using only Claim Ledger entries. Use after the Python preparation pipeline whenever the user expects a real polished brief, weekly report, management brief, or analytical output. The deterministic Python AnalystAgent produces only a draft; this role rewrites it into the real user-facing analysis.
+description: Drafts executive-readable brief sections using only Claim Ledger entries. Use when the user expects a real polished brief, weekly report, management brief, or analytical output.
 ---
 
 # Analyst Skill
@@ -11,7 +11,7 @@ Drafts executive-readable brief sections using only Claim Ledger entries.
 
 ## When To Use
 
-Use after the Python preparation pipeline whenever the user expects a real polished brief, weekly report, management brief, or analytical output. The deterministic Python AnalystAgent produces only a draft; this role rewrites it into the real user-facing analysis.
+Use when the user expects a real polished brief, weekly report, management brief, or analytical output. This role produces the real user-facing analysis from Claim Ledger evidence.
 
 ## Responsibilities
 
@@ -23,7 +23,6 @@ Use after the Python preparation pipeline whenever the user expects a real polis
 - Preserve uncertainty and source limitations.
 - Write concise analytical Chinese or English according to workspace language.
 - Do not add unsupported facts.
-- Do not use the deterministic brief.md as truth; use it only as a rough scaffold.
 - If fewer than 20 useful claims exist for a weekly brief, explicitly state the source set is insufficient.
 
 ## Hard Rules
@@ -34,20 +33,20 @@ Use after the Python preparation pipeline whenever the user expects a real polis
 - Do not remove or rewrite [src:CLAIM_ID] citations.
 - Always read claim_ledger.json before writing.
 
-## Pipeline Context
+## Workflow Context
 
 ```text
-Scout -> Screener -> Claim Ledger -> Analyst -> Editor -> Auditor -> Formatter
+scout -> screener -> claim-ledger -> analyst -> editor -> auditor -> finalize
 ```
 
 ## Expected Inputs
 
-Source files, claim ledger entries, or draft markdown as appropriate for the pipeline stage.
+Source files, claim ledger entries, or draft markdown as appropriate for the workflow stage.
 
 ## Expected Outputs
 
-Structured artifacts conforming to the pipeline contract:
-- `draft_brief.md`
+Structured artifacts conforming to the workflow contract:
+- `audited_brief.md`
 - `claim_ledger.json`
 - `audit_report.json`
 - `source_map.md`

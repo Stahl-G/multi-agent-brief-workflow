@@ -83,7 +83,7 @@ See [v0.5.0 Implementation Plan](impl-plan-v0.5.0.md) for the detailed PR split.
 
 Scope:
 
-- Freeze one official path: interactive init → source discovery/confirmation → doctor → prepare → Analyst → Editor → Final Auditor → Markdown / DOCX → Human Review.
+- Freeze one official path: interactive init → source discovery/confirmation → doctor → scout → screener → claim-ledger → analyst → editor → auditor → finalize → Markdown / DOCX → Human Review.
 - Keep one maintainer-local reference workflow and one public-safe synthetic demo.
 - Add Audience Profiles for management, research, IR, and legal/compliance readers.
 - Add DOCX templates for Executive Brief, Research Note, and Formal Internal Report, with basic layout validation.

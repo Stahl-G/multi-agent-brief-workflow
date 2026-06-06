@@ -59,17 +59,17 @@ report:
 
 Sources older than the configured window are flagged as `stale_source`; in strict mode they become high-severity findings.
 
-The pipeline-level `AuditorAgent` delegates to an `AuditAgentInterface` backend:
+The auditor subagent delegates to an `AuditAgentInterface` backend:
 
 ```text
-AuditorAgent
+auditor subagent
   -> CompositeAuditAgent
        -> DeterministicAuditAgent
        -> QualityHarnessAuditAgent
        -> optional SemanticAuditAgent
 ```
 
-This separation lets the pipeline keep one stable agent step while swapping audit implementations.
+This separation lets the workflow keep one stable audit step while swapping audit implementations.
 
 ### Formatter
 
