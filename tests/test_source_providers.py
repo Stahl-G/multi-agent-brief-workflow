@@ -327,9 +327,36 @@ def test_mcp_jsonrpc_communication(monkeypatch):
     def mock_call(_self, _proc, method, params):
         return next(call_responses, None)
 
+    def mock_cleanup(_self, proc):
+        """Properly clean up the subprocess and close file descriptors."""
+        try:
+            if proc.stdin and not proc.stdin.closed:
+                proc.stdin.close()
+        except Exception:
+            pass
+        try:
+            if proc.stdout and not proc.stdout.closed:
+                proc.stdout.close()
+        except Exception:
+            pass
+        try:
+            if proc.stderr and not proc.stderr.closed:
+                proc.stderr.close()
+        except Exception:
+            pass
+        try:
+            if proc.poll() is None:
+                proc.terminate()
+                proc.wait(timeout=1)
+        except Exception:
+            try:
+                proc.kill()
+            except Exception:
+                pass
+
     monkeypatch.setattr(McpProvider, "_jsonrpc_call", mock_call)
     monkeypatch.setattr(McpProvider, "_jsonrpc_notify", lambda _self, _proc, _method: None)
-    monkeypatch.setattr(McpProvider, "_cleanup_proc", lambda _self, _proc: None)
+    monkeypatch.setattr(McpProvider, "_cleanup_proc", mock_cleanup)
 
     config = {
         "enabled": True,
@@ -353,9 +380,36 @@ def test_mcp_jsonrpc_init_failure_returns_empty(monkeypatch):
     def mock_fail(_self, _proc, method, params):
         return None  # simulate failure
 
+    def mock_cleanup(_self, proc):
+        """Properly clean up the subprocess and close file descriptors."""
+        try:
+            if proc.stdin and not proc.stdin.closed:
+                proc.stdin.close()
+        except Exception:
+            pass
+        try:
+            if proc.stdout and not proc.stdout.closed:
+                proc.stdout.close()
+        except Exception:
+            pass
+        try:
+            if proc.stderr and not proc.stderr.closed:
+                proc.stderr.close()
+        except Exception:
+            pass
+        try:
+            if proc.poll() is None:
+                proc.terminate()
+                proc.wait(timeout=1)
+        except Exception:
+            try:
+                proc.kill()
+            except Exception:
+                pass
+
     monkeypatch.setattr(McpProvider, "_jsonrpc_call", mock_fail)
     monkeypatch.setattr(McpProvider, "_jsonrpc_notify", lambda _self, _proc, _method: None)
-    monkeypatch.setattr(McpProvider, "_cleanup_proc", lambda _self, _proc: None)
+    monkeypatch.setattr(McpProvider, "_cleanup_proc", mock_cleanup)
 
     config = {
         "enabled": True,
@@ -693,7 +747,11 @@ def test_mineru_http_put_file_error_prints_body(monkeypatch, tmp_path, capsys):
     test_file = tmp_path / "test.pdf"
     test_file.write_bytes(b"fake pdf content")
 
-    result = _http_put_file("https://example.com/signed-url", str(test_file))
+    # Suppress ResourceWarning for this test since we're testing error handling
+    import warnings
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", ResourceWarning)
+        result = _http_put_file("https://example.com/signed-url", str(test_file))
 
     assert result is False
     captured = capsys.readouterr()
