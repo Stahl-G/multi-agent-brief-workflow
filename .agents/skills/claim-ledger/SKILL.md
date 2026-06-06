@@ -21,13 +21,13 @@ Use when implementing or reviewing claim ID creation, source evidence storage, c
 - Carry useful Screener metadata forward.
 - Detect duplicate or unsupported claims.
 
-## Hard Rules
+## Guardrails
 
 - Every claim must be evidence-backed.
-- Do not merge claims in a way that loses traceability.
-- Do not upgrade weak evidence into strong language.
+- Merge claims only when traceability is preserved.
+- Keep language strength aligned with evidence strength.
 
-## Pipeline Context
+## Subagent workflow Context
 
 ```text
 Scout -> Screener -> Claim Ledger -> Analyst -> Editor -> Auditor -> Formatter
@@ -39,7 +39,7 @@ Source files, claim ledger entries, or draft markdown as appropriate for the pip
 
 ## Expected Outputs
 
-Structured artifacts conforming to the pipeline contract:
+Structured artifacts conforming to the workflow contract:
 - `draft_brief.md`
 - `claim_ledger.json`
 - `audit_report.json`

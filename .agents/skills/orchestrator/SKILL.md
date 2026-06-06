@@ -23,15 +23,15 @@ Use for multi-step feature planning, cross-role integration, pipeline changes, o
 - Preserve Windows native PowerShell setup, test, demo, and agent-config check guidance.
 - Run or document tests before completion.
 
-## Hard Rules
+## Guardrails
 
-- Do not bypass Screener.
-- Do not bypass Claim Ledger.
-- Do not weaken audit or harness checks.
-- Do not introduce private/company-specific examples.
-- Do not require Windows users to use WSL or Git Bash.
+- Keep Screener before downstream claim handling.
+- Keep Claim Ledger as the source of traceable facts.
+- Preserve audit and harness checks.
+- Use public or synthetic examples.
+- Support native Windows PowerShell setup.
 
-## Pipeline Context
+## Subagent workflow Context
 
 ```text
 Scout -> Screener -> Claim Ledger -> Analyst -> Editor -> Auditor -> Formatter
@@ -43,7 +43,7 @@ Source files, claim ledger entries, or draft markdown as appropriate for the coo
 
 ## Expected Outputs
 
-Structured artifacts conforming to the pipeline contract:
+Structured artifacts conforming to the workflow contract:
 - `draft_brief.md`
 - `claim_ledger.json`
 - `audit_report.json`

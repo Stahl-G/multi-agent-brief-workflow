@@ -35,9 +35,9 @@
         | Profile | Tools | Use |
         |---------|-------|-----|
         | read_only | Read, Grep, Glob, Bash | Scout |
-        | edit_safe | Read, Grep, Glob, Bash, Edit, MultiEdit, Write | Most pipeline agents |
+        | edit_safe | Read, Grep, Glob, Bash, Edit, MultiEdit, Write | Most workflow agents |
         | audit_edit | Read, Grep, Glob, Bash, Edit, MultiEdit, Write | Audit and harness agents |
 
         ## Worktree Isolation
 
-        By default, subagents do not use `isolation: worktree`. For risky parallel implementation tasks, users can enable worktree isolation in the agent definition or at invocation time.
+        By default, subagents share the current workspace. For risky parallel implementation tasks, users can enable worktree isolation in the agent definition or at invocation time.

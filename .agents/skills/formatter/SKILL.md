@@ -20,13 +20,13 @@ Use when implementing or reviewing output file writing, JSON validity, source ma
 - Validate cited claim IDs exist.
 - Preserve deterministic formatting.
 
-## Hard Rules
+## Guardrails
 
-- Do not hide failed audits.
-- Do not change substantive content to hide rendering defects.
-- Do not overwrite user files outside output directories.
+- Surface failed audits clearly.
+- Fix rendering defects without changing substantive content.
+- Write files only inside configured output directories.
 
-## Pipeline Context
+## Subagent workflow Context
 
 ```text
 Scout -> Screener -> Claim Ledger -> Analyst -> Editor -> Auditor -> Formatter
@@ -38,7 +38,7 @@ Source files, claim ledger entries, or draft markdown as appropriate for the pip
 
 ## Expected Outputs
 
-Structured artifacts conforming to the pipeline contract:
+Structured artifacts conforming to the workflow contract:
 - `draft_brief.md`
 - `claim_ledger.json`
 - `audit_report.json`

@@ -31,13 +31,13 @@ Use before final delivery of any real brief. Must verify brief against claim_led
 - Prefer running python deterministic audit commands where available.
 - Coordinate draft and final harness agents when needed.
 
-## Hard Rules
+## Guardrails
 
-- Do not weaken audit gates to pass tests.
-- Do not treat model judgment as source evidence.
-- Do not mark blocked reports as distribution-ready.
+- Preserve audit gates while fixing failures.
+- Treat model judgment as analysis, not source evidence.
+- Mark reports distribution-ready only after gates pass.
 
-## Pipeline Context
+## Subagent workflow Context
 
 ```text
 Scout -> Screener -> Claim Ledger -> Analyst -> Editor -> Auditor -> Formatter
@@ -49,7 +49,7 @@ Source files, claim ledger entries, or draft markdown as appropriate for the pip
 
 ## Expected Outputs
 
-Structured artifacts conforming to the pipeline contract:
+Structured artifacts conforming to the workflow contract:
 - `draft_brief.md`
 - `claim_ledger.json`
 - `audit_report.json`

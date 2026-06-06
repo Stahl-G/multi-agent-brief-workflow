@@ -58,7 +58,7 @@ v0.4 should only lay reusable foundations:
 - Claim Schema v2 reserves optional event, field, and fact-role links so future claims can support field-level traceability.
 - The contracts package may include experimental `EventRecord`, `EventField`, input content type, and source coverage summary schemas.
 - Audit Finding / Rule Packs may reserve issue types such as `feedback_contamination`, `instruction_leakage`, `editorial_comment_leakage`, `low_factual_density`, and `unsupported_business_advice`.
-- Run Manifest may record event counts, source coverage summaries, and future missing-fact retrieval counters, but these fields must not become required runtime dependencies in v0.4.
+- Run Manifest may record event counts, source coverage summaries, and future missing-fact retrieval counters as optional metadata in v0.4.
 
 v0.5 should consume those contracts in the official workflow:
 
@@ -66,7 +66,7 @@ v0.5 should consume those contracts in the official workflow:
 - Audience Profiles define factual density, banned styles, and must-preserve facts for management, research, IR, and legal/compliance readers.
 - Comparable Case Contracts require specific case facts, comparable dimensions, non-comparable boundaries, applicability rationale, and local verification questions.
 - Source Coverage Report / `research_gaps.md` separates direct local sources, regional comparable sources, global background sources, official sources, and social discussion coverage. Coverage dimensions must be configurable instead of hard-coding Vietnam, TikTok, Shopee, Lazada, or any other scenario into core support.
-- Missing facts must be explicit as `not_found`, `not_disclosed`, `not_verified`, `conflicting`, or `not_applicable`; models must not fill gaps from general knowledge.
+- Missing facts should be explicit as `not_found`, `not_disclosed`, `not_verified`, `conflicting`, or `not_applicable`; gap handling should rely on source status rather than general-knowledge filling.
 
 Post-v0.5 candidate extensions:
 
@@ -98,7 +98,7 @@ Done when:
 - A new user can complete the official workflow from the README.
 - The reference workflow and synthetic demo are reproducible.
 - Markdown and DOCX have publish-level quality gates.
-- Reader-facing briefs do not mix user feedback, agent process notes, source-gap notes, or next-research suggestions into formal business prose.
+- Reader-facing briefs keep user feedback, agent process notes, source-gap notes, and next-research suggestions separate from formal business prose.
 - Two meaningfully different Analysis Modules use the same registry.
 - Historical context cannot silently become current-period fact.
 

@@ -41,7 +41,7 @@ SENSITIVE_CONTEXT_PATTERNS = [
     "internal report", "secret",
 ]
 
-# Lines containing these safety-rule phrases are allowed to mention sensitive words
+# Lines containing these guardrail phrases are allowed to mention sensitive words
 SENSITIVE_EXEMPTIONS = [
     "do not commit", "do not store", "do not expose", "do not put",
     "do not place", "do not import", "do not migrate", "do not copy",
@@ -73,7 +73,7 @@ def validate_manifest(manifest: dict[str, Any]) -> None:
     pipeline = project.get("pipeline", [])
     expected_pipeline = ["scout", "screener", "claim-ledger", "analyst", "editor", "auditor", "formatter"]
     if pipeline != expected_pipeline:
-        raise ValueError(f"Pipeline mismatch: got {pipeline}, expected {expected_pipeline}")
+        raise ValueError(f"Subagent workflow mismatch: got {pipeline}, expected {expected_pipeline}")
 
     roles = manifest["roles"]
     required_fields = ["stage", "tool_profile", "description", "trigger", "responsibilities", "hard_rules"]
@@ -109,7 +109,7 @@ def _sensitive_check(text: str, context: str) -> list[str]:
     hits = []
     for line in text.splitlines():
         lower = line.lower()
-        # Skip lines that are safety rules (mentioning what NOT to do)
+        # Skip lines that are guardrails (may mention sensitive terms)
         if any(exempt in lower for exempt in SENSITIVE_EXEMPTIONS):
             continue
         for pattern in SENSITIVE_PATTERNS + SENSITIVE_CONTEXT_PATTERNS:
@@ -141,11 +141,12 @@ def render_agents_md(manifest: dict) -> str:
     roles = manifest["roles"]
     non_goals = _join_lines(project["non_goals"])
 
-    # Compact role summary — one line per role, no full details
-    # Full details live in .claude/agents/*.md, .codex/agents/*.toml, .agents/skills/*/SKILL.md
-    role_lines = []
-    for name, role in roles.items():
-        role_lines.append(f"- **{name}** ({role['stage']}): {role['description']}")
+    # Compact role summary — one line per role. Full details live in generated
+    # platform-specific agent/skill files.
+    role_lines = [
+        f"- **{name}** ({role['stage']}): {role['description']}"
+        for name, role in roles.items()
+    ]
     roles_section = "\n".join(role_lines)
 
     context_mode_rule = (
@@ -160,10 +161,10 @@ def render_agents_md(manifest: dict) -> str:
         "\n"
         "2. **Generated workspace mode**\n"
         "   - If the current directory contains `config.yaml`, `sources.yaml`, `user.md`, and `input/`, treat this as an end-user brief workspace.\n"
-        "   - In this mode, `user.md` is user context, and only `input/` contains source evidence.\n"
-        "   - Do not treat repository README, examples, agent docs, or generated config files as source evidence.\n"
+        "   - In this mode, `user.md` is user context, and `input/` contains source evidence.\n"
+        "   - Repository README, examples, agent docs, and generated config files are development references rather than source evidence.\n"
         "\n"
-        "Before running any brief generation command, identify which mode you are in.\n"
+        "Identify the active mode before running source, validation, audit, or rendering commands.\n"
     )
 
     return (
@@ -171,10 +172,16 @@ def render_agents_md(manifest: dict) -> str:
         f"\n"
         f"# AGENTS.md\n"
         f"\n"
+        f"Python commands are support tools. The briefing runtime is the external subagent workflow:\n"
+        f"\n"
+        f"```text\n"
+        f"{PIPELINE_TEXT}\n"
+        f"```\n"
+        f"\n"
         f"{context_mode_rule}\n"
         f"## Quick Start (for agents)\n"
         f"\n"
-        f"**Single authoritative workflow.** Follow these steps in order. Do not skip steps.\n"
+        f"Follow the single authoritative workflow below.\n"
         f"\n"
         f"### Step 1: Setup\n"
         f"\n"
@@ -196,11 +203,9 @@ def render_agents_md(manifest: dict) -> str:
         f"- Source style: official only / reliable research / broad scan (default: \"reliable research\")\n"
         f"- Output style (default: \"executive brief, conclusion-first\")\n"
         f"- Must-watch topics or entities (default: empty)\n"
-        f"- Forbidden sources or topics (default: empty)\n"
+        f"- Excluded sources or topics (default: empty)\n"
         f"\n"
-        f"If the user says \"default\" or \"unknown\", stop and ask for explicit confirmation. "
-        f"Do NOT silently default values.\n"
-        f"See `docs/onboarding.md` for field mappings.\n"
+        f"Confirm required fields and defaults explicitly. See `docs/onboarding.md` for field mappings.\n"
         f"\n"
         f"Create `onboarding.json` from the answers, then:\n"
         f"\n"
@@ -208,23 +213,23 @@ def render_agents_md(manifest: dict) -> str:
         f"multi-agent-brief init ../mabw-workspace --from-onboarding onboarding.json\n"
         f"```\n"
         f"\n"
-        f"Do NOT pass `--language`, `--company`, etc. directly — always use `--from-onboarding`.\n"
+        f"Use `--from-onboarding` as the workspace creation interface.\n"
         f"\n"
         f"### Step 3: Source discovery (if llm_decide)\n"
         f"\n"
-        f"If `sources.yaml` has `source.mode: llm_decide`, run source discovery BEFORE the pipeline:\n"
+        f"If `sources.yaml` has `source.mode: llm_decide`, run source discovery before invoking Scout:\n"
         f"\n"
         f"```bash\n"
         f"multi-agent-brief sources decide --config ../mabw-workspace/config.yaml\n"
         f"```\n"
         f"\n"
-        f"Review `../mabw-workspace/source_candidates.yaml`, then merge:\n"
+        f"Review `../mabw-workspace/source_candidates.yaml`, then merge approved sources:\n"
         f"\n"
         f"```bash\n"
         f"multi-agent-brief sources decide --config ../mabw-workspace/config.yaml --merge\n"
         f"```\n"
         f"\n"
-        f"If the user explicitly chooses local input-only mode, skip this step.\n"
+        f"Local input-only mode can proceed directly to the doctor gate.\n"
         f"\n"
         f"### Step 4: Doctor\n"
         f"\n"
@@ -232,45 +237,45 @@ def render_agents_md(manifest: dict) -> str:
         f"multi-agent-brief doctor --config ../mabw-workspace/config.yaml\n"
         f"```\n"
         f"\n"
-        f"Fix any issues before proceeding.\n"
+        f"Resolve reported configuration issues before proceeding.\n"
         f"\n"
-        f"### Step 5: Invoke scout subagent\n"
+        f"### Step 5: Scout subagent\n"
         f"\n"
         f"Use the `scout` subagent to read approved source materials, evidence inputs, and cached packages.\n"
         f"- Extract candidate reportable items.\n"
         f"- Write `output/intermediate/candidate_claims.json`.\n"
-        f"- Do not write final prose.\n"
         f"\n"
-        f"### Step 6: Invoke screener subagent\n"
+        f"### Step 6: Screener subagent\n"
         f"\n"
         f"Use the `screener` subagent to dedupe, rank, freshness-check, and cap candidates.\n"
         f"- Write `output/intermediate/screened_candidates.json`.\n"
         f"\n"
-        f"### Step 7: Invoke claim-ledger subagent\n"
+        f"### Step 7: Claim Ledger subagent\n"
         f"\n"
         f"Use the `claim-ledger` subagent to convert screened candidates into source-grounded claims.\n"
         f"- Write `output/intermediate/claim_ledger.json`.\n"
         f"\n"
-        f"### Step 8: Invoke analyst subagent\n"
+        f"### Step 8: Analyst subagent\n"
         f"\n"
-        f"Use the `analyst` subagent to write the final brief from `claim_ledger.json` and `user.md`.\n"
+        f"Use the `analyst` subagent to write the auditable brief from `claim_ledger.json` and `user.md`.\n"
         f"- Write in the workspace output language.\n"
-        f"- Use only claims in `claim_ledger.json`.\n"
-        f"- Preserve all valid `[src:CLAIM_ID]` citations.\n"
+        f"- Use claims in `claim_ledger.json` as the evidence base.\n"
+        f"- Preserve valid `[src:CLAIM_ID]` citations.\n"
         f"- Include source dates where available.\n"
-        f"- Write the auditable brief to `output/intermediate/audited_brief.md`.\n"
+        f"- Write `output/intermediate/audited_brief.md`.\n"
         f"\n"
-        f"### Step 9: Invoke editor subagent\n"
+        f"### Step 9: Editor subagent\n"
         f"\n"
-        f"Use the `editor` subagent to polish the final brief.\n"
-        f"- Remove process residue and invalid citation markers.\n"
-        f"- Preserve valid `[src:CLAIM_ID]`.\n"
+        f"Use the `editor` subagent to polish the auditable brief.\n"
+        f"- Improve readability and management tone.\n"
+        f"- Clean process residue and invalid citation markers.\n"
+        f"- Preserve valid `[src:CLAIM_ID]` citations.\n"
         f"\n"
-        f"### Step 10: Invoke auditor subagent\n"
+        f"### Step 10: Auditor subagent\n"
         f"\n"
-        f"Use the `auditor` subagent to audit the final `audited_brief.md` against `claim_ledger.json`.\n"
-        f"- Check orphan citations, unsupported facts, unsupported numbers, missing dates, advice language, and process residue.\n"
-        f"- Write/update `output/intermediate/audit_report.json`.\n"
+        f"Use the `auditor` subagent to audit `output/intermediate/audited_brief.md` against `claim_ledger.json`.\n"
+        f"- Check citations, support, numbers, dates, advice language, and process residue.\n"
+        f"- Write or update `output/intermediate/audit_report.json`.\n"
         f"\n"
         f"### Step 11: Finalize\n"
         f"\n"
@@ -278,11 +283,11 @@ def render_agents_md(manifest: dict) -> str:
         f"multi-agent-brief finalize --config ../mabw-workspace/config.yaml\n"
         f"```\n"
         f"\n"
-        f"This generates reader-facing `brief.md` (with `[src:CLAIM_ID]` stripped) and DOCX if configured.\n"
+        f"This generates reader-facing `brief.md` and DOCX if configured.\n"
         f"\n"
         f"### Step 12: Report artifacts\n"
         f"\n"
-        f"Summarize final artifacts to the user. Do not claim success if audit failed.\n"
+        f"Summarize final artifacts, audit status, and remaining limitations.\n"
         f"\n"
         f"Use `/generate-brief <workspace>` in Claude Code for the full subagent-assisted workflow.\n"
         f"\n"
@@ -290,9 +295,9 @@ def render_agents_md(manifest: dict) -> str:
         f"\n"
         f"## Project Purpose\n"
         f"\n"
-        f"This repository implements a source-grounded, audit-ready multi-agent workflow for producing business, research, market, policy, and management briefs.\n"
+        f"This repository implements a subagent-first, source-grounded, audit-ready workflow toolkit for producing business, research, market, policy, and management briefs.\n"
         f"\n"
-        f"Pipeline:\n"
+        f"Subagent workflow:\n"
         f"\n"
         f"```text\n"
         f"{PIPELINE_TEXT}\n"
@@ -324,7 +329,7 @@ def render_agents_md(manifest: dict) -> str:
         f"multi-agent-brief version\n"
         f"```\n"
         f"\n"
-        f"PowerShell is the Windows-native path. WSL is optional, not required.\n"
+        f"PowerShell is the Windows-native path. WSL is optional.\n"
         f"\n"
         f"Run tests:\n"
         f"\n"
@@ -332,29 +337,17 @@ def render_agents_md(manifest: dict) -> str:
         f"python -m pytest -q\n"
         f"```\n"
         f"\n"
-        f"Windows (PowerShell):\n"
-        f"\n"
-        f"```powershell\n"
-        f"python -m pytest -q\n"
-        f"```\n"
-        f"\n"
-        f"Run demo:\n"
+        f"Run demo workspace setup:\n"
         f"\n"
         f"```bash\n"
         f"multi-agent-brief init ../mabw-workspace --demo\n"
         f"```\n"
         f"\n"
-        f"Then use `/generate-brief ../mabw-workspace` in Claude Code to run the full subagent-first workflow.\n"
+        f"Then use `/generate-brief ../mabw-workspace` in a subagent-capable runtime.\n"
         f"\n"
         f"Generate agent configs:\n"
         f"\n"
         f"```bash\n"
-        f"python scripts/generate_agent_configs.py --write\n"
-        f"```\n"
-        f"\n"
-        f"Windows (PowerShell):\n"
-        f"\n"
-        f"```powershell\n"
         f"python scripts/generate_agent_configs.py --write\n"
         f"```\n"
         f"\n"
@@ -364,71 +357,36 @@ def render_agents_md(manifest: dict) -> str:
         f"python scripts/generate_agent_configs.py --check\n"
         f"```\n"
         f"\n"
-        f"Windows (PowerShell):\n"
+        f"## Repository Guardrails\n"
         f"\n"
-        f"```powershell\n"
-        f"python scripts/generate_agent_configs.py --check\n"
-        f"```\n"
-        f"\n"
-        f"Generate OpenCode configs:\n"
-        f"\n"
-        f"```bash\n"
-        f"python scripts/generate_agent_configs.py --target opencode --write\n"
-        f"```\n"
-        f"\n"
-        f"Windows (PowerShell):\n"
-        f"\n"
-        f"```powershell\n"
-        f"python scripts/generate_agent_configs.py --target opencode --write\n"
-        f"```\n"
-        f"\n"
-        f"Check OpenCode configs:\n"
-        f"\n"
-        f"```bash\n"
-        f"python scripts/generate_agent_configs.py --target opencode --check\n"
-        f"```\n"
-        f"\n"
-        f"Windows (PowerShell):\n"
-        f"\n"
-        f"```powershell\n"
-        f"python scripts/generate_agent_configs.py --target opencode --check\n"
-        f"```\n"
-        f"\n"
-        f"## Repository Rules\n"
-        f"\n"
-        f"- Do not commit credentials, tokens, webhooks, raw internal logs, private reports, customer names, confidential files, internal paths, or company-specific prompts.\n"
-        f"- Use public or synthetic examples only.\n"
-        f"- Do not bypass Screener.\n"
-        f"- Do not bypass Claim Ledger.\n"
-        f"- Do not weaken deterministic audit, quality harness, or final delivery gates.\n"
-        f"- Do not remove `[src:CLAIM_ID]` citations unless the corresponding claim is removed.\n"
-        f"- Keep MVP runnable without API keys.\n"
+        f"- Keep sensitive values, private materials, and company-specific prompts out of commits.\n"
+        f"- Use public or synthetic examples.\n"
+        f"- Preserve Screener, Claim Ledger, and audit gates in delivery workflows.\n"
+        f"- Preserve `[src:CLAIM_ID]` citations for supported statements.\n"
+        f"- Keep the toolkit runnable without API keys.\n"
         f"- Run tests before completing implementation work.\n"
         f"\n"
         f"## Output Contract\n"
         f"\n"
         f"Expected artifacts:\n"
         f"\n"
-        f"- `brief.md`\n"
-        f"- `claim_ledger.json`\n"
-        f"- `audit_report.json`\n"
-        f"- `source_map.md`\n"
+        f"- `output/brief.md`\n"
+        f"- `output/intermediate/audited_brief.md`\n"
+        f"- `output/intermediate/claim_ledger.json`\n"
+        f"- `output/intermediate/audit_report.json`\n"
         f"\n"
-        f"Every important source-backed statement in `brief.md` should cite a claim ID:\n"
+        f"Every important source-backed statement in `audited_brief.md` should cite a claim ID:\n"
         f"\n"
         f"```text\n"
         f"[src:CLAIM_ID]\n"
         f"```\n"
         f"\n"
-        f"Every cited claim must exist in `claim_ledger.json`.\n"
+        f"Every cited claim should exist in `claim_ledger.json`.\n"
         f"\n"
         f"## Harness Contract\n"
         f"\n"
-        f"Draft-level audit:\n"
-        f"\n"
-        f"- DeterministicAuditAgent\n"
-        f"- QualityHarnessAuditAgent\n"
-        f"- Optional semantic audit adapter\n"
+        f"Harnesses own hard gates, schema checks, regression tests, CI checks, and failure conditions.\n"
+        f"Prompt and skill files describe positive workflow, role boundaries, inputs, outputs, and handoffs.\n"
         f"\n"
         f"Final delivery gate:\n"
         f"\n"
@@ -444,10 +402,10 @@ def render_agents_md(manifest: dict) -> str:
         f"\n"
         f"{roles_section}\n"
         f"\n"
-        f"Full role details (responsibilities, hard rules, tool profiles) are in:\n"
+        f"Full role details (responsibilities, guardrails, tool profiles) are in:\n"
         f"- `.claude/agents/*.md` — Claude Code subagents\n"
         f"- `.codex/agents/*.toml` — Codex custom agents\n"
-        f"- `.agents/skills/*/SKILL.md` — Codex skills\n"
+        f"- `.agents/skills/*/SKILL.md` — agent skills\n"
     )
 
 
@@ -487,7 +445,7 @@ def render_codex_agent(role_name: str, role: dict, manifest: dict) -> str:
         f'developer_instructions = """\n'
         f"You are the {title} agent for multi-agent-brief-workflow.\n"
         f"\n"
-        f"Pipeline:\n"
+        f"Subagent workflow:\n"
         f"{PIPELINE_TEXT}\n"
         f"\n"
         f"When to use:\n"
@@ -496,11 +454,11 @@ def render_codex_agent(role_name: str, role: dict, manifest: dict) -> str:
         f"Responsibilities:\n"
         f"{resp}\n"
         f"\n"
-        f"Hard rules:\n"
+        f"Guardrails:\n"
         f"{rules}\n"
         f"\n"
         f"Repository rules:\n"
-        f"        - Do not bypass Screener, Claim Ledger, or audit gates.\n"
+        f"        - Preserve Screener, Claim Ledger, and audit gates.\n"
         f"        - Keep public examples synthetic or public-safe.\n"
         f"        - Run python -m pytest -q after behavior changes.\n"
         f"        - On Windows, use .\\scripts\\setup.ps1 and native PowerShell; WSL is optional.\n"
@@ -541,11 +499,11 @@ def render_skill(role_name: str, role: dict, manifest: dict) -> str:
         f"\n"
         f"{resp}\n"
         f"\n"
-        f"## Hard Rules\n"
+        f"## Guardrails\n"
         f"\n"
         f"{rules}\n"
         f"\n"
-        f"## Pipeline Context\n"
+        f"## Subagent workflow Context\n"
         f"\n"
         f"```text\n"
         f"{PIPELINE_TEXT}\n"
@@ -557,7 +515,7 @@ def render_skill(role_name: str, role: dict, manifest: dict) -> str:
         f"\n"
         f"## Expected Outputs\n"
         f"\n"
-        f"Structured artifacts conforming to the pipeline contract:\n"
+        f"Structured artifacts conforming to the workflow contract:\n"
         f"{outputs}\n"
     )
 
@@ -588,7 +546,7 @@ def render_claude_agent(role_name: str, role: dict, manifest: dict) -> str:
         f"\n"
         f"You are the {title} subagent for `multi-agent-brief-workflow`.\n"
         f"\n"
-        f"Pipeline:\n"
+        f"Subagent workflow:\n"
         f"\n"
         f"```text\n"
         f"{PIPELINE_TEXT}\n"
@@ -600,11 +558,11 @@ def render_claude_agent(role_name: str, role: dict, manifest: dict) -> str:
         f"Responsibilities:\n"
         f"{resp}\n"
         f"\n"
-        f"Hard rules:\n"
+        f"Guardrails:\n"
         f"{rules}\n"
         f"\n"
         f"Repository rules:\n"
-        f"- Do not bypass Screener, Claim Ledger, or audit gates.\n"
+        f"- Preserve Screener, Claim Ledger, and audit gates.\n"
         f"- Keep public examples synthetic or public-safe.\n"
         f"- Run `python -m pytest -q` after behavior changes.\n"
         f"- On Windows, use `.\\scripts\\setup.ps1` in native PowerShell; WSL is optional.\n"
@@ -639,7 +597,7 @@ def render_docs(manifest: dict) -> dict[str, str]:
         configs/agent_roles.yaml
         ```
 
-        Do not edit generated files directly. Edit the manifest and regenerate.
+        Edit the manifest and regenerate to update generated files.
 
         ## Generation
 
@@ -655,7 +613,7 @@ def render_docs(manifest: dict) -> dict[str, str]:
         python scripts/generate_agent_configs.py --check
         ```
 
-        ## Pipeline
+        ## Subagent workflow
 
         ```text
         {PIPELINE_TEXT}
@@ -702,7 +660,7 @@ def render_docs(manifest: dict) -> dict[str, str]:
 
         Located in `.agents/skills/*/SKILL.md`:
 
-        Each skill has YAML frontmatter with `name` and `description`, plus sections for purpose, responsibilities, hard rules, and expected I/O.
+        Each skill has YAML frontmatter with `name` and `description`, plus sections for purpose, responsibilities, guardrails, and expected I/O.
 
         ## Config
 
@@ -742,12 +700,12 @@ def render_docs(manifest: dict) -> dict[str, str]:
         | Profile | Tools | Use |
         |---------|-------|-----|
         | read_only | Read, Grep, Glob, Bash | Scout |
-        | edit_safe | Read, Grep, Glob, Bash, Edit, MultiEdit, Write | Most pipeline agents |
+        | edit_safe | Read, Grep, Glob, Bash, Edit, MultiEdit, Write | Most workflow agents |
         | audit_edit | Read, Grep, Glob, Bash, Edit, MultiEdit, Write | Audit and harness agents |
 
         ## Worktree Isolation
 
-        By default, subagents do not use `isolation: worktree`. For risky parallel implementation tasks, users can enable worktree isolation in the agent definition or at invocation time.
+        By default, subagents share the current workspace. For risky parallel implementation tasks, users can enable worktree isolation in the agent definition or at invocation time.
     """)
 
     # docs/agents/opencode.md
@@ -770,7 +728,7 @@ def render_docs(manifest: dict) -> dict[str, str]:
 
         - `description`
         - `mode`: primary (brief-orchestrator) or subagent
-        - `hidden`: true for pipeline-internal roles
+        - `hidden`: true for workflow-internal roles
         - `permission`: mapped from tool_profiles (edit, bash, network, task)
 
         ## Command
@@ -899,7 +857,7 @@ def render_docs(manifest: dict) -> dict[str, str]:
         f"project:\n"
         f'  name: "..."\n'
         f'  purpose: "..."\n'
-        f"  pipeline: [...]\n"
+        f"  workflow: [...]\n"
         f"  output_contract: [...]\n"
         f"  non_goals: [...]\n"
         f"tool_profiles:\n"
@@ -909,7 +867,7 @@ def render_docs(manifest: dict) -> dict[str, str]:
         f"  audit_edit: {{ ... }}\n"
         f"roles:\n"
         f"  <role-name>:\n"
-        f"    stage: pipeline | harness | coordination\n"
+        f"    stage: workflow | harness | coordination\n"
         f"    tool_profile: <profile-name>\n"
         f'    description: "..."\n'
         f'    trigger: "..."\n'
@@ -917,13 +875,13 @@ def render_docs(manifest: dict) -> dict[str, str]:
         f"    hard_rules: [...]\n"
         f"```\n"
         f"\n"
-        f"## Pipeline\n"
+        f"## Subagent workflow\n"
         f"\n"
         f"```text\n"
         f"{PIPELINE_TEXT}\n"
         f"```\n"
         f"\n"
-        f"## Pipeline Roles\n"
+        f"## Subagent workflow Roles\n"
         f"\n"
         f"{pipeline_roles}\n"
         f"\n"
@@ -1049,7 +1007,7 @@ def render_opencode_agent(role_name: str, role: dict, manifest: dict) -> str:
     lines.append("")
     lines.append(f"You are the {desc}")
     lines.append("")
-    lines.append("Pipeline:")
+    lines.append("Subagent workflow:")
     lines.append("")
     lines.append("```text")
     lines.append(PIPELINE_TEXT)
@@ -1061,7 +1019,7 @@ def render_opencode_agent(role_name: str, role: dict, manifest: dict) -> str:
     lines.append("Responsibilities:")
     lines.append(resp)
     lines.append("")
-    lines.append("Hard rules:")
+    lines.append("Guardrails:")
     lines.append(rules)
 
     return "\n".join(lines) + "\n"
@@ -1147,7 +1105,7 @@ def render_opencode_command_generate_brief(manifest: dict) -> str:
         "13. **Final response:**\n"
         "    - Report artifact paths.\n"
         "    - Report audit status.\n"
-        "    - Do not claim success if audit failed.\n"
+        "    - Report success when audit status supports delivery.\n"
     )
 
 

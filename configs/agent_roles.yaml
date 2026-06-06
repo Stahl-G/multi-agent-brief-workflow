@@ -1,369 +1,388 @@
-schema_version: "multi-agent-brief-agent-roles/v1"
-
+schema_version: multi-agent-brief-agent-roles/v1
 project:
-  name: "multi-agent-brief-workflow"
-  purpose: "source-grounded, audit-ready multi-agent workflow for management and research briefs"
+  name: multi-agent-brief-workflow
+  purpose: source-grounded, audit-ready multi-agent workflow for management and research briefs
   pipeline:
-    - scout
-    - screener
-    - claim-ledger
-    - analyst
-    - editor
-    - auditor
-    - formatter
+  - scout
+  - screener
+  - claim-ledger
+  - analyst
+  - editor
+  - auditor
+  - formatter
   output_contract:
-    - draft_brief.md
-    - claim_ledger.json
-    - audit_report.json
-    - source_map.md
+  - draft_brief.md
+  - claim_ledger.json
+  - audit_report.json
+  - source_map.md
   non_goals:
-    - investment advice
-    - trading signals
-    - legal advice
-    - tax advice
-    - compliance advice
-    - replacing human review
-
+  - investment advice
+  - trading signals
+  - legal advice
+  - tax advice
+  - compliance advice
+  - replacing human review
 tool_profiles:
   read_only:
-    claude_tools: ["Read", "Grep", "Glob", "Bash"]
-    codex_mode: "exploration"
+    claude_tools:
+    - Read
+    - Grep
+    - Glob
+    - Bash
+    codex_mode: exploration
     may_edit: false
-
   edit_safe:
-    claude_tools: ["Read", "Grep", "Glob", "Bash", "Edit", "MultiEdit", "Write"]
-    codex_mode: "implementation"
+    claude_tools:
+    - Read
+    - Grep
+    - Glob
+    - Bash
+    - Edit
+    - MultiEdit
+    - Write
+    codex_mode: implementation
     may_edit: true
-
   audit_read_only:
-    claude_tools: ["Read", "Grep", "Glob", "Bash"]
-    codex_mode: "audit"
+    claude_tools:
+    - Read
+    - Grep
+    - Glob
+    - Bash
+    codex_mode: audit
     may_edit: false
-
   audit_edit:
-    claude_tools: ["Read", "Grep", "Glob", "Bash", "Edit", "MultiEdit", "Write"]
-    codex_mode: "audit_implementation"
+    claude_tools:
+    - Read
+    - Grep
+    - Glob
+    - Bash
+    - Edit
+    - MultiEdit
+    - Write
+    codex_mode: audit_implementation
     may_edit: true
-
 roles:
   orchestrator:
     stage: coordination
     tool_profile: edit_safe
-    description: "Coordinates Scout, Screener, Claim Ledger, Analyst, Editor, Auditor, Formatter, and harness-specific review agents."
-    trigger: "Use for multi-step feature planning, cross-role integration, pipeline changes, or agent config generation."
+    description: Coordinates Scout, Screener, Claim Ledger, Analyst, Editor, Auditor, Formatter, and harness-specific review
+      agents.
+    trigger: Use for multi-step feature planning, cross-role integration, pipeline changes, or agent config generation.
     responsibilities:
-      - "Preserve the full pipeline order."
-      - "Preserve Screener before Claim Ledger."
-      - "Preserve Claim Ledger before Analyst."
-      - "Preserve audit gates."
-      - "Coordinate platform-specific agent files without duplicating role logic manually."
-      - "Preserve Windows native PowerShell setup, test, demo, and agent-config check guidance."
-      - "Run or document tests before completion."
+    - Preserve the full pipeline order.
+    - Preserve Screener before Claim Ledger.
+    - Preserve Claim Ledger before Analyst.
+    - Preserve audit gates.
+    - Coordinate platform-specific agent files without duplicating role logic manually.
+    - Preserve Windows native PowerShell setup, test, demo, and agent-config check guidance.
+    - Run or document tests before completion.
     hard_rules:
-      - "Do not bypass Screener."
-      - "Do not bypass Claim Ledger."
-      - "Do not weaken audit or harness checks."
-      - "Do not introduce private/company-specific examples."
-      - "Do not require Windows users to use WSL or Git Bash."
-
+    - Keep Screener before downstream claim handling.
+    - Keep Claim Ledger as the source of traceable facts.
+    - Preserve audit and harness checks.
+    - Use public or synthetic examples.
+    - Support native Windows PowerShell setup.
   source-provider:
     stage: coordination
     tool_profile: edit_safe
-    description: "Configures, validates, and collects information sources from manual inputs, RSS feeds, web search, APIs, and MCP/CLI tools."
-    trigger: "Use when implementing or reviewing source provider configuration, source collection, source normalization, or the doctor health-check command."
+    description: Configures, validates, and collects information sources from manual inputs, RSS feeds, web search, APIs,
+      and MCP/CLI tools.
+    trigger: Use when implementing or reviewing source provider configuration, source collection, source normalization, or
+      the doctor health-check command.
     responsibilities:
-      - "Load and validate sources.yaml configuration."
-      - "Instantiate enabled source providers (manual, rss, web_search, api, mcp, cli)."
-      - "Collect sources from all enabled providers."
-      - "Normalize source items into a unified SourceItem structure."
-      - "Deduplicate sources by dedupe_key."
-      - "Filter sources by recency."
-      - "Run doctor checks on source configuration health."
-      - "Generate proper sources.yaml templates in init wizard."
+    - Load and validate sources.yaml configuration.
+    - Instantiate enabled source providers (manual, rss, web_search, api, mcp, cli).
+    - Collect sources from all enabled providers.
+    - Normalize source items into a unified SourceItem structure.
+    - Deduplicate sources by dedupe_key.
+    - Filter sources by recency.
+    - Run doctor checks on source configuration health.
+    - Generate proper sources.yaml templates in init wizard.
     hard_rules:
-      - "Do not write API keys into configuration files."
-      - "Do not bypass source profile constraints."
-      - "Do not claim sources are verified when they are only collected."
-      - "Do not silently skip provider validation errors."
-
+    - Keep API keys in environment variables.
+    - Apply source profile constraints consistently.
+    - Label collected sources separately from verified sources.
+    - Surface provider validation errors clearly.
   source-planner:
     stage: coordination
     tool_profile: edit_safe
-    description: "Reads user.md, config.yaml, and sources.yaml to generate or refine source_candidates.yaml and search_tasks. Ensures all sources are public, citable, and timestamped."
-    trigger: "Use when planning source discovery, generating search tasks, or refining source candidates for a brief workspace."
+    description: Reads user.md, config.yaml, and sources.yaml to generate or refine source_candidates.yaml and search_tasks.
+      Ensures all sources are public, citable, and timestamped.
+    trigger: Use when planning source discovery, generating search tasks, or refining source candidates for a brief workspace.
     responsibilities:
-      - "Read user.md, config.yaml, and sources.yaml to understand the briefing context."
-      - "Generate or refine source_candidates.yaml with public, citable, timestamped sources."
-      - "Generate or refine search_tasks in sources.yaml."
-      - "Ensure all proposed sources are public, citable, and timestamped."
-      - "Only use public, citable sources — never include private or confidential content."
-      - "Align source discovery with user industry, role, and focus areas."
+    - Read user.md, config.yaml, and sources.yaml to understand the briefing context.
+    - Generate or refine source_candidates.yaml with public, citable, timestamped sources.
+    - Generate or refine search_tasks in sources.yaml.
+    - Ensure all proposed sources are public, citable, and timestamped.
+    - Use public, citable, timestamped sources as the source-planning basis.
+    - Align source discovery with user industry, role, and focus areas.
     hard_rules:
-      - "Do not propose private, internal, or confidential sources."
-      - "Do not include credentials, tokens, or MNPI in source plans."
-      - "Do not claim sources are verified before collection."
-      - "Do not bypass source profile constraints."
-
+    - Propose public, internal-approved, or user-provided sources according to workspace policy.
+    - Keep source plans free of sensitive values and MNPI.
+    - Mark planned sources as proposed until collected and reviewed.
+    - Apply source profile constraints consistently.
   scout:
     stage: pipeline
     tool_profile: read_only
-    description: "Extracts candidate reportable items from local markdown, text, JSON, and future connector sources."
-    trigger: "Use when inspecting source inputs or extracting candidate items before screening."
+    description: Extracts candidate reportable items from local markdown, text, JSON, and future connector sources.
+    trigger: Use when inspecting source inputs or extracting candidate items before screening.
     responsibilities:
-      - "Read source packages, Tavily/RSS/local input outputs."
-      - "Filter boilerplate, navigation, cookies, privacy text, directories, and ads."
-      - "Extract structured claims from source content."
-      - "Each claim must include: statement, evidence_text, source_url, published_at or retrieved_at, topic, claim_type, confidence."
-      - "Preserve source path, source ID, source date, and evidence text."
-      - "Mark vague, stale-looking, duplicate-looking, or low-confidence items."
-      - "Return candidates, not final analysis."
-      - "Do not invent facts."
+    - Read source packages, Tavily/RSS/local input outputs.
+    - Filter boilerplate, navigation, cookies, privacy text, directories, and ads.
+    - Extract structured claims from source content.
+    - 'Each claim must include: statement, evidence_text, source_url, published_at or retrieved_at, topic, claim_type, confidence.'
+    - Preserve source path, source ID, source date, and evidence text.
+    - Mark vague, stale-looking, duplicate-looking, or low-confidence items.
+    - Return candidates, not final analysis.
+    - Ground every candidate in source material.
     hard_rules:
-      - "Do not write final brief prose."
-      - "Do not rank or capacity-cap candidates."
-      - "Do not create unsupported facts."
-      - "Do not invent claims not present in source material."
-
+    - Output candidate claims only; leave prose drafting to Analyst.
+    - Leave ranking and capacity caps to Screener.
+    - Create only source-supported items.
+    - Extract claims that are present in the source material.
   screener:
     stage: pipeline
     tool_profile: edit_safe
-    description: "Filters, ranks, deduplicates, freshness-checks, and capacity-caps Scout candidates before Claim Ledger."
-    trigger: "Use when implementing or reviewing novelty scoring, source-tier ranking, topic caps, stale source filtering, or previous-report deduplication."
+    description: Filters, ranks, deduplicates, freshness-checks, and capacity-caps Scout candidates before Claim Ledger.
+    trigger: Use when implementing or reviewing novelty scoring, source-tier ranking, topic caps, stale source filtering,
+      or previous-report deduplication.
     responsibilities:
-      - "Filter and rank Scout candidates."
-      - "Deduplicate exact and near-duplicate items."
-      - "Enforce topic capacity caps."
-      - "Detect previous-report overlap."
-      - "Exclude stale or low-confidence candidates according to config."
-      - "Preserve source identity and evidence for included candidates."
-      - "Record exclusion reasons when practical."
+    - Filter and rank Scout candidates.
+    - Deduplicate exact and near-duplicate items.
+    - Enforce topic capacity caps.
+    - Detect previous-report overlap.
+    - Exclude stale or low-confidence candidates according to config.
+    - Preserve source identity and evidence for included candidates.
+    - Record exclusion reasons when practical.
     hard_rules:
-      - "Do not create new facts."
-      - "Do not pass stale weekly items unless config permits."
-      - "Do not drop source identity."
-      - "Do not exceed topic capacity caps."
-
+    - Screen existing Scout candidates only.
+    - Apply reporting-window freshness rules from config.
+    - Preserve source identity for every included item.
+    - Apply configured topic capacity caps.
   claim-ledger:
     stage: pipeline
     tool_profile: edit_safe
-    description: "Converts screened candidates into source-grounded claim ledger entries with stable IDs and evidence."
-    trigger: "Use when implementing or reviewing claim ID creation, source evidence storage, claim metadata, or ledger consistency."
+    description: Converts screened candidates into source-grounded claim ledger entries with stable IDs and evidence.
+    trigger: Use when implementing or reviewing claim ID creation, source evidence storage, claim metadata, or ledger consistency.
     responsibilities:
-      - "Create stable claim IDs."
-      - "Ensure every claim has source evidence."
-      - "Preserve source IDs and evidence text."
-      - "Carry useful Screener metadata forward."
-      - "Detect duplicate or unsupported claims."
+    - Create stable claim IDs.
+    - Ensure every claim has source evidence.
+    - Preserve source IDs and evidence text.
+    - Carry useful Screener metadata forward.
+    - Detect duplicate or unsupported claims.
     hard_rules:
-      - "Every claim must be evidence-backed."
-      - "Do not merge claims in a way that loses traceability."
-      - "Do not upgrade weak evidence into strong language."
-
+    - Every claim must be evidence-backed.
+    - Merge claims only when traceability is preserved.
+    - Keep language strength aligned with evidence strength.
   analyst:
     stage: pipeline
     tool_profile: edit_safe
-    description: "Drafts executive-readable brief sections using only Claim Ledger entries."
-    trigger: "Use after the claim-ledger subagent or validator has produced claim_ledger.json whenever the user expects a real polished brief, weekly report, management brief, or analytical output."
+    description: Drafts executive-readable brief sections using only Claim Ledger entries.
+    trigger: Use after the claim-ledger subagent or validator has produced claim_ledger.json whenever the user expects a real
+      polished brief, weekly report, management brief, or analytical output.
     responsibilities:
-      - "Read claim_ledger.json and user.md to understand context and available evidence."
-      - "Draft management-ready sections using only Claim Ledger material."
-      - "Attach [src:CLAIM_ID] citations to every important statement."
-      - "Preserve every [src:CLAIM_ID] citation — do not remove or rewrite claim IDs."
-      - "Include source dates (published_at or retrieved_at) where available."
-      - "Preserve uncertainty and source limitations."
-      - "Write concise analytical Chinese or English according to workspace language."
-      - "Do not add unsupported facts."
-      - "Do not use reader-facing brief.md as truth; use claim_ledger.json and approved analysis artifacts as evidence."
-      - "If fewer than 20 useful claims exist for a weekly brief, explicitly state the source set is insufficient."
+    - Read claim_ledger.json and user.md to understand context and available evidence.
+    - Draft management-ready sections using only Claim Ledger material.
+    - Attach [src:CLAIM_ID] citations to every important statement.
+    - Preserve every [src:CLAIM_ID] citation exactly.
+    - Include source dates (published_at or retrieved_at) where available.
+    - Preserve uncertainty and source limitations.
+    - Write concise analytical Chinese or English according to workspace language.
+    - Keep all added facts within Claim Ledger support.
+    - Use claim_ledger.json and approved analysis artifacts as the evidence base.
+    - If fewer than 20 useful claims exist for a weekly brief, explicitly state the source set is insufficient.
     hard_rules:
-      - "Do not add unsupported facts, numbers, or causality."
-      - "Do not write investment advice or trading signals."
-      - "Do not cite claims that do not exist in the ledger."
-      - "Do not remove or rewrite [src:CLAIM_ID] citations."
-      - "Always read claim_ledger.json before writing."
-
+    - Keep facts, numbers, and causality within Claim Ledger support.
+    - Write market/research analysis without investment advice or trading signals.
+    - Cite only claim IDs that exist in the ledger.
+    - Preserve [src:CLAIM_ID] citations exactly.
+    - Always read claim_ledger.json before writing.
   auditor:
     stage: pipeline
     tool_profile: audit_edit
-    description: "Audits source support, freshness, unsupported numbers, redaction risk, duplicate claims, placeholders, and harness failures."
-    trigger: "Use before final delivery of any real brief. Must verify brief against claim_ledger.json and enforce quality thresholds."
+    description: Audits source support, freshness, unsupported numbers, redaction risk, duplicate claims, placeholders, and
+      harness failures.
+    trigger: Use before final delivery of any real brief. Must verify brief against claim_ledger.json and enforce quality
+      thresholds.
     responsibilities:
-      - "Review final brief against claim_ledger.json and audit_report.json."
-      - "Check unsupported facts — every important statement must have a [src:CLAIM_ID]."
-      - "Check missing citations — claims in ledger not cited in brief."
-      - "Check orphan citations — [src:CLAIM_ID] in brief not found in ledger."
-      - "Check stale sources — sources older than configured reporting window."
-      - "Check investment-advice language — no trading signals or investment recommendations."
-      - "Check redaction risks — no private identifiers, internal paths, or confidential content."
-      - "Check low-confidence source leakage."
-      - "Check process residue and placeholders."
-      - "Check [SRC:] or process residue remains in final text."
-      - "Check weekly brief has enough claims (default: >= 20) unless quiet-week exception configured."
-      - "Check source dates are present for claims in final brief."
-      - "Recommend fixes for each finding."
-      - "Prefer running python deterministic audit commands where available."
-      - "Coordinate draft and final harness agents when needed."
+    - Review final brief against claim_ledger.json and audit_report.json.
+    - Check unsupported facts — every important statement must have a [src:CLAIM_ID].
+    - Check missing citations — claims in ledger not cited in brief.
+    - Check orphan citations — [src:CLAIM_ID] in brief not found in ledger.
+    - Check stale sources — sources older than configured reporting window.
+    - Check investment-advice language — no trading signals or investment recommendations.
+    - Check redaction risks — no private identifiers, internal paths, or confidential content.
+    - Check low-confidence source leakage.
+    - Check process residue and placeholders.
+    - Check [SRC:] or process residue remains in final text.
+    - 'Check weekly brief has enough claims (default: >= 20) unless quiet-week exception configured.'
+    - Check source dates are present for claims in final brief.
+    - Recommend fixes for each finding.
+    - Prefer running python deterministic audit commands where available.
+    - Coordinate draft and final harness agents when needed.
     hard_rules:
-      - "Do not weaken audit gates to pass tests."
-      - "Do not treat model judgment as source evidence."
-      - "Do not mark blocked reports as distribution-ready."
-
+    - Preserve audit gates while fixing failures.
+    - Treat model judgment as analysis, not source evidence.
+    - Mark reports distribution-ready only after gates pass.
   editor:
     stage: pipeline
     tool_profile: edit_safe
-    description: "Improves clarity, structure, tone, and executive readability without adding facts."
-    trigger: "Use after the analyst subagent and before final DOCX rendering. Must remove process residue while preserving valid citations."
+    description: Improves clarity, structure, tone, and executive readability without adding facts.
+    trigger: Use after the analyst subagent and before final DOCX rendering. Must remove process residue while preserving
+      valid citations.
     responsibilities:
-      - "Improve readability and management tone."
-      - "Reduce repetition."
-      - "Preserve all [src:CLAIM_ID] citations exactly — do not remove or rewrite claim IDs."
-      - "Preserve uncertainty."
-      - "Remove internal residue when safe."
-      - "Remove [SRC:], [SOURCE:], empty [src:] markers."
-      - "Remove Claude/Codex process residue (Thought for..., Agent completed, Bash(...), audit in background)."
-      - "Do not add new facts."
-      - "Do not remove or rewrite claim IDs."
+    - Improve readability and management tone.
+    - Reduce repetition.
+    - Preserve all [src:CLAIM_ID] citations exactly.
+    - Preserve uncertainty.
+    - Remove internal residue when safe.
+    - Remove [SRC:], [SOURCE:], empty [src:] markers.
+    - Remove Claude/Codex process residue (Thought for..., Agent completed, Bash(...), audit in background).
+    - Keep editorial changes within existing facts.
+    - Keep claim IDs unchanged.
     hard_rules:
-      - "Do not add new claims."
-      - "Do not remove claim citations."
-      - "Do not convert caveats into certainty."
-      - "Do not remove or rewrite [src:CLAIM_ID] citations."
-
+    - Edit existing claims and prose only.
+    - Keep claim citations with supported statements.
+    - Preserve caveats and uncertainty.
+    - Preserve [src:CLAIM_ID] citations exactly.
   formatter:
     stage: pipeline
     tool_profile: edit_safe
-    description: "Writes and validates preparation artifacts: draft_brief.md, claim_ledger.json, audit_report.json, source_map.md."
-    trigger: "Use when implementing or reviewing output file writing, JSON validity, source maps, Markdown/DOCX/PDF rendering contracts."
+    description: 'Writes and validates preparation artifacts: draft_brief.md, claim_ledger.json, audit_report.json, source_map.md.'
+    trigger: Use when implementing or reviewing output file writing, JSON validity, source maps, Markdown/DOCX/PDF rendering
+      contracts.
     responsibilities:
-      - "Write files only inside configured output directories."
-      - "Validate JSON artifacts."
-      - "Validate cited claim IDs exist."
-      - "Preserve deterministic formatting."
+    - Write files only inside configured output directories.
+    - Validate JSON artifacts.
+    - Validate cited claim IDs exist.
+    - Preserve deterministic formatting.
     hard_rules:
-      - "Do not hide failed audits."
-      - "Do not change substantive content to hide rendering defects."
-      - "Do not overwrite user files outside output directories."
-
+    - Surface failed audits clearly.
+    - Fix rendering defects without changing substantive content.
+    - Write files only inside configured output directories.
   draft-audit-harness:
     stage: harness
     tool_profile: audit_edit
-    description: "Reviews and implements the draft-level audit harness: deterministic source checks plus QualityHarnessAuditAgent checks."
-    trigger: "Use when working on DeterministicAuditAgent, QualityHarnessAuditAgent, CompositeAuditAgent, or draft-level source/freshness/redaction checks."
+    description: 'Reviews and implements the draft-level audit harness: deterministic source checks plus QualityHarnessAuditAgent
+      checks.'
+    trigger: Use when working on DeterministicAuditAgent, QualityHarnessAuditAgent, CompositeAuditAgent, or draft-level source/freshness/redaction
+      checks.
     responsibilities:
-      - "Check missing or orphan [src:CLAIM_ID] references."
-      - "Check number/source coverage."
-      - "Check strict reporting-window freshness."
-      - "Check missing source dates."
-      - "Check placeholders."
-      - "Check internal workflow residue."
-      - "Check unsupported certainty wording."
-      - "Check investment-advice style language."
-      - "Check needs_recrawl and low-confidence claims appearing in briefs."
-      - "Check low numeric source density."
-      - "Check possible unit inflation."
-      - "Check repeat/background claims in executive summaries."
+    - Check missing or orphan [src:CLAIM_ID] references.
+    - Check number/source coverage.
+    - Check strict reporting-window freshness.
+    - Check missing source dates.
+    - Check placeholders.
+    - Check internal workflow residue.
+    - Check unsupported certainty wording.
+    - Check investment-advice style language.
+    - Check needs_recrawl and low-confidence claims appearing in briefs.
+    - Check low numeric source density.
+    - Check possible unit inflation.
+    - Check repeat/background claims in executive summaries.
     hard_rules:
-      - "Do not weaken draft audit gates."
-      - "Do not bypass CompositeAuditAgent."
-      - "Do not treat semantic model output as source truth."
-
+    - Preserve draft audit gates.
+    - Keep CompositeAuditAgent in the draft audit path where applicable.
+    - Treat semantic model output as review signal, not source truth.
   final-quality-harness:
     stage: harness
     tool_profile: audit_edit
-    description: "Reviews and implements final text delivery gates for BRIEF_HARNESS_V2 final target."
-    trigger: "Use when working on FinalQualityAuditAgent, final Markdown quality gates, report depth, metadata, summary bullet separation, stale-current framing, or publication readiness."
+    description: Reviews and implements final text delivery gates for BRIEF_HARNESS_V2 final target.
+    trigger: Use when working on FinalQualityAuditAgent, final Markdown quality gates, report depth, metadata, summary bullet
+      separation, stale-current framing, or publication readiness.
     responsibilities:
-      - "Validate final report depth unless quiet_week is explicit."
-      - "Validate front-page metadata when configured."
-      - "Validate executive summary bullet separation."
-      - "Block stale-current framing."
-      - "Block internal workflow residue."
-      - "Keep final gate separate from default MVP draft audit."
+    - Validate final report depth unless quiet_week is explicit.
+    - Validate front-page metadata when configured.
+    - Validate executive summary bullet separation.
+    - Block stale-current framing.
+    - Block internal workflow residue.
+    - Keep final gate separate from default MVP draft audit.
     hard_rules:
-      - "Do not let correct facts pass if final text quality is blocked."
-      - "Do not invent facts while repairing final prose."
-      - "Do not remove safety notes to pass formatting."
-
+    - Require final text quality gates in addition to factual correctness.
+    - Repair final prose within existing evidence.
+    - Preserve required safety notes during formatting fixes.
   rendered-output-harness:
     stage: harness
     tool_profile: audit_edit
-    description: "Reviews rendered output gates for DOCX/PDF/Markdown rendering fidelity."
-    trigger: "Use when working on rendered document validation, DOCX text depth, heading mapping, margins, footer fields, or wide table conversion."
+    description: Reviews rendered output gates for DOCX/PDF/Markdown rendering fidelity.
+    trigger: Use when working on rendered document validation, DOCX text depth, heading mapping, margins, footer fields, or
+      wide table conversion.
     responsibilities:
-      - "Validate rendered text depth."
-      - "Validate heading mapping."
-      - "Validate bullet separation after rendering."
-      - "Validate wide table conversion."
-      - "Validate DOCX/PDF dependency behavior."
-      - "Keep renderer-level checks separate from prompt instructions."
+    - Validate rendered text depth.
+    - Validate heading mapping.
+    - Validate bullet separation after rendering.
+    - Validate wide table conversion.
+    - Validate DOCX/PDF dependency behavior.
+    - Keep renderer-level checks separate from prompt instructions.
     hard_rules:
-      - "Do not hide rendering defects by changing substantive content."
-      - "Do not silently pass rendered-output validation if required dependencies are missing."
-      - "Do not treat prompt instructions as a substitute for deterministic rendering checks."
-
+    - Fix rendering defects at the rendering layer.
+    - Report missing rendering dependencies explicitly.
+    - Use deterministic rendering checks for output validation.
   market-competitor-planner:
     stage: analysis_module
     tool_profile: read_only
-    description: "Recommends competitor candidates for a workspace based on user.md context (company, industry, market_scope, focus_areas)."
-    trigger: "Use during workspace setup or when the user runs 'multi-agent-brief competitors propose'. Read user.md and recommend competitors for competitor_candidates.yaml."
+    description: Recommends competitor candidates for a workspace based on user.md context (company, industry, market_scope,
+      focus_areas).
+    trigger: Use during workspace setup or when the user runs 'multi-agent-brief competitors propose'. Read user.md and recommend
+      competitors for competitor_candidates.yaml.
     responsibilities:
-      - "Read user.md (company, industry, market_scope, focus_areas) for context."
-      - "Recommend 3-8 competitor entities based on industry knowledge."
-      - "Write competitor_candidates.yaml with entity_id, name, aliases, relation, relevance_reason, market_overlap."
-      - "Do not approve candidates — only recommend for user review."
+    - Read user.md (company, industry, market_scope, focus_areas) for context.
+    - Recommend 3-8 competitor entities based on industry knowledge.
+    - Write competitor_candidates.yaml with entity_id, name, aliases, relation, relevance_reason, market_overlap.
+    - Recommend candidates for user review.
     hard_rules:
-      - "Do not write to competitor_universe.yaml directly."
-      - "Do not create entities without a relevance_reason."
-      - "Only use publicly known competitor information."
-
+    - Write recommendations to competitor_candidates.yaml for review.
+    - Give every entity a relevance_reason.
+    - Only use publicly known competitor information.
   market-competitor-analyst:
     stage: analysis_module
     tool_profile: edit_safe
-    description: "Generates AnalysisCards from evidence_pack.json and writes competitor sections for the final brief."
-    trigger: "Use after the pipeline produces evidence_pack.json. Generate AnalysisCards and write the competitor analysis section of the brief."
+    description: Generates AnalysisCards from evidence_pack.json and writes competitor sections for the final brief.
+    trigger: Use after the pipeline produces evidence_pack.json. Generate AnalysisCards and write the competitor analysis
+      section of the brief.
     responsibilities:
-      - "Read evidence_pack.json, competitor_matrix.json, claim_ledger.json."
-      - "Generate analysis_cards.json — each card must have supporting_claim_ids."
-      - "Write competitor analysis section for the brief using only AnalysisCards and Claim Ledger."
-      - "Preserve [src:CLAIM_ID] citations for every source-backed statement."
-      - "Distinguish announced vs operational capacity in prose."
-      - "Flag evidence gaps clearly."
+    - Read evidence_pack.json, competitor_matrix.json, claim_ledger.json.
+    - Generate analysis_cards.json — each card must have supporting_claim_ids.
+    - Write competitor analysis section for the brief using only AnalysisCards and Claim Ledger.
+    - Preserve [src:CLAIM_ID] citations for every source-backed statement.
+    - Distinguish announced vs operational capacity in prose.
+    - Flag evidence gaps clearly.
     hard_rules:
-      - "Do not create claims not present in claim_ledger.json."
-      - "Every AnalysisCard must have at least one supporting claim."
-      - "Single-source interpretations must set confidence='low'."
-      - "Do not write investment advice or trading signals."
-
+    - Use claims present in claim_ledger.json.
+    - Every AnalysisCard must have at least one supporting claim.
+    - Single-source interpretations must set confidence='low'.
+    - Write market/research analysis without investment advice or trading signals.
   market-competitor-auditor:
     stage: analysis_module
     tool_profile: audit_edit
-    description: "Runs 6 specialist audits on competitor analysis output: comparison evidence, capacity status, metric basis, market trends, single-source confidence, and coverage gaps."
-    trigger: "Use after analysis_cards.json is generated. Validate against claim_ledger.json and competitors.json."
+    description: 'Runs 6 specialist audits on competitor analysis output: comparison evidence, capacity status, metric basis,
+      market trends, single-source confidence, and coverage gaps.'
+    trigger: Use after analysis_cards.json is generated. Validate against claim_ledger.json and competitors.json.
     responsibilities:
-      - "Check comparison claims have evidence for each entity cited."
-      - "Check capacity events have a status (announced vs operational vs etc)."
-      - "Check numeric values have period and unit in supporting claims."
-      - "Check market trend claims have at least 2 supporting claims."
-      - "Check single-source interpretations use confidence='low'."
-      - "Check primary competitors all have coverage."
-      - "Update audit_report.json with MC-specific findings."
+    - Check comparison claims have evidence for each entity cited.
+    - Check capacity events have a status (announced vs operational vs etc).
+    - Check numeric values have period and unit in supporting claims.
+    - Check market trend claims have at least 2 supporting claims.
+    - Check single-source interpretations use confidence='low'.
+    - Check primary competitors all have coverage.
+    - Update audit_report.json with MC-specific findings.
     hard_rules:
-      - "Do not weaken audit gates to pass tests."
-      - "Do not treat model judgment as source evidence."
-      - "Announced capacity must never be verified as operational without evidence."
-
+    - Preserve audit gates while fixing failures.
+    - Treat model judgment as analysis, not source evidence.
+    - Treat announced capacity as announced until operational evidence exists.
 onboarding_rules:
-  title: "Conversational onboarding rule"
+  title: Conversational onboarding rule
   rules:
-    - "Do not ask the user to edit YAML, JSON, schema files, or CLI flags."
-    - "Ask plain-language business questions directly in chat."
-    - "Cover all onboarding fields: company, industry, task, audience, language, cadence, source style, output style, must-watch, forbidden sources. Ask about each one or confirm its default."
-    - "Accept natural-language answers."
-    - "Do not infer or silently choose onboarding values."
-    - "If the user provides \"unknown\" or \"default\" for a required field, stop and ask for explicit confirmation."
-    - "Generic requests such as \"start\", \"run\", \"initialize\" do not authorize the use of default values."
-    - "Only proceed with workspace creation when the user explicitly confirms all required fields (company, industry, title)."
-    - "Convert the answers into `onboarding.json`."
-    - "Run: `multi-agent-brief init --from-onboarding onboarding.json`"
-    - "Explain the final setup in business language."
-    - "Do not expose internal fields such as `source_profile`, `selector_max_items`, `retrieval_provider`, or `output_formats` unless the user asks as a developer."
+  - Ask plain-language questions instead of asking users to edit YAML, JSON, schemas, or CLI flags.
+  - Ask plain-language business questions directly in chat.
+  - 'Cover all onboarding fields: company, industry, task, audience, language, cadence, source style, output style, must-watch,
+    forbidden sources. Ask about each one or confirm its default.'
+  - Accept natural-language answers.
+  - Confirm onboarding values explicitly before workspace creation.
+  - If the user provides "unknown" or "default" for a required field, stop and ask for explicit confirmation.
+  - Use defaults only after explicit user confirmation.
+  - Only proceed with workspace creation when the user explicitly confirms all required fields (company, industry, title).
+  - Convert the answers into `onboarding.json`.
+  - 'Run: `multi-agent-brief init --from-onboarding onboarding.json`'
+  - Explain the final setup in business language.
+  - Explain setup in business language unless the user asks as a developer.

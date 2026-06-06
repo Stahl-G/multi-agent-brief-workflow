@@ -62,4 +62,4 @@ Follow this sequence:
 13. **Final response:**
     - Report artifact paths.
     - Report audit status.
-    - Do not claim success if audit failed.
+    - Report success when audit status supports delivery.

@@ -17,22 +17,22 @@ Use after the analyst subagent and before final DOCX rendering. Must remove proc
 
 - Improve readability and management tone.
 - Reduce repetition.
-- Preserve all [src:CLAIM_ID] citations exactly — do not remove or rewrite claim IDs.
+- Preserve all [src:CLAIM_ID] citations exactly.
 - Preserve uncertainty.
 - Remove internal residue when safe.
 - Remove [SRC:], [SOURCE:], empty [src:] markers.
 - Remove Claude/Codex process residue (Thought for..., Agent completed, Bash(...), audit in background).
-- Do not add new facts.
-- Do not remove or rewrite claim IDs.
+- Keep editorial changes within existing facts.
+- Keep claim IDs unchanged.
 
-## Hard Rules
+## Guardrails
 
-- Do not add new claims.
-- Do not remove claim citations.
-- Do not convert caveats into certainty.
-- Do not remove or rewrite [src:CLAIM_ID] citations.
+- Edit existing claims and prose only.
+- Keep claim citations with supported statements.
+- Preserve caveats and uncertainty.
+- Preserve [src:CLAIM_ID] citations exactly.
 
-## Pipeline Context
+## Subagent workflow Context
 
 ```text
 Scout -> Screener -> Claim Ledger -> Analyst -> Editor -> Auditor -> Formatter
@@ -44,7 +44,7 @@ Source files, claim ledger entries, or draft markdown as appropriate for the pip
 
 ## Expected Outputs
 
-Structured artifacts conforming to the pipeline contract:
+Structured artifacts conforming to the workflow contract:
 - `draft_brief.md`
 - `claim_ledger.json`
 - `audit_report.json`

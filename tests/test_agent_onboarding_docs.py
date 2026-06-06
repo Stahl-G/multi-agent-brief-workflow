@@ -30,9 +30,8 @@ def test_agent_onboarding_docs_public_safe():
             )
 
 
-def test_agent_onboarding_docs_do_not_expose_internal_fields_as_user_questions():
-    """Docs may mention internal fields in 'do not expose' lists,
-    but must not present them as user-facing questions."""
+def test_agent_onboarding_docs_keep_internal_fields_out_of_user_questions():
+    """Docs keep internal fields out of user-facing questions."""
     user_question_patterns = [
         "What source_profile",
         "What selector_max_items",
@@ -71,5 +70,5 @@ def test_claude_policy_disallows_required_free_text_askuserquestion():
     claude_path = ROOT / "CLAUDE.md"
     assert claude_path.exists(), "CLAUDE.md not found"
     text = claude_path.read_text(encoding="utf-8")
-    assert "Do not use AskUserQuestion as the primary onboarding path" in text
-    assert "Never use AskUserQuestion for required free-text fields" in text
+    assert "Ask plain-language questions directly in chat" in text
+    assert "Use AskUserQuestion for optional single-choice refinements" in text

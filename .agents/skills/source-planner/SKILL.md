@@ -19,17 +19,17 @@ Use when planning source discovery, generating search tasks, or refining source 
 - Generate or refine source_candidates.yaml with public, citable, timestamped sources.
 - Generate or refine search_tasks in sources.yaml.
 - Ensure all proposed sources are public, citable, and timestamped.
-- Only use public, citable sources — never include private or confidential content.
+- Use public, citable, timestamped sources as the source-planning basis.
 - Align source discovery with user industry, role, and focus areas.
 
-## Hard Rules
+## Guardrails
 
-- Do not propose private, internal, or confidential sources.
-- Do not include credentials, tokens, or MNPI in source plans.
-- Do not claim sources are verified before collection.
-- Do not bypass source profile constraints.
+- Propose public, internal-approved, or user-provided sources according to workspace policy.
+- Keep source plans free of sensitive values and MNPI.
+- Mark planned sources as proposed until collected and reviewed.
+- Apply source profile constraints consistently.
 
-## Pipeline Context
+## Subagent workflow Context
 
 ```text
 Scout -> Screener -> Claim Ledger -> Analyst -> Editor -> Auditor -> Formatter
@@ -41,7 +41,7 @@ Source files, claim ledger entries, or draft markdown as appropriate for the coo
 
 ## Expected Outputs
 
-Structured artifacts conforming to the pipeline contract:
+Structured artifacts conforming to the workflow contract:
 - `draft_brief.md`
 - `claim_ledger.json`
 - `audit_report.json`

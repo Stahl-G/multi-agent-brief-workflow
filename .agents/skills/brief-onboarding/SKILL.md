@@ -7,68 +7,58 @@ description: Use when the user wants to initialize, start, configure, or set up 
 
 You are onboarding a non-programmer user.
 
-Do not expose:
-- YAML
-- JSON
-- schema
-- CLI flags
-- source_profile
-- selector_max_items
-- retrieval_provider
-- output_formats
+Keep the conversation in plain business language. Developer-facing details such as YAML, JSON, schemas, CLI flags, source_profile, selector_max_items, retrieval_provider, and output_formats belong in internal setup work unless the user asks for them.
 
 Ask at most 14 questions:
 
 0. What should this brief be called?
    Required field. Examples: "Canadian Solar Photovoltaic Weekly", "阿特斯光伏行业周报", "Global Macro Strategy Monthly".
-   Recommended default: "{Company} {Industry} Weekly" (auto-generated if skipped).
+   Suggested default: "{Company} {Industry} Weekly" after user confirmation.
 
 1. What is your company or organization name?
-   Required field. Do not use defaults.
+   Required field.
 
 2. What is your role or department?
    Examples: Strategy, Research, Marketing, Investor Relations, Policy, Management.
-   Recommended default: Strategy.
+   Suggested default: Strategy.
 
 3. What should this brief monitor?
-   Recommended default: company + industry + policy + competitors + risk events.
+   Suggested default: company + industry + policy + competitors + risk events.
 
-4. Do you want to enable competitor monitoring?
-   If yes, ask which specific competitors to track (company names).
+4. Should competitor monitoring be enabled?
+   If yes, ask which specific competitors to track.
    Examples: "Yes — track Acme Corp and Globex Inc" or "No, not now".
-   Recommended default: yes if the user mentioned competitors in question 3.
 
 5. Who will read it?
-   Recommended default: management / leadership team / marketing / investment team / research.
+   Suggested default: management / leadership team / marketing / investment team / research.
 
 6. How broad should sources be?
-   Recommended default: reliable public sources + industry media.
+   Suggested default: reliable public sources + industry media.
 
 7. What language and cadence?
-   Recommended default: Chinese, weekly.
+   Suggested default: Chinese, weekly.
 
 8. What specific focus areas are most important?
-   Recommended default: based on industry (e.g., for automotive: sales data, AI, policy, supply chain, product launches).
+   Suggested default: based on industry.
 
-9. Enable live web search?
-   Options: yes (then select from available backends), no (local files only).
-   If yes, show configured backends (based on API keys in .env) plus runtime-provided web search option.
-   Recommended default: configure later.
+9. Should live web search be enabled?
+   Options: yes with available backends, or local files only.
+   Suggested default: configure later.
 
 10. How many items should each brief contain?
-    Recommended default: 20 items.
+    Suggested default: 20 items.
 
-11. What is the maximum age for source materials (in days)?
-    Recommended default: 14 days.
+11. What is the maximum age for source materials, in days?
+    Suggested default: 14 days.
 
 12. How strict should the audit be?
-    Options: standard (default), strict (fail on any issue), lenient (allow minor issues).
-    Recommended default: standard.
+    Options: standard, strict, lenient.
+    Suggested default: standard.
 
-13. Are there any sources or topics that should be avoided?
-    Recommended default: none.
+13. Are there any sources or topics to exclude?
+    Suggested default: none.
 
-Accept natural-language answers. If incomplete, infer defaults.
+Accept natural-language answers. Confirm required fields and defaults before creating the workspace.
 
 Then create `onboarding.json` with:
 - target
@@ -98,11 +88,11 @@ multi-agent-brief init --from-onboarding onboarding.json
 
 Finally summarize:
 
-* brief title (user-specified or auto-generated)
+* brief title
 * workspace created
 * brief audience
 * monitor scope
-* competitor monitoring status (enabled/disabled, which competitors)
+* competitor monitoring status
 * source style
 * search backend
 * max items per brief

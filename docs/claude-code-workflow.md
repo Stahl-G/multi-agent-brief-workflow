@@ -1,155 +1,124 @@
 # Claude Code Agent Workflow
 
+MABW is a subagent-first workflow toolkit. Python CLI commands provide setup,
+source discovery, input governance, audit checks, and final rendering. The actual
+brief is produced by external subagents.
+
 ## Architecture
 
-MABW uses a subagent-first workflow. Python CLI commands provide setup, source discovery, input governance, audit checks, and final rendering. Subagents produce the actual brief.
-
 ```text
-multi-agent-brief init → /generate-brief (Claude Code) → output artifacts
+Python tools
+  init / sources decide / doctor / inputs classify / audit / finalize
+
+External subagents
+  source-planner -> scout -> screener -> claim-ledger -> analyst -> editor -> auditor -> formatter
 ```
 
-### CLI Tools
+## CLI Tool Layer
 
-- `multi-agent-brief init` — create workspace
-- `multi-agent-brief doctor` — check configuration health
-- `multi-agent-brief sources decide` — resolve llm_decide source policy
-- `multi-agent-brief inputs classify` — classify inputs as evidence/non-evidence
-- `multi-agent-brief finalize` — render reader-facing Markdown/DOCX from audited_brief.md
-- `multi-agent-brief audit` — run deterministic audit checks
+The Python CLI keeps deterministic, testable support functions in code:
 
-### Subagent Workflow
+- `multi-agent-brief init` — create a workspace
+- `multi-agent-brief sources decide` — resolve `llm_decide` source policy
+- `multi-agent-brief doctor` — check configuration and source health
+- `multi-agent-brief inputs classify` — classify evidence and instruction inputs
+- `multi-agent-brief audit` — run deterministic audit checks where applicable
+- `multi-agent-brief finalize` — render reader-facing Markdown and DOCX from `audited_brief.md`
 
-```text
-scout → screener → claim-ledger → analyst → editor → auditor → finalize
-```
+These commands are tools. They provide contracts, validation, and rendering for
+the subagent workflow.
 
-- **Subagent definitions**: `.claude/agents/*.md` (Markdown + YAML frontmatter)
-- **Interactive orchestration**: Claude Code spawns subagents as needed
-- **Model-assisted judgment**: subagents use LLM for extraction, analysis, editing
-- **Source grounding**: all subagents respect Claim Ledger and citation contracts
-- **No SDK dependency**: subagents are pure Markdown prompts, not Python code
+## Subagent Runtime Layer
 
-## How The Workflow Executes
+Claude Code subagents handle model-assisted judgment and handoffs:
 
 ```text
-┌─────────────────────────────────────────────────────┐
-│  Claude Code Session                                │
-│                                                     │
-│  User: "Generate a weekly brief for my company"     │
-│         │                                           │
-│         ▼                                           │
-│  source discovery (if llm_decide)                   │
-│    → sources decide + merge                         │
-│         │                                           │
-│         ▼                                           │
-│  doctor gate                                        │
-│    → fix config issues                              │
-│         │                                           │
-│         ▼                                           │
-│  scout subagent                                     │
-│    → reads sources, extracts candidates             │
-│    → writes candidate_claims.json                   │
-│         │                                           │
-│         ▼                                           │
-│  screener subagent                                  │
-│    → dedupe, rank, freshness-check                  │
-│    → writes screened_candidates.json                │
-│         │                                           │
-│         ▼                                           │
-│  claim-ledger subagent                              │
-│    → converts to source-grounded claims             │
-│    → writes claim_ledger.json                       │
-│         │                                           │
-│         ▼                                           │
-│  analyst subagent                                   │
-│    → reads claim_ledger.json and user.md            │
-│    → writes audited_brief.md                        │
-│    → preserves all [src:CLAIM_ID] citations         │
-│         │                                           │
-│         ▼                                           │
-│  editor subagent                                    │
-│    → improves readability and management tone       │
-│    → preserves all citations                        │
-│         │                                           │
-│         ▼                                           │
-│  auditor subagent                                   │
-│    → reviews audited_brief.md against ledger        │
-│    → reports findings and recommends fixes          │
-│         │                                           │
-│         ▼                                           │
-│  finalize                                           │
-│    → strips [src:CLAIM_ID] for brief.md             │
-│    → generates DOCX if configured                   │
-└─────────────────────────────────────────────────────┘
+source-planner -> scout -> screener -> claim-ledger -> analyst -> editor -> auditor -> formatter
 ```
 
-## Available Subagents
+- **source-planner** proposes public, citable sources.
+- **scout** extracts candidate reportable items.
+- **screener** ranks, deduplicates, freshness-checks, and capacity-caps candidates.
+- **claim-ledger** writes stable source-grounded claim entries.
+- **analyst** writes `output/intermediate/audited_brief.md`.
+- **editor** improves readability while preserving citations.
+- **auditor** checks the auditable brief against `claim_ledger.json`.
+- **formatter/finalize** produces reader-facing artifacts.
 
-| Subagent | Role | Purpose |
-|----------|------|---------|
-| `source-planner` | coordination | Generate/refine source_candidates.yaml and search_tasks |
-| `source-provider` | coordination | Configure and collect sources from providers |
-| `scout` | pipeline | Extract candidate reportable items from sources |
-| `screener` | pipeline | Filter, rank, deduplicate candidates |
-| `claim-ledger` | pipeline | Convert candidates to source-grounded claims |
-| `analyst` | pipeline | Draft management-ready brief sections |
-| `editor` | pipeline | Improve readability without adding facts |
-| `auditor` | pipeline | Review final brief against ledger and audit report |
-| `formatter` | pipeline | Write final output artifacts |
-| `orchestrator` | coordination | Coordinate multi-step work |
-| `draft-audit-harness` | harness | Draft-level audit checks |
-| `final-quality-harness` | harness | Final text quality gates |
-| `rendered-output-harness` | harness | DOCX/PDF rendering fidelity checks |
-
-## Key Design Decisions
-
-### Why Subagent-First?
-
-1. **Testability**: CLI tools have 100+ tests covering setup, source discovery, audit, and finalize. Subagent behavior is validated through audit gates.
-2. **Flexibility**: Subagents can adapt to different workspace configurations, languages, and audience profiles.
-3. **Auditability**: Deterministic audit gates in Python are repeatable. Model-assisted checks are complementary.
-4. **No SDK lock-in**: Subagents are pure Markdown — no Anthropic SDK dependency in the Python package.
-
-### What Stays in Python CLI
-
-- Workspace initialization and configuration
-- Source discovery and provider management
-- Input governance and classification
-- Deterministic audit checks
-- Final rendering (finalize)
-
-### What Stays in Subagents
-
-- Source scouting and candidate extraction
-- Screening and deduplication
-- Claim ledger construction
-- Brief section drafting
-- Prose editing and readability improvement
-- Final review and recommendation
-
-## Usage Patterns
-
-### Pattern 1: Full Agent Workflow
+## Execution Flow
 
 ```text
-1. User asks Claude Code to generate a brief
-2. CLI resolves sources and checks config
-3. Subagents produce the brief through scout → screener → claim-ledger → analyst → editor → auditor
-4. CLI finalizes reader-facing output
+User request
+  |
+  v
+Read workspace: config.yaml, sources.yaml, user.md, input/
+  |
+  v
+Source discovery if llm_decide is enabled
+  |
+  v
+doctor
+  |
+  v
+inputs classify if available
+  |
+  v
+scout subagent -> candidate_claims.json
+  |
+  v
+screener subagent -> screened_candidates.json
+  |
+  v
+claim-ledger subagent -> claim_ledger.json
+  |
+  v
+analyst subagent -> audited_brief.md
+  |
+  v
+editor subagent -> polished audited_brief.md
+  |
+  v
+auditor subagent -> audit_report.json
+  |
+  v
+finalize -> brief.md / DOCX
 ```
 
-### Pattern 2: Hybrid
+## Generated Agent Files
+
+| Role | Purpose |
+|---|---|
+| `source-planner` | Plan public, citable source discovery |
+| `scout` | Extract candidate reportable items |
+| `screener` | Rank, deduplicate, and freshness-check candidates |
+| `claim-ledger` | Convert screened candidates into stable source-grounded claims |
+| `analyst` | Draft the auditable brief from Claim Ledger evidence |
+| `editor` | Improve clarity and structure while preserving citations |
+| `auditor` | Verify the auditable brief against Claim Ledger evidence |
+| `formatter` | Coordinate final output handoff and rendering |
+
+## Design Principle
+
+Prompt and skill files describe positive workflow, role boundaries, inputs,
+outputs, and handoffs.
+
+Harnesses, validators, CI checks, and audit rules own hard gates, schema checks,
+regression tests, and failure conditions.
+
+## Usage Pattern
 
 ```text
-1. User runs multi-agent-brief init (CLI)
-2. User asks Claude Code source-planner to refine sources
-3. User runs /generate-brief in Claude Code
-4. User asks Claude Code auditor to review output
+1. Initialize or open a workspace.
+2. Resolve source discovery when configured.
+3. Run doctor.
+4. Invoke the subagents in workflow order.
+5. Run finalize after `audited_brief.md` exists.
+6. Review artifact paths, audit status, and limitations.
 ```
 
-## See Also
+## Related Docs
 
-- [docs/claude-code-quickstart.md](claude-code-quickstart.md) — Command guide with sample prompts
-- [docs/agents/claude-code.md](agents/claude-code.md) — Subagent configuration reference
-- [docs/architecture.md](architecture.md) — Architecture overview
-- [docs/harness.md](harness.md) — Audit harness design
+- [Claude Code quickstart](claude-code-quickstart.md)
+- [Agent configuration reference](agents/claude-code.md)
+- [Architecture overview](architecture.md)
+- [Harness design](harness.md)

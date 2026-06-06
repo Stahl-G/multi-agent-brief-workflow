@@ -28,13 +28,13 @@ Use when working on DeterministicAuditAgent, QualityHarnessAuditAgent, Composite
 - Check possible unit inflation.
 - Check repeat/background claims in executive summaries.
 
-## Hard Rules
+## Guardrails
 
-- Do not weaken draft audit gates.
-- Do not bypass CompositeAuditAgent.
-- Do not treat semantic model output as source truth.
+- Preserve draft audit gates.
+- Keep CompositeAuditAgent in the draft audit path where applicable.
+- Treat semantic model output as review signal, not source truth.
 
-## Pipeline Context
+## Subagent workflow Context
 
 ```text
 Scout -> Screener -> Claim Ledger -> Analyst -> Editor -> Auditor -> Formatter
@@ -46,7 +46,7 @@ Source files, claim ledger entries, or draft markdown as appropriate for the har
 
 ## Expected Outputs
 
-Structured artifacts conforming to the pipeline contract:
+Structured artifacts conforming to the workflow contract:
 - `draft_brief.md`
 - `claim_ledger.json`
 - `audit_report.json`

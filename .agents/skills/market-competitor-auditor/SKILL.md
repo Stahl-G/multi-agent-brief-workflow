@@ -23,13 +23,13 @@ Use after analysis_cards.json is generated. Validate against claim_ledger.json a
 - Check primary competitors all have coverage.
 - Update audit_report.json with MC-specific findings.
 
-## Hard Rules
+## Guardrails
 
-- Do not weaken audit gates to pass tests.
-- Do not treat model judgment as source evidence.
-- Announced capacity must never be verified as operational without evidence.
+- Preserve audit gates while fixing failures.
+- Treat model judgment as analysis, not source evidence.
+- Treat announced capacity as announced until operational evidence exists.
 
-## Pipeline Context
+## Subagent workflow Context
 
 ```text
 Scout -> Screener -> Claim Ledger -> Analyst -> Editor -> Auditor -> Formatter
@@ -41,7 +41,7 @@ Source files, claim ledger entries, or draft markdown as appropriate for the ana
 
 ## Expected Outputs
 
-Structured artifacts conforming to the pipeline contract:
+Structured artifacts conforming to the workflow contract:
 - `draft_brief.md`
 - `claim_ledger.json`
 - `audit_report.json`

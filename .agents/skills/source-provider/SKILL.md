@@ -24,14 +24,14 @@ Use when implementing or reviewing source provider configuration, source collect
 - Run doctor checks on source configuration health.
 - Generate proper sources.yaml templates in init wizard.
 
-## Hard Rules
+## Guardrails
 
-- Do not write API keys into configuration files.
-- Do not bypass source profile constraints.
-- Do not claim sources are verified when they are only collected.
-- Do not silently skip provider validation errors.
+- Keep API keys in environment variables.
+- Apply source profile constraints consistently.
+- Label collected sources separately from verified sources.
+- Surface provider validation errors clearly.
 
-## Pipeline Context
+## Subagent workflow Context
 
 ```text
 Scout -> Screener -> Claim Ledger -> Analyst -> Editor -> Auditor -> Formatter
@@ -43,7 +43,7 @@ Source files, claim ledger entries, or draft markdown as appropriate for the coo
 
 ## Expected Outputs
 
-Structured artifacts conforming to the pipeline contract:
+Structured artifacts conforming to the workflow contract:
 - `draft_brief.md`
 - `claim_ledger.json`
 - `audit_report.json`

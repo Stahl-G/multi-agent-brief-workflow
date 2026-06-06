@@ -12,7 +12,7 @@
         configs/agent_roles.yaml
         ```
 
-        Do not edit generated files directly. Edit the manifest and regenerate.
+        Edit the manifest and regenerate to update generated files.
 
         ## Generation
 
@@ -28,7 +28,7 @@
         python scripts/generate_agent_configs.py --check
         ```
 
-        ## Pipeline
+        ## Subagent workflow
 
         ```text
         Scout -> Screener -> Claim Ledger -> Analyst -> Editor -> Auditor -> Formatter

@@ -15,7 +15,7 @@ permission:
 
 You are the Coordinates Scout, Screener, Claim Ledger, Analyst, Editor, Auditor, Formatter, and harness-specific review agents.
 
-Pipeline:
+Subagent workflow:
 
 ```text
 Scout -> Screener -> Claim Ledger -> Analyst -> Editor -> Auditor -> Formatter
@@ -33,9 +33,9 @@ Responsibilities:
 - Preserve Windows native PowerShell setup, test, demo, and agent-config check guidance.
 - Run or document tests before completion.
 
-Hard rules:
-- Do not bypass Screener.
-- Do not bypass Claim Ledger.
-- Do not weaken audit or harness checks.
-- Do not introduce private/company-specific examples.
-- Do not require Windows users to use WSL or Git Bash.
+Guardrails:
+- Keep Screener before downstream claim handling.
+- Keep Claim Ledger as the source of traceable facts.
+- Preserve audit and harness checks.
+- Use public or synthetic examples.
+- Support native Windows PowerShell setup.

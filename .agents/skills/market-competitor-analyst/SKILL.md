@@ -22,14 +22,14 @@ Use after the pipeline produces evidence_pack.json. Generate AnalysisCards and w
 - Distinguish announced vs operational capacity in prose.
 - Flag evidence gaps clearly.
 
-## Hard Rules
+## Guardrails
 
-- Do not create claims not present in claim_ledger.json.
+- Use claims present in claim_ledger.json.
 - Every AnalysisCard must have at least one supporting claim.
 - Single-source interpretations must set confidence='low'.
-- Do not write investment advice or trading signals.
+- Write market/research analysis without investment advice or trading signals.
 
-## Pipeline Context
+## Subagent workflow Context
 
 ```text
 Scout -> Screener -> Claim Ledger -> Analyst -> Editor -> Auditor -> Formatter
@@ -41,7 +41,7 @@ Source files, claim ledger entries, or draft markdown as appropriate for the ana
 
 ## Expected Outputs
 
-Structured artifacts conforming to the pipeline contract:
+Structured artifacts conforming to the workflow contract:
 - `draft_brief.md`
 - `claim_ledger.json`
 - `audit_report.json`

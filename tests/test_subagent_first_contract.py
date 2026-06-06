@@ -57,7 +57,7 @@ def test_user_facing_docs_do_not_present_prepare_as_workflow_runtime():
             assert token not in text, f"{token!r} found in {doc}"
 
 
-def test_agents_md_states_python_commands_are_tools_not_runtime():
+def test_agents_md_states_python_commands_are_support_tools():
     text = _read("AGENTS.md")
-    assert "Python commands are tools, not the workflow runtime." in text
-    assert "There is no Python brief-generation pipeline." in text
+    assert "Python commands are support tools." in text
+    assert "The briefing runtime is the external subagent workflow" in text

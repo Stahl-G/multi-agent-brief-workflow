@@ -71,13 +71,12 @@ def test_build_hermes_cron_plan_has_daily_weekly_monthly(tmp_path: Path):
 def test_hermes_skill_contains_cron_rules():
     skill = render_hermes_skill()
     assert "name: multi-agent-brief-hermes" in skill
-    assert "Daily scout jobs collect source packages only" in skill
+    assert "Daily Scout Workflow" in skill
     assert "multi-agent-brief doctor" in skill
     assert "subagent workflow" in skill
     assert "multi-agent-brief finalize" in skill
-    assert "Reader-facing artifacts must not contain `[src:CLAIM_ID]`" in skill
+    assert "/generate-brief <workspace>" in skill
     assert "multi-agent-brief prepare" not in skill
-    assert "generate-brief" in skill
 
 
 def test_cli_hermes_cron_plan_writes_json_and_markdown(tmp_path: Path):

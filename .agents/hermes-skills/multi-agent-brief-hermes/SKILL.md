@@ -20,13 +20,21 @@ tags:
 
 Use this skill when a Hermes cron job needs to collect daily signals for a MABW workspace or trigger an audited weekly/monthly brief.
 
-## Hard Rules
+## Operating Model
 
-- Treat Hermes cron as a fresh session. Rely only on this skill, the cron prompt, `AGENTS.md`, and files in the configured workdir/workspace.
-- Do not invent internal company facts. Use only public or user-provided source evidence.
-- Do not paste API keys, tokens, raw private logs, or credentials into files or messages.
-- Daily scout jobs collect source packages only. They must not write final management briefs.
-- Reader-facing artifacts must not contain `[src:CLAIM_ID]`; internal audited markdown may retain citations.
+Hermes provides scheduled execution, daily source collection, cache preparation, and delivery notifications. Formal brief generation follows the MABW subagent workflow:
+
+```text
+scout -> screener -> claim-ledger -> analyst -> editor -> auditor -> formatter
+```
+
+If you already use Claude Code, the recommended formal generation path is:
+
+```text
+/generate-brief <workspace>
+```
+
+Claude Code can invoke the project's full subagent workflow. Hermes remains useful for scheduled source collection, cache preparation, reminders, and delivery notifications.
 
 ## Daily Scout Workflow
 
@@ -57,7 +65,7 @@ Use this skill when a Hermes cron job needs to collect daily signals for a MABW 
 ## Weekly / Monthly Brief Workflow
 
 1. Confirm the workspace has `config.yaml`, `sources.yaml`, and `user.md`.
-2. Ensure `sources.yaml` enables any required source providers, including `cached_package` for `input/hermes_cache` when daily Hermes scout cache is used.
+2. Ensure `sources.yaml` enables required source providers, including `cached_package` for `input/hermes_cache` when daily Hermes scout cache is used.
 3. Run doctor:
 
 ```bash
@@ -65,9 +73,9 @@ multi-agent-brief doctor --config <workspace>/config.yaml
 ```
 
 4. Generate the brief through the subagent workflow:
-   - If Claude Code is available, the recommended path is `/generate-brief <workspace>`.
-   - Otherwise invoke subagents in order: scout → screener → claim-ledger → analyst → editor → auditor.
-5. After `audited_brief.md` exists, run finalize:
+   - Recommended for Claude Code users: `/generate-brief <workspace>`.
+   - Hermes-native continuation: use scout, screener, claim-ledger, analyst, editor, and auditor roles in that order.
+5. After `output/intermediate/audited_brief.md` exists, run finalize:
 
 ```bash
 multi-agent-brief finalize --config <workspace>/config.yaml
@@ -89,5 +97,5 @@ The MABW `cached_package` provider can read JSON, Markdown, and text files from 
 
 - Attach this skill to each cron job with `--skill multi-agent-brief-hermes`.
 - Use `--workdir <repo-root>` so Hermes loads repository instructions and runs commands from the project.
-- Pin `--profile <name>` only when the Hermes profile already exists.
-- Do not call `send_message` for the normal cron destination; Hermes delivers the final response automatically.
+- Pin `--profile <name>` when the Hermes profile already exists.
+- Hermes delivers the final response through the configured cron destination.

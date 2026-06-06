@@ -23,14 +23,14 @@ Use when implementing or reviewing novelty scoring, source-tier ranking, topic c
 - Preserve source identity and evidence for included candidates.
 - Record exclusion reasons when practical.
 
-## Hard Rules
+## Guardrails
 
-- Do not create new facts.
-- Do not pass stale weekly items unless config permits.
-- Do not drop source identity.
-- Do not exceed topic capacity caps.
+- Screen existing Scout candidates only.
+- Apply reporting-window freshness rules from config.
+- Preserve source identity for every included item.
+- Apply configured topic capacity caps.
 
-## Pipeline Context
+## Subagent workflow Context
 
 ```text
 Scout -> Screener -> Claim Ledger -> Analyst -> Editor -> Auditor -> Formatter
@@ -42,7 +42,7 @@ Source files, claim ledger entries, or draft markdown as appropriate for the pip
 
 ## Expected Outputs
 
-Structured artifacts conforming to the pipeline contract:
+Structured artifacts conforming to the workflow contract:
 - `draft_brief.md`
 - `claim_ledger.json`
 - `audit_report.json`

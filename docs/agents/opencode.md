@@ -27,7 +27,7 @@
 
         - `description`
         - `mode`: primary (brief-orchestrator) or subagent
-        - `hidden`: true for pipeline-internal roles
+        - `hidden`: true for workflow-internal roles
         - `permission`: mapped from tool_profiles (edit, bash, network, task)
 
         ## Command

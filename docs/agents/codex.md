@@ -33,7 +33,7 @@
 
         Located in `.agents/skills/*/SKILL.md`:
 
-        Each skill has YAML frontmatter with `name` and `description`, plus sections for purpose, responsibilities, hard rules, and expected I/O.
+        Each skill has YAML frontmatter with `name` and `description`, plus sections for purpose, responsibilities, guardrails, and expected I/O.
 
         ## Config
 

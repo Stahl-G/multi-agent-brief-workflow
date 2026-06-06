@@ -17,7 +17,7 @@ schema_version: "..."
 project:
   name: "..."
   purpose: "..."
-  pipeline: [...]
+  workflow: [...]
   output_contract: [...]
   non_goals: [...]
 tool_profiles:
@@ -27,7 +27,7 @@ tool_profiles:
   audit_edit: { ... }
 roles:
   <role-name>:
-    stage: pipeline | harness | coordination
+    stage: workflow | harness | coordination
     tool_profile: <profile-name>
     description: "..."
     trigger: "..."
@@ -35,13 +35,13 @@ roles:
     hard_rules: [...]
 ```
 
-## Pipeline
+## Subagent workflow
 
 ```text
 Scout -> Screener -> Claim Ledger -> Analyst -> Editor -> Auditor -> Formatter
 ```
 
-## Pipeline Roles
+## Subagent workflow Roles
 
 - **scout** (pipeline)
 - **screener** (pipeline)

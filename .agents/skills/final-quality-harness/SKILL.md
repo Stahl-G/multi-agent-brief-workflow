@@ -22,13 +22,13 @@ Use when working on FinalQualityAuditAgent, final Markdown quality gates, report
 - Block internal workflow residue.
 - Keep final gate separate from default MVP draft audit.
 
-## Hard Rules
+## Guardrails
 
-- Do not let correct facts pass if final text quality is blocked.
-- Do not invent facts while repairing final prose.
-- Do not remove safety notes to pass formatting.
+- Require final text quality gates in addition to factual correctness.
+- Repair final prose within existing evidence.
+- Preserve required safety notes during formatting fixes.
 
-## Pipeline Context
+## Subagent workflow Context
 
 ```text
 Scout -> Screener -> Claim Ledger -> Analyst -> Editor -> Auditor -> Formatter
@@ -40,7 +40,7 @@ Source files, claim ledger entries, or draft markdown as appropriate for the har
 
 ## Expected Outputs
 
-Structured artifacts conforming to the pipeline contract:
+Structured artifacts conforming to the workflow contract:
 - `draft_brief.md`
 - `claim_ledger.json`
 - `audit_report.json`

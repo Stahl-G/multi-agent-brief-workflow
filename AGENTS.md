@@ -2,6 +2,12 @@
 
 # AGENTS.md
 
+Python commands are support tools. The briefing runtime is the external subagent workflow:
+
+```text
+Scout -> Screener -> Claim Ledger -> Analyst -> Editor -> Auditor -> Formatter
+```
+
 ## Context Mode Rule
 
 This repository has two modes:
@@ -13,14 +19,14 @@ This repository has two modes:
 
 2. **Generated workspace mode**
    - If the current directory contains `config.yaml`, `sources.yaml`, `user.md`, and `input/`, treat this as an end-user brief workspace.
-   - In this mode, `user.md` is user context, and only `input/` contains source evidence.
-   - Do not treat repository README, examples, agent docs, or generated config files as source evidence.
+   - In this mode, `user.md` is user context, and `input/` contains source evidence.
+   - Repository README, examples, agent docs, and generated config files are development references rather than source evidence.
 
-Before running any brief generation command, identify which mode you are in.
+Identify the active mode before running source, validation, audit, or rendering commands.
 
 ## Quick Start (for agents)
 
-**Single authoritative workflow.** Follow these steps in order. Do not skip steps.
+Follow the single authoritative workflow below.
 
 ### Step 1: Setup
 
@@ -42,10 +48,9 @@ Ask the user about these fields in chat (accept natural-language answers):
 - Source style: official only / reliable research / broad scan (default: "reliable research")
 - Output style (default: "executive brief, conclusion-first")
 - Must-watch topics or entities (default: empty)
-- Forbidden sources or topics (default: empty)
+- Excluded sources or topics (default: empty)
 
-If the user says "default" or "unknown", stop and ask for explicit confirmation. Do NOT silently default values.
-See `docs/onboarding.md` for field mappings.
+Confirm required fields and defaults explicitly. See `docs/onboarding.md` for field mappings.
 
 Create `onboarding.json` from the answers, then:
 
@@ -53,23 +58,23 @@ Create `onboarding.json` from the answers, then:
 multi-agent-brief init ../mabw-workspace --from-onboarding onboarding.json
 ```
 
-Do NOT pass `--language`, `--company`, etc. directly — always use `--from-onboarding`.
+Use `--from-onboarding` as the workspace creation interface.
 
 ### Step 3: Source discovery (if llm_decide)
 
-If `sources.yaml` has `source.mode: llm_decide`, run source discovery BEFORE the pipeline:
+If `sources.yaml` has `source.mode: llm_decide`, run source discovery before invoking Scout:
 
 ```bash
 multi-agent-brief sources decide --config ../mabw-workspace/config.yaml
 ```
 
-Review `../mabw-workspace/source_candidates.yaml`, then merge:
+Review `../mabw-workspace/source_candidates.yaml`, then merge approved sources:
 
 ```bash
 multi-agent-brief sources decide --config ../mabw-workspace/config.yaml --merge
 ```
 
-If the user explicitly chooses local input-only mode, skip this step.
+Local input-only mode can proceed directly to the doctor gate.
 
 ### Step 4: Doctor
 
@@ -77,45 +82,45 @@ If the user explicitly chooses local input-only mode, skip this step.
 multi-agent-brief doctor --config ../mabw-workspace/config.yaml
 ```
 
-Fix any issues before proceeding.
+Resolve reported configuration issues before proceeding.
 
-### Step 5: Invoke scout subagent
+### Step 5: Scout subagent
 
 Use the `scout` subagent to read approved source materials, evidence inputs, and cached packages.
 - Extract candidate reportable items.
 - Write `output/intermediate/candidate_claims.json`.
-- Do not write final prose.
 
-### Step 6: Invoke screener subagent
+### Step 6: Screener subagent
 
 Use the `screener` subagent to dedupe, rank, freshness-check, and cap candidates.
 - Write `output/intermediate/screened_candidates.json`.
 
-### Step 7: Invoke claim-ledger subagent
+### Step 7: Claim Ledger subagent
 
 Use the `claim-ledger` subagent to convert screened candidates into source-grounded claims.
 - Write `output/intermediate/claim_ledger.json`.
 
-### Step 8: Invoke analyst subagent
+### Step 8: Analyst subagent
 
-Use the `analyst` subagent to write the final brief from `claim_ledger.json` and `user.md`.
+Use the `analyst` subagent to write the auditable brief from `claim_ledger.json` and `user.md`.
 - Write in the workspace output language.
-- Use only claims in `claim_ledger.json`.
-- Preserve all valid `[src:CLAIM_ID]` citations.
+- Use claims in `claim_ledger.json` as the evidence base.
+- Preserve valid `[src:CLAIM_ID]` citations.
 - Include source dates where available.
-- Write the auditable brief to `output/intermediate/audited_brief.md`.
+- Write `output/intermediate/audited_brief.md`.
 
-### Step 9: Invoke editor subagent
+### Step 9: Editor subagent
 
-Use the `editor` subagent to polish the final brief.
-- Remove process residue and invalid citation markers.
-- Preserve valid `[src:CLAIM_ID]`.
+Use the `editor` subagent to polish the auditable brief.
+- Improve readability and management tone.
+- Clean process residue and invalid citation markers.
+- Preserve valid `[src:CLAIM_ID]` citations.
 
-### Step 10: Invoke auditor subagent
+### Step 10: Auditor subagent
 
-Use the `auditor` subagent to audit the final `audited_brief.md` against `claim_ledger.json`.
-- Check orphan citations, unsupported facts, unsupported numbers, missing dates, advice language, and process residue.
-- Write/update `output/intermediate/audit_report.json`.
+Use the `auditor` subagent to audit `output/intermediate/audited_brief.md` against `claim_ledger.json`.
+- Check citations, support, numbers, dates, advice language, and process residue.
+- Write or update `output/intermediate/audit_report.json`.
 
 ### Step 11: Finalize
 
@@ -123,11 +128,11 @@ Use the `auditor` subagent to audit the final `audited_brief.md` against `claim_
 multi-agent-brief finalize --config ../mabw-workspace/config.yaml
 ```
 
-This generates reader-facing `brief.md` (with `[src:CLAIM_ID]` stripped) and DOCX if configured.
+This generates reader-facing `brief.md` and DOCX if configured.
 
 ### Step 12: Report artifacts
 
-Summarize final artifacts to the user. Do not claim success if audit failed.
+Summarize final artifacts, audit status, and remaining limitations.
 
 Use `/generate-brief <workspace>` in Claude Code for the full subagent-assisted workflow.
 
@@ -135,9 +140,9 @@ Use `/generate-brief <workspace>` in Claude Code for the full subagent-assisted 
 
 ## Project Purpose
 
-This repository implements a source-grounded, audit-ready multi-agent workflow for producing business, research, market, policy, and management briefs.
+This repository implements a subagent-first, source-grounded, audit-ready workflow toolkit for producing business, research, market, policy, and management briefs.
 
-Pipeline:
+Subagent workflow:
 
 ```text
 Scout -> Screener -> Claim Ledger -> Analyst -> Editor -> Auditor -> Formatter
@@ -174,7 +179,7 @@ Windows (PowerShell):
 multi-agent-brief version
 ```
 
-PowerShell is the Windows-native path. WSL is optional, not required.
+PowerShell is the Windows-native path. WSL is optional.
 
 Run tests:
 
@@ -182,29 +187,17 @@ Run tests:
 python -m pytest -q
 ```
 
-Windows (PowerShell):
-
-```powershell
-python -m pytest -q
-```
-
-Run demo:
+Run demo workspace setup:
 
 ```bash
 multi-agent-brief init ../mabw-workspace --demo
 ```
 
-Then use `/generate-brief ../mabw-workspace` in Claude Code to run the full subagent-first workflow.
+Then use `/generate-brief ../mabw-workspace` in a subagent-capable runtime.
 
 Generate agent configs:
 
 ```bash
-python scripts/generate_agent_configs.py --write
-```
-
-Windows (PowerShell):
-
-```powershell
 python scripts/generate_agent_configs.py --write
 ```
 
@@ -214,71 +207,36 @@ Check agent configs:
 python scripts/generate_agent_configs.py --check
 ```
 
-Windows (PowerShell):
+## Repository Guardrails
 
-```powershell
-python scripts/generate_agent_configs.py --check
-```
-
-Generate OpenCode configs:
-
-```bash
-python scripts/generate_agent_configs.py --target opencode --write
-```
-
-Windows (PowerShell):
-
-```powershell
-python scripts/generate_agent_configs.py --target opencode --write
-```
-
-Check OpenCode configs:
-
-```bash
-python scripts/generate_agent_configs.py --target opencode --check
-```
-
-Windows (PowerShell):
-
-```powershell
-python scripts/generate_agent_configs.py --target opencode --check
-```
-
-## Repository Rules
-
-- Do not commit credentials, tokens, webhooks, raw internal logs, private reports, customer names, confidential files, internal paths, or company-specific prompts.
-- Use public or synthetic examples only.
-- Do not bypass Screener.
-- Do not bypass Claim Ledger.
-- Do not weaken deterministic audit, quality harness, or final delivery gates.
-- Do not remove `[src:CLAIM_ID]` citations unless the corresponding claim is removed.
-- Keep MVP runnable without API keys.
+- Keep sensitive values, private materials, and company-specific prompts out of commits.
+- Use public or synthetic examples.
+- Preserve Screener, Claim Ledger, and audit gates in delivery workflows.
+- Preserve `[src:CLAIM_ID]` citations for supported statements.
+- Keep the toolkit runnable without API keys.
 - Run tests before completing implementation work.
 
 ## Output Contract
 
 Expected artifacts:
 
-- `brief.md`
-- `claim_ledger.json`
-- `audit_report.json`
-- `source_map.md`
+- `output/brief.md`
+- `output/intermediate/audited_brief.md`
+- `output/intermediate/claim_ledger.json`
+- `output/intermediate/audit_report.json`
 
-Every important source-backed statement in `brief.md` should cite a claim ID:
+Every important source-backed statement in `audited_brief.md` should cite a claim ID:
 
 ```text
 [src:CLAIM_ID]
 ```
 
-Every cited claim must exist in `claim_ledger.json`.
+Every cited claim should exist in `claim_ledger.json`.
 
 ## Harness Contract
 
-Draft-level audit:
-
-- DeterministicAuditAgent
-- QualityHarnessAuditAgent
-- Optional semantic audit adapter
+Harnesses own hard gates, schema checks, regression tests, CI checks, and failure conditions.
+Prompt and skill files describe positive workflow, role boundaries, inputs, outputs, and handoffs.
 
 Final delivery gate:
 
@@ -290,18 +248,18 @@ Correct facts are necessary but not sufficient for final delivery.
 
 ## Conversational onboarding rule
 
-- Do not ask the user to edit YAML, JSON, schema files, or CLI flags.
+- Ask plain-language questions instead of asking users to edit YAML, JSON, schemas, or CLI flags.
 - Ask plain-language business questions directly in chat.
 - Cover all onboarding fields: company, industry, task, audience, language, cadence, source style, output style, must-watch, forbidden sources. Ask about each one or confirm its default.
 - Accept natural-language answers.
-- Do not infer or silently choose onboarding values.
+- Confirm onboarding values explicitly before workspace creation.
 - If the user provides "unknown" or "default" for a required field, stop and ask for explicit confirmation.
-- Generic requests such as "start", "run", "initialize" do not authorize the use of default values.
+- Use defaults only after explicit user confirmation.
 - Only proceed with workspace creation when the user explicitly confirms all required fields (company, industry, title).
 - Convert the answers into `onboarding.json`.
 - Run: `multi-agent-brief init --from-onboarding onboarding.json`
 - Explain the final setup in business language.
-- Do not expose internal fields such as `source_profile`, `selector_max_items`, `retrieval_provider`, or `output_formats` unless the user asks as a developer.
+- Explain setup in business language unless the user asks as a developer.
 
 ## Agent Roles
 
@@ -322,7 +280,7 @@ Correct facts are necessary but not sufficient for final delivery.
 - **market-competitor-analyst** (analysis_module): Generates AnalysisCards from evidence_pack.json and writes competitor sections for the final brief.
 - **market-competitor-auditor** (analysis_module): Runs 6 specialist audits on competitor analysis output: comparison evidence, capacity status, metric basis, market trends, single-source confidence, and coverage gaps.
 
-Full role details (responsibilities, hard rules, tool profiles) are in:
+Full role details (responsibilities, guardrails, tool profiles) are in:
 - `.claude/agents/*.md` — Claude Code subagents
 - `.codex/agents/*.toml` — Codex custom agents
-- `.agents/skills/*/SKILL.md` — Codex skills
+- `.agents/skills/*/SKILL.md` — agent skills

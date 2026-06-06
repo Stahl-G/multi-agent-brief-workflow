@@ -22,16 +22,16 @@ Use when inspecting source inputs or extracting candidate items before screening
 - Preserve source path, source ID, source date, and evidence text.
 - Mark vague, stale-looking, duplicate-looking, or low-confidence items.
 - Return candidates, not final analysis.
-- Do not invent facts.
+- Ground every candidate in source material.
 
-## Hard Rules
+## Guardrails
 
-- Do not write final brief prose.
-- Do not rank or capacity-cap candidates.
-- Do not create unsupported facts.
-- Do not invent claims not present in source material.
+- Output candidate claims only; leave prose drafting to Analyst.
+- Leave ranking and capacity caps to Screener.
+- Create only source-supported items.
+- Extract claims that are present in the source material.
 
-## Pipeline Context
+## Subagent workflow Context
 
 ```text
 Scout -> Screener -> Claim Ledger -> Analyst -> Editor -> Auditor -> Formatter
@@ -43,7 +43,7 @@ Source files, claim ledger entries, or draft markdown as appropriate for the pip
 
 ## Expected Outputs
 
-Structured artifacts conforming to the pipeline contract:
+Structured artifacts conforming to the workflow contract:
 - `draft_brief.md`
 - `claim_ledger.json`
 - `audit_report.json`

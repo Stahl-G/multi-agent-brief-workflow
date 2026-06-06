@@ -22,13 +22,13 @@ Use when working on rendered document validation, DOCX text depth, heading mappi
 - Validate DOCX/PDF dependency behavior.
 - Keep renderer-level checks separate from prompt instructions.
 
-## Hard Rules
+## Guardrails
 
-- Do not hide rendering defects by changing substantive content.
-- Do not silently pass rendered-output validation if required dependencies are missing.
-- Do not treat prompt instructions as a substitute for deterministic rendering checks.
+- Fix rendering defects at the rendering layer.
+- Report missing rendering dependencies explicitly.
+- Use deterministic rendering checks for output validation.
 
-## Pipeline Context
+## Subagent workflow Context
 
 ```text
 Scout -> Screener -> Claim Ledger -> Analyst -> Editor -> Auditor -> Formatter
@@ -40,7 +40,7 @@ Source files, claim ledger entries, or draft markdown as appropriate for the har
 
 ## Expected Outputs
 
-Structured artifacts conforming to the pipeline contract:
+Structured artifacts conforming to the workflow contract:
 - `draft_brief.md`
 - `claim_ledger.json`
 - `audit_report.json`

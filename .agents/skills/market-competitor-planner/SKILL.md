@@ -18,15 +18,15 @@ Use during workspace setup or when the user runs 'multi-agent-brief competitors 
 - Read user.md (company, industry, market_scope, focus_areas) for context.
 - Recommend 3-8 competitor entities based on industry knowledge.
 - Write competitor_candidates.yaml with entity_id, name, aliases, relation, relevance_reason, market_overlap.
-- Do not approve candidates — only recommend for user review.
+- Recommend candidates for user review.
 
-## Hard Rules
+## Guardrails
 
-- Do not write to competitor_universe.yaml directly.
-- Do not create entities without a relevance_reason.
+- Write recommendations to competitor_candidates.yaml for review.
+- Give every entity a relevance_reason.
 - Only use publicly known competitor information.
 
-## Pipeline Context
+## Subagent workflow Context
 
 ```text
 Scout -> Screener -> Claim Ledger -> Analyst -> Editor -> Auditor -> Formatter
@@ -38,7 +38,7 @@ Source files, claim ledger entries, or draft markdown as appropriate for the ana
 
 ## Expected Outputs
 
-Structured artifacts conforming to the pipeline contract:
+Structured artifacts conforming to the workflow contract:
 - `draft_brief.md`
 - `claim_ledger.json`
 - `audit_report.json`
