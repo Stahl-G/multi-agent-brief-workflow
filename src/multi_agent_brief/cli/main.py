@@ -961,6 +961,21 @@ def run_sources_decide_from_args(args: argparse.Namespace) -> int:
         return 1
 
     print(f"[sources] Generated source_candidates.yaml at {candidates_path}")
+
+    # Generate collector_tasks.json if local signal tasks exist
+    from multi_agent_brief.sources.local_signal_planner import generate_collector_tasks
+    collector_tasks = generate_collector_tasks(discovery)
+    if collector_tasks.get("tasks"):
+        import json
+        collector_path = workspace / "output" / "intermediate" / "collector_tasks.json"
+        collector_path.parent.mkdir(parents=True, exist_ok=True)
+        collector_path.write_text(
+            json.dumps(collector_tasks, ensure_ascii=False, indent=2) + "\n",
+            encoding="utf-8",
+        )
+        print(f"[sources] Generated collector_tasks.json at {collector_path}")
+        print(f"[sources] {len(collector_tasks['tasks'])} local signal collection tasks ready")
+
     print("[sources] Review and enable/disable sources, then run:")
     print(f"  multi-agent-brief sources decide --config {args.config} --merge")
     return 0
