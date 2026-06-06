@@ -76,9 +76,13 @@ class AnalystAgent(BaseAgent):
         if not sections:
             sections.append(BriefSection(title="No Reportable Signals", body="No candidate claims were found."))
 
-        # Use structured draft as primary output, legacy draft as fallback
+        # Epistemic blocks are intermediate governance artifacts, NOT reader-facing.
+        # Store in metadata for analysis_blocks.json export and MAS shared-world use.
+        context.metadata["epistemic_draft"] = structured_draft
+
+        # The reader-facing brief uses the legacy prose format with executive summary.
         context.report_state.sections = sections
-        context.report_state.draft_markdown = structured_draft
+        context.report_state.draft_markdown = render_draft(context.project_name, sections)
         return AgentOutput(
             agent_name=self.name,
             summary=f"Generated draft with {len(analysis_blocks)} analysis blocks, {len(sections)} sections.",

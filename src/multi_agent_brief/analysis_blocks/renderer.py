@@ -157,8 +157,8 @@ def _render_block(
             lines.append(f"> **{ _verification_path_label(is_zh) }:** {block.verification_path}")
         lines.append("")
 
-    # Confidence footer
-    lines.append(f"_{ _confidence_label(is_zh) }: {block.confidence:.0%}_")
+    # Confidence footer (qualitative label, not percentage — avoids audit false positives)
+    lines.append(f"_{ _confidence_label(is_zh) }: { _confidence_level(block.confidence, is_zh) }_")
     lines.append("")
 
     return "\n".join(lines)
@@ -227,3 +227,16 @@ def _verification_path_label(is_zh: bool) -> str:
 
 def _confidence_label(is_zh: bool) -> str:
     return "置信度" if is_zh else "Confidence"
+
+
+def _confidence_level(score: float, is_zh: bool) -> str:
+    """Map numeric confidence to qualitative label.
+
+    Avoids precise percentages that trigger audit false positives
+    (e.g. '100%' flagged as number_without_source).
+    """
+    if score >= 0.8:
+        return "高" if is_zh else "High"
+    if score >= 0.5:
+        return "中" if is_zh else "Medium"
+    return "低" if is_zh else "Low"
