@@ -19,6 +19,13 @@ import json
 import sys
 from pathlib import Path
 
+# Bootstrap: ensure src/ is on sys.path so multi_agent_brief is importable
+# without requiring PYTHONPATH or an editable install.
+_ROOT = Path(__file__).resolve().parents[2]
+_SRC = _ROOT / "src"
+if _SRC.exists() and str(_SRC) not in sys.path:
+    sys.path.insert(0, str(_SRC))
+
 
 # ── Expected artifacts ────────────────────────────────────────────────────────
 
