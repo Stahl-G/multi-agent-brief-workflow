@@ -101,6 +101,47 @@ DEMO_MARKET_DATA = {
     ],
 }
 
+DEMO_SOURCES = """source_strategy:
+  profile: "conservative"
+  enabled_providers:
+    - "manual"
+
+manual:
+  enabled: true
+  sources: []
+"""
+
+DEMO_USER_MD = """# User Context
+
+## Company
+
+Synthetic Corp
+
+## Industry
+
+Manufacturing & Industrial
+
+## Role
+
+Strategy Office
+
+## Focus Areas
+
+- Manufacturing output and capacity trends
+- Trade regulation and policy impacts
+- Competitor capacity announcements
+- Commodity pricing and supply chain conditions
+
+## Cadence
+
+Weekly
+
+## Notes
+
+This is a synthetic demo workspace for validating the reference workflow.
+All data is public-safe and fabricated for testing purposes.
+"""
+
 DEMO_CONFIG = """project:
   name: "Synthetic Market Brief Demo"
   language: "en-US"
@@ -246,8 +287,15 @@ def missing_required_direct_init_args(args: Any) -> list[str]:
 
 def create_demo_workspace(target: Path, *, force: bool = False) -> None:
     input_dir = target / "input"
+    output_dir = target / "output"
+    output_dir.mkdir(parents=True, exist_ok=True)
+    input_dir.mkdir(parents=True, exist_ok=True)
     files = {
         target / "config.yaml": DEMO_CONFIG,
+        target / "sources.yaml": DEMO_SOURCES,
+        target / "user.md": DEMO_USER_MD,
+        target / ".gitignore": WORKSPACE_GITIGNORE,
+        target / ".env.example": _build_env_example(),
         input_dir / "news.json": json.dumps(DEMO_NEWS, indent=2),
         input_dir / "market_data.json": json.dumps(DEMO_MARKET_DATA, indent=2),
     }
