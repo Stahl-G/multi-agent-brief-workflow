@@ -176,6 +176,7 @@ def _add_available_info(results: list[CheckResult], source_config: SourceConfig)
         "filing_resolver": "filing_resolver.enabled: true + add tickers",
         "feishu": "feishu.enabled: true (requires lark-cli)",
         "mineru": "mineru.enabled: true (local CLI or remote API)",
+        "opencli": "opencli.enabled: true + configure read-only opencli.commands for user-authorized browser/session sources",
         "mcp": "mcp.enabled: true + configure mcp.servers",
     }
 

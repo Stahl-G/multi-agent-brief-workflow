@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import os
 import shutil
+import sys
 from pathlib import Path
 
 from multi_agent_brief.capabilities.catalog import get_capability
@@ -24,6 +25,10 @@ def check_cli_tool(tool_name: str) -> RequirementResult:
     """Check if a CLI tool is available on PATH."""
     if shutil.which(tool_name):
         return RequirementResult(requirement=tool_name, status="OK", message=f"{tool_name} found on PATH")
+    if tool_name == "python":
+        fallback = sys.executable or shutil.which("python3")
+        if fallback:
+            return RequirementResult(requirement=tool_name, status="OK", message=f"python available via {fallback}")
     return RequirementResult(requirement=tool_name, status="WARN", message=f"{tool_name} not found on PATH")
 
 
@@ -81,6 +86,9 @@ def detect_readiness(
 
     elif capability_id == "feishu":
         results.append(check_cli_tool("lark-cli"))
+
+    elif capability_id == "opencli":
+        results.append(check_cli_tool("opencli"))
 
     elif capability_id == "filing_resolver":
         if workspace_dir:

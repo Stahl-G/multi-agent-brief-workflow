@@ -14,6 +14,7 @@ from multi_agent_brief.sources.api_news import NewsApiProvider
 from multi_agent_brief.sources.api_filings import FilingsProvider
 from multi_agent_brief.sources.mcp_provider import McpProvider
 from multi_agent_brief.sources.cli_provider import CliProvider
+from multi_agent_brief.sources.opencli_provider import OpenCliProvider
 from multi_agent_brief.sources.feishu_provider import FeishuProvider
 from multi_agent_brief.sources.mineru_provider import MineruProvider
 from multi_agent_brief.sources.normalizer import normalize_source_item, dedupe_sources, filter_by_recency
@@ -51,11 +52,13 @@ def test_source_config_from_dict():
         "source_strategy": {"profile": "research", "enabled_providers": ["manual", "rss"]},
         "manual": {"enabled": True, "sources": [{"name": "Test", "path": "input/"}]},
         "rss": {"enabled": False},
+        "opencli": {"enabled": True, "commands": [{"name": "zhihu-hot", "site": "zhihu", "command": "hot"}]},
     }
     config = SourceConfig.from_dict(data)
     assert config.profile == "research"
     assert config.enabled_providers == ["manual", "rss"]
     assert config.manual["enabled"] is True
+    assert config.opencli["commands"][0]["site"] == "zhihu"
 
 
 def test_source_config_defaults():
@@ -257,6 +260,97 @@ def test_mcp_disabled_returns_empty():
     config = {"enabled": False}
     items = provider.collect(SourceQuery(), config)
     assert items == []
+
+
+# --- OpenCliProvider ---
+
+def test_opencli_disabled_returns_empty():
+    provider = OpenCliProvider()
+    items = provider.collect(SourceQuery(keywords=["OpenAI"]), {"enabled": False})
+    assert items == []
+
+
+def test_opencli_validate_rejects_write_command(monkeypatch):
+    monkeypatch.setattr("multi_agent_brief.sources.opencli_provider.shutil.which", lambda cmd: "/bin/opencli")
+    provider = OpenCliProvider()
+    errors = provider.validate_config({
+        "enabled": True,
+        "commands": [{"name": "bad-like", "site": "zhihu", "command": "like"}],
+    })
+    assert any("read-only allowlist" in e for e in errors)
+
+
+def test_opencli_collects_json_items(monkeypatch):
+    class FakeResult:
+        returncode = 0
+        stdout = (
+            '[{"title":"OpenAI topic","content":"A Zhihu answer discussed OpenAI.",'
+            '"url":"https://www.zhihu.com/question/1","published_at":"2026-06-01"}]\n\n'
+            "Update available: v1.8.2 -> v1.8.3"
+        )
+        stderr = ""
+
+    captured = {}
+
+    def fake_run(cmd, capture_output, text, timeout):
+        captured["cmd"] = cmd
+        captured["timeout"] = timeout
+        return FakeResult()
+
+    monkeypatch.setattr("multi_agent_brief.sources.opencli_provider.subprocess.run", fake_run)
+
+    provider = OpenCliProvider()
+    items = provider.collect(
+        SourceQuery(keywords=["OpenAI"]),
+        {
+            "enabled": True,
+            "commands": [
+                {
+                    "name": "zhihu-search",
+                    "site": "zhihu",
+                    "command": "search",
+                    "query_from_keywords": True,
+                    "args": ["--limit", "3"],
+                }
+            ],
+        },
+    )
+
+    assert captured["cmd"] == [
+        "opencli", "zhihu", "search", "OpenAI", "--limit", "3", "-f", "json",
+    ]
+    assert captured["timeout"] == 60
+    assert len(items) == 1
+    assert items[0].source_type == "cli"
+    assert items[0].source_name == "OpenCLI: zhihu-search"
+    assert items[0].metadata["backend"] == "opencli"
+    assert items[0].metadata["site"] == "zhihu"
+
+
+def test_opencli_registry_collects_provider(monkeypatch):
+    class FakeResult:
+        returncode = 0
+        stdout = '[{"title":"Zhihu hot","content":"A hot topic","url":"https://www.zhihu.com/question/2"}]'
+        stderr = ""
+
+    monkeypatch.setattr("multi_agent_brief.sources.opencli_provider.shutil.which", lambda cmd: "/bin/opencli")
+    monkeypatch.setattr(
+        "multi_agent_brief.sources.opencli_provider.subprocess.run",
+        lambda cmd, capture_output, text, timeout: FakeResult(),
+    )
+
+    config = SourceConfig(
+        enabled_providers=["opencli"],
+        opencli={
+            "enabled": True,
+            "commands": [{"name": "zhihu-hot", "site": "zhihu", "command": "hot"}],
+        },
+    )
+    items, errors = collect_all_sources(config, SourceQuery())
+
+    assert errors == []
+    assert len(items) == 1
+    assert items[0].title == "Zhihu hot"
 
 
 def test_mcp_no_servers_returns_empty():

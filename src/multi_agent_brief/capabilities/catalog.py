@@ -125,6 +125,35 @@ CAPABILITIES: list[CapabilitySpec] = [
         maturity="beta",
         requirements=["scripts configured in mcp.cli section of sources.yaml"],
     ),
+    CapabilitySpec(
+        id="opencli",
+        name={"en": "OpenCLI Private Signals", "zh": "OpenCLI 私域信号"},
+        summary={
+            "en": "Collect user-authorized browser/session sources through read-only OpenCLI adapters",
+            "zh": "通过只读 OpenCLI 适配器采集用户授权的浏览器/登录态来源",
+        },
+        category="source",
+        provider_name="opencli",
+        visibility="advanced",
+        maturity="beta",
+        requirements=["opencli installed", "Browser Bridge connected for browser/session adapters"],
+        privacy_note="Use only user-authorized sources. Do not store credentials, cookies, raw logs, or personal data.",
+        docs_path="docs/opencli-source-provider.md",
+    ),
+    CapabilitySpec(
+        id="local_signal",
+        name={"en": "Local Signals", "zh": "本地信号"},
+        summary={
+            "en": "Ingest user-provided local signal samples and de-identified excerpts",
+            "zh": "采集用户提供的本地信号样本和脱敏摘录",
+        },
+        category="source",
+        provider_name="local_signal",
+        visibility="advanced",
+        maturity="beta",
+        requirements=["input/local_signal_samples.jsonl or generated collector tasks"],
+        privacy_note="Store only de-identified excerpts and reusable signal metadata.",
+    ),
     # ── Analysis modules ──
     CapabilitySpec(
         id="market_competitor",

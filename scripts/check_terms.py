@@ -37,7 +37,7 @@ SCAN_FILES = [
 ]
 
 # Paths to exclude
-EXCLUDE = {".git", ".venv", "__pycache__", "dist", "build", ".pytest_cache"}
+EXCLUDE = {".git", ".venv", "__pycache__", "dist", "build", ".pytest_cache", "worktrees"}
 
 
 def load_terminology() -> dict:
