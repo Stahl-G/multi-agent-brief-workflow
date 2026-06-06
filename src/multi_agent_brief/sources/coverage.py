@@ -26,8 +26,14 @@ COVERAGE_DIMENSIONS: list[str] = [
 ]
 
 
-def _extract_dimension_value(source: SourceItem, dimension: str) -> str:
-    """Extract the value of a coverage dimension from a SourceItem."""
+def _extract_dimension_value(source: SourceItem, dimension: str, report_date: str | None = None) -> str:
+    """Extract the value of a coverage dimension from a SourceItem.
+
+    Args:
+        source: The source item to extract dimension from.
+        dimension: The dimension name to extract.
+        report_date: ISO format date string of the report date for recency calculation.
+    """
     if dimension == "source_kind":
         return source.source_type or "unknown"
     elif dimension == "language":
@@ -36,7 +42,7 @@ def _extract_dimension_value(source: SourceItem, dimension: str) -> str:
         # Check metadata for official status, default to unknown
         return source.metadata.get("official_status", "unknown")
     elif dimension == "recency_bucket":
-        return _classify_recency(source.published_at)
+        return _classify_recency(source.published_at, report_date)
     elif dimension == "geography":
         return source.metadata.get("geography", "unknown")
     elif dimension == "platform":
@@ -49,20 +55,33 @@ def _extract_dimension_value(source: SourceItem, dimension: str) -> str:
         return source.metadata.get(dimension, "unknown")
 
 
-def _classify_recency(published_at: str) -> str:
-    """Classify a source into recency buckets based on published_at."""
+def _classify_recency(published_at: str, report_date: str | None = None) -> str:
+    """Classify a source into recency buckets based on published_at.
+
+    Args:
+        published_at: ISO format date string of when the source was published.
+        report_date: ISO format date string of the report date. If None, uses current time.
+    """
     if not published_at:
         return "unknown"
 
     try:
         # Try ISO format parsing
         from datetime import timedelta
-        now = datetime.now(timezone.utc)
+
+        # Use report_date if provided, otherwise use current time
+        if report_date:
+            reference_date = datetime.fromisoformat(report_date.replace("Z", "+00:00"))
+            if reference_date.tzinfo is None:
+                reference_date = reference_date.replace(tzinfo=timezone.utc)
+        else:
+            reference_date = datetime.now(timezone.utc)
+
         pub_date = datetime.fromisoformat(published_at.replace("Z", "+00:00"))
         if pub_date.tzinfo is None:
             pub_date = pub_date.replace(tzinfo=timezone.utc)
 
-        delta = now - pub_date
+        delta = reference_date - pub_date
         if delta <= timedelta(days=7):
             return "within_7d"
         elif delta <= timedelta(days=30):
@@ -142,11 +161,18 @@ class SourceCoverageReport:
 def _count_by_dimension(
     sources: list[SourceItem],
     dimension: str,
+    report_date: str | None = None,
 ) -> dict[str, int]:
-    """Count sources by dimension value."""
+    """Count sources by dimension value.
+
+    Args:
+        sources: List of source items.
+        dimension: The dimension to count by.
+        report_date: ISO format date string for recency calculation.
+    """
     counts: dict[str, int] = {}
     for source in sources:
-        value = _extract_dimension_value(source, dimension)
+        value = _extract_dimension_value(source, dimension, report_date)
         counts[value] = counts.get(value, 0) + 1
     return counts
 
@@ -155,9 +181,19 @@ def _calculate_coverage_pct(
     actual: dict[str, int],
     expected: dict[str, int],
 ) -> float:
-    """Calculate coverage percentage based on expected vs actual."""
+    """Calculate coverage percentage based on expected vs actual.
+
+    Returns:
+        Coverage percentage (0-100). Returns 0.0 if no sources collected
+        but expectations exist. Returns 100.0 if no expectations configured.
+    """
     if not expected:
         return 100.0  # No expectations = full coverage
+
+    # If no sources collected but expectations exist, return 0%
+    total_actual = sum(actual.values())
+    if total_actual == 0:
+        return 0.0
 
     covered = 0
     for category, min_count in expected.items():
@@ -170,6 +206,7 @@ def _calculate_coverage_pct(
 def calculate_coverage(
     sources: list[SourceItem],
     config: dict[str, Any] | None = None,
+    report_date: str | None = None,
 ) -> SourceCoverageReport:
     """Calculate source coverage across configured dimensions.
 
@@ -184,6 +221,8 @@ def calculate_coverage(
                     "language": {"required": False},
                 }
             }
+        report_date: ISO format date string of the report date for recency calculation.
+            If None, uses current time.
 
     Returns:
         SourceCoverageReport with coverage statistics and gaps.
@@ -204,7 +243,7 @@ def calculate_coverage(
             # Skip unknown dimensions
             continue
 
-        actual = _count_by_dimension(sources, dim_name)
+        actual = _count_by_dimension(sources, dim_name, report_date)
         expected = dim_opts.get("expected", {})
         required = dim_opts.get("required", False)
 

@@ -178,6 +178,7 @@ class BriefPipeline:
         context.metadata["source_coverage"] = calculate_coverage(
             sources=items,
             config=coverage_config,
+            report_date=context.report_date,
         )
 
         artifacts: dict = {

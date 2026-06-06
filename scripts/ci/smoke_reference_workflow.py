@@ -32,6 +32,15 @@ EXPECTED_INTERMEDIATE = [
     "run_manifest.json",
 ]
 
+# v0.5 quality gate artifacts
+QUALITY_GATE_ARTIFACTS = [
+    "final_clean_report.json",
+    "final_quality_report.json",
+    "rendered_output_report.json",
+    "source_coverage_report.json",
+    "research_gaps.md",
+]
+
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -172,8 +181,44 @@ def _verify_artifacts(workspace: Path, checks: _Check) -> None:
                         checks.fail("run_manifest.json artifacts missing hash fields")
                 else:
                     checks.fail("run_manifest.json has no artifacts")
+
+                # Verify stage statuses are trustworthy
+                stages = manifest.get("stages", {})
+                for stage_name, stage_info in stages.items():
+                    if isinstance(stage_info, dict):
+                        status = stage_info.get("status", "")
+                        if status not in ("ok", "failed", "warning", "skipped"):
+                            checks.fail(f"Stage '{stage_name}' has invalid status: {status}")
             except json.JSONDecodeError:
                 checks.fail("run_manifest.json is not valid JSON")
+
+    # 3. v0.5 quality gate artifacts (optional but recommended)
+    for name in QUALITY_GATE_ARTIFACTS:
+        path = intermediate / name
+        if path.exists():
+            checks.ok(f"intermediate/{name} exists (v0.5 quality gate)")
+        else:
+            checks.ok(f"intermediate/{name} not present (optional v0.5 artifact)")
+
+    # 4. Audit report quality gate status
+    audit_report_path = intermediate / "audit_report.json"
+    if audit_report_path.exists():
+        try:
+            audit_report = json.loads(audit_report_path.read_text(encoding="utf-8"))
+            audit_status = audit_report.get("audit_status", "")
+            if audit_status in ("pass", "warning", "fail"):
+                checks.ok(f"audit_report.json status: {audit_status}")
+            else:
+                checks.fail(f"audit_report.json has invalid status: {audit_status}")
+
+            # Check for final quality metadata
+            metadata = audit_report.get("metadata", {})
+            if "final_quality_status" in metadata:
+                checks.ok(f"audit_report.json has final_quality_status: {metadata['final_quality_status']}")
+            else:
+                checks.ok("audit_report.json missing final_quality_status (may not be wired yet)")
+        except json.JSONDecodeError:
+            checks.fail("audit_report.json is not valid JSON")
 
 
 def main() -> int:

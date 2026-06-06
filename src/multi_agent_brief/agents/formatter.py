@@ -155,6 +155,8 @@ class FormatterAgent(BaseAgent):
                 audit_report.metadata["rendered_docx_path"] = rendered_docx_path
             if rendered_output_report:
                 audit_report.metadata["rendered_output_status"] = rendered_output_report.audit_status
+            if final_clean_report:
+                audit_report.metadata["final_clean_status"] = final_clean_report.get("audit_status", "not_run")
             audit_report.metadata["audited_markdown_artifact"] = str(audited_path)
             audit_report.metadata["reader_brief_artifact"] = str(brief_path)
             audit_report.metadata["reader_brief_transform"] = "strip_claim_citations"
