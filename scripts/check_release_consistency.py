@@ -6,10 +6,11 @@ Checks:
   2. README.md current version line matches
   3. README_en.md current version line matches
   4. CHANGELOG.md has a section for the current version
-  5. Generated agent configs are up to date (delegates to generate_agent_configs.py --check)
+  5. Latest git tag matches current version (skipped if no tags or --no-tag)
+  6. Generated agent configs are up to date (delegates to generate_agent_configs.py --check)
 
 Usage:
-  python scripts/check_release_consistency.py [--strict]
+  python scripts/check_release_consistency.py [--strict] [--no-tag]
 
 Exit codes:
   0 = all checks pass
@@ -19,6 +20,7 @@ Exit codes:
 from __future__ import annotations
 
 import re
+import subprocess
 import sys
 from pathlib import Path
 
@@ -64,6 +66,24 @@ def extract_changelog_latest() -> str:
     return m.group(1) if m else ""
 
 
+def extract_latest_git_tag() -> str:
+    """Return the latest semver git tag (without 'v' prefix), or '' if none."""
+    try:
+        result = subprocess.run(
+            ["git", "tag", "--sort=-v:refname"],
+            capture_output=True, text=True, cwd=str(REPO_ROOT),
+        )
+        if result.returncode != 0:
+            return ""
+        for line in result.stdout.splitlines():
+            tag = line.strip()
+            if re.match(r'^v?\d+\.\d+\.\d+$', tag):
+                return tag.lstrip("v")
+    except FileNotFoundError:
+        pass
+    return ""
+
+
 def check_agent_configs() -> bool:
     """Run generate_agent_configs.py --check and return True if it passes."""
     import subprocess
@@ -78,7 +98,7 @@ def check_agent_configs() -> bool:
     return True
 
 
-def main(strict: bool = False) -> int:
+def main(strict: bool = False, check_tag: bool = True) -> int:
     print("Release Consistency Check")
     print("=" * 40)
 
@@ -115,6 +135,15 @@ def main(strict: bool = False) -> int:
     elif strict:
         check("CHANGELOG.md has version section", False, "could not extract version")
 
+    # Git tag check
+    if check_tag and pyproject_ver:
+        tag_ver = extract_latest_git_tag()
+        if tag_ver:
+            check("Latest git tag matches version", tag_ver == pyproject_ver,
+                  f"tag=v{tag_ver}, expected={pyproject_ver}")
+        elif strict:
+            check("Latest git tag matches version", False, "no semver tags found")
+
     # Agent configs check
     try:
         configs_ok = check_agent_configs()
@@ -133,4 +162,5 @@ def main(strict: bool = False) -> int:
 
 if __name__ == "__main__":
     strict = "--strict" in sys.argv
-    sys.exit(main(strict=strict))
+    no_tag = "--no-tag" in sys.argv
+    sys.exit(main(strict=strict, check_tag=not no_tag))
