@@ -45,7 +45,7 @@
 - **analyst** (pipeline): Drafts executive-readable brief sections using only Claim Ledger entries.
 - **auditor** (pipeline): Audits source support, freshness, unsupported numbers, redaction risk, duplicate claims, placeholders, and harness failures.
 - **editor** (pipeline): Improves clarity, structure, tone, and executive readability without adding facts.
-- **formatter** (pipeline): Writes and validates preparation artifacts: draft_brief.md, claim_ledger.json, audit_report.json, source_map.md.
+- **formatter** (pipeline): Renders reader-facing outputs from audited_brief.md and audit_report.json through finalize.
 - **draft-audit-harness** (harness): Reviews and implements the draft-level audit harness: deterministic source checks plus QualityHarnessAuditAgent checks.
 - **final-quality-harness** (harness): Reviews and implements final text delivery gates for BRIEF_HARNESS_V2 final target.
 - **rendered-output-harness** (harness): Reviews rendered output gates for DOCX/PDF/Markdown rendering fidelity.
@@ -58,7 +58,7 @@
         | Platform | Location | Format |
         |----------|----------|--------|
         | Codex agents | `.codex/agents/*.toml` | TOML |
-        | Skills | `.agents/skills/*/SKILL.md` | Markdown + YAML frontmatter, hand-maintained by default |
+        | Skills | `.agents/skills/*/SKILL.md` | Markdown + YAML frontmatter, hand-maintained |
         | Claude Code | `.claude/agents/*.md` | Markdown + YAML frontmatter |
         | OpenCode | `.opencode/agents/*.md` | Markdown + YAML frontmatter |
-        | Project instructions | `AGENTS.md` | Markdown, hand-maintained by default |
+        | Project instructions | `AGENTS.md` | Markdown, hand-maintained |

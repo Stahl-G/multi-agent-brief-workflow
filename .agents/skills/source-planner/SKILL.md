@@ -1,48 +1,42 @@
 ---
 name: source-planner
-description: Reads user.md, config.yaml, and sources.yaml to generate or refine source_candidates.yaml and search_tasks. Ensures all sources are public, citable, and timestamped. Use when planning source discovery, generating search tasks, or refining source candidates for a brief workspace.
+description: Plans public, citable source discovery for a workspace. Use when sources.yaml uses llm_decide or when a workspace needs source_candidates.yaml before source validation.
 ---
 
-# Source Planner Skill
+# Source Planner Skill Contract
+
+## Scope
+
+This is a runtime skill contract. It describes the capability and artifact contract for this role.
+
+It is not the platform-specific subagent definition. Claude Code subagents live in `.claude/agents/`; OpenCode subagents live in `.opencode/agents/`; Codex custom agents live in `.codex/agents/`; Hermes child tasks are created through `delegate_task`.
 
 ## Purpose
 
-Reads user.md, config.yaml, and sources.yaml to generate or refine source_candidates.yaml and search_tasks. Ensures all sources are public, citable, and timestamped.
+Plan public, citable source discovery for a workspace.
 
-## When To Use
+## Use When
 
-Use when planning source discovery, generating search tasks, or refining source candidates for a brief workspace.
+Use when sources.yaml uses llm_decide, or when the workspace needs source candidates or search tasks.
 
-## Responsibilities
+## Inputs
 
-- Read user.md, config.yaml, and sources.yaml to understand the briefing context.
-- Generate or refine source_candidates.yaml with public, citable, timestamped sources.
-- Generate or refine search_tasks in sources.yaml.
-- Ensure all proposed sources are public, citable, and timestamped.
-- Use public, citable, timestamped sources as the source-planning basis.
-- Align source discovery with user industry, role, and focus areas.
+- `user.md`
+- `config.yaml`
+- `sources.yaml`
 
-## Guardrails
+## Outputs
 
-- Propose public, internal-approved, or user-provided sources according to workspace policy.
-- Keep source plans free of sensitive values and MNPI.
-- Mark planned sources as proposed until collected and reviewed.
-- Apply source profile constraints consistently.
+- `source_candidates.yaml`
+- search tasks or source-discovery notes as configured
 
-## Subagent workflow Context
+## Work
 
-```text
-Scout -> Screener -> Claim Ledger -> Analyst -> Editor -> Auditor -> Formatter
-```
+- Understand company, industry, audience, cadence, focus areas, and source preference.
+- Propose public, citable, timestamped sources.
+- Align sources with selected source profile and runtime search mode.
+- Prepare candidates for review and merge.
 
-## Expected Inputs
+## Handoff
 
-Source files, claim ledger entries, or draft markdown as appropriate for the coordination stage.
-
-## Expected Outputs
-
-Structured artifacts conforming to the workflow contract:
-- `draft_brief.md`
-- `claim_ledger.json`
-- `audit_report.json`
-- `source_map.md`
+After source candidates are reviewed and merged, pass source configuration to doctor/source-provider.

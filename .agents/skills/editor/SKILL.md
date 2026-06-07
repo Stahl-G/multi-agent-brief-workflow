@@ -1,51 +1,41 @@
 ---
 name: editor
-description: Improves clarity, structure, tone, and executive readability without adding facts. Use after the analyst subagent and before final DOCX rendering. Must remove process residue while preserving valid citations.
+description: Polishes the auditable brief for clarity and executive readability without adding facts. Use after analyst writes output/intermediate/audited_brief.md and update that file for auditor review.
 ---
 
-# Editor Skill
+# Editor Skill Contract
+
+## Scope
+
+This is a runtime skill contract. It describes the capability and artifact contract for this role.
+
+It is not the platform-specific subagent definition. Claude Code subagents live in `.claude/agents/`; OpenCode subagents live in `.opencode/agents/`; Codex custom agents live in `.codex/agents/`; Hermes child tasks are created through `delegate_task`.
 
 ## Purpose
 
-Improves clarity, structure, tone, and executive readability without adding facts.
+Improve readability, structure, and executive tone while preserving factual scope.
 
-## When To Use
+## Use When
 
-Use after the analyst subagent and before final DOCX rendering. Must remove process residue while preserving valid citations.
+Use after analyst has written audited_brief.md.
 
-## Responsibilities
+## Inputs
 
-- Improve readability and management tone.
-- Reduce repetition.
-- Preserve all [src:CLAIM_ID] citations exactly.
-- Preserve uncertainty.
-- Remove internal residue when safe.
-- Remove [SRC:], [SOURCE:], empty [src:] markers.
-- Remove Claude/Codex process residue (Thought for..., Agent completed, Bash(...), audit in background).
-- Keep editorial changes within existing facts.
-- Keep claim IDs unchanged.
+- `output/intermediate/audited_brief.md`
+- `output/intermediate/claim_ledger.json`
+- `user.md`
 
-## Guardrails
+## Outputs
 
-- Edit existing claims and prose only.
-- Keep claim citations with supported statements.
-- Preserve caveats and uncertainty.
-- Preserve [src:CLAIM_ID] citations exactly.
+- `updated output/intermediate/audited_brief.md`
 
-## Subagent workflow Context
+## Work
 
-```text
-Scout -> Screener -> Claim Ledger -> Analyst -> Editor -> Auditor -> Formatter
-```
+- Improve headings, flow, concision, and management readability.
+- Preserve valid [src:CLAIM_ID] citations.
+- Preserve caveats, uncertainty, dates, and factual scope.
+- Clean process residue, invalid citation markers, and obvious formatting defects.
 
-## Expected Inputs
+## Handoff
 
-Source files, claim ledger entries, or draft markdown as appropriate for the pipeline stage.
-
-## Expected Outputs
-
-Structured artifacts conforming to the workflow contract:
-- `draft_brief.md`
-- `claim_ledger.json`
-- `audit_report.json`
-- `source_map.md`
+Pass the edited audited_brief.md to auditor.

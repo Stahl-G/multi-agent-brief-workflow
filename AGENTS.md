@@ -6,6 +6,14 @@ Multi-Agent Brief Workflow is a subagent-first briefing toolkit.
 
 Python CLI commands provide onboarding, workspace setup, runtime handoff, source tooling, validation, audit checks, and final rendering. The selected agent runtime coordinates the brief workflow through handoff artifacts and role-specific agents.
 
+## Instruction Scope
+
+This repository contains both development code and runtime agent contracts.
+
+In repository development mode, files under `.agents/skills/`, `.agents/hermes-skills/`, `.claude/agents/`, `.codex/agents/`, and `.opencode/agents/` are source assets to inspect, edit, and test. Their role instructions become active only when the corresponding runtime explicitly invokes that role or skill.
+
+Use `multi-agent-brief run --workspace <workspace>` to create a runtime handoff. The handoff artifact, not this repository manual, is the execution contract for a specific brief run.
+
 ## Context Mode
 
 ### Repository development mode
@@ -43,11 +51,11 @@ multi-agent-brief run --workspace <workspace>
 
 Supported runtimes:
 
-* `hermes`: Hermes parent agent uses `delegate_task` children.
-* `claude`: Claude Code uses the repository command workflow.
-* `opencode`: OpenCode uses the repository command and agent files.
-* `codex`: Codex uses repository agent instructions and generated configs.
-* `manual`: prints the artifact workflow.
+- `hermes`: Hermes parent agent uses `delegate_task` children.
+- `claude`: Claude Code uses the repository command workflow.
+- `opencode`: OpenCode uses the repository command and agent files.
+- `codex`: Codex uses repository agent instructions and generated configs.
+- `manual`: prints the artifact workflow.
 
 Canonical workflow:
 
@@ -66,33 +74,18 @@ doctor
 
 ## Onboarding
 
-Use `multi-agent-brief onboard` for requirement capture.
-
-The onboarding conversation should collect:
-
-* company or organization
-* industry or theme
-* task objective or brief title
-* audience
-* language
-* cadence
-* source style
-* output style
-* must-watch topics
-* excluded sources or topics
-* source/search preference
+Use `multi-agent-brief onboard` for requirement capture. It collects company or organization, industry or theme, task objective, audience, language, cadence, source style, output style, must-watch topics, excluded topics, and source/search preference.
 
 For details, see `docs/onboarding.md`.
 
 ## Role Details
 
-Role-specific instructions live in:
-
-* `.agents/skills/*/SKILL.md`
-* `.claude/agents/*.md`
-* `.codex/agents/*.toml`
-* `.opencode/agents/*.md`
-* `docs/agents/`
+- `.agents/skills/*/SKILL.md` — runtime capability contracts, hand-maintained.
+- `.agents/hermes-skills/*/SKILL.md` — Hermes runtime skills and reference files, hand-maintained.
+- `.claude/agents/*.md` — Claude Code subagent definitions.
+- `.codex/agents/*.toml` — Codex custom agent configs.
+- `.opencode/agents/*.md` — OpenCode subagent definitions.
+- `docs/agents/` — generated platform adapter documentation.
 
 ## Artifact Contract
 

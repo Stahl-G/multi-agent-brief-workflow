@@ -86,22 +86,28 @@ source-planner
 
 Python CLI commands provide setup, source discovery, input governance, audit checks, runtime handoff, and final rendering tools. The auditable brief is written by subagents and rendered through `finalize`.
 
-## Generated Files
+## Generated And Hand-Maintained Files
 
-Prefer editing generation sources:
+Generated platform adapter files come from:
 
 ```text
 configs/agent_roles.yaml
 scripts/generate_agent_configs.py
-src/multi_agent_brief/hermes/
 ```
 
-After editing generated content:
+Generated targets are limited to `.codex/`, `.claude/agents/`, `.opencode/`, and `docs/agents/`.
 
-```bash
-python scripts/generate_agent_configs.py
-python scripts/generate_agent_configs.py --check
+Hand-maintained operating contracts:
+
+```text
+AGENTS.md
+CLAUDE.md
+.agents/AGENTS.md
+.agents/skills/*/SKILL.md
+.agents/hermes-skills/*
 ```
+
+Do not regenerate hand-maintained operating contracts from `configs/agent_roles.yaml`.
 
 ## Focused Tests
 
@@ -117,16 +123,28 @@ For onboarding changes:
 python -m pytest tests/test_onboarding*.py tests/test_init*.py -q
 ```
 
+For skill contract changes:
+
+```bash
+python -m pytest tests/test_skill_contracts.py -q
+```
+
 For final validation:
 
 ```bash
 python -m pytest -q
 ```
 
-## Implementation Style
+## Development Governance
 
-Keep user-facing prompts and skills short and positive.
+Prefer deletion and simplification over new abstraction.
 
-Use complete section rewrites for architecture language changes instead of partial line patches.
+Python CLI is harness/tooling, not the brief-generation runtime. Do not add a Python full-run pipeline, `BriefPipeline`, `prepare` runtime, or a new full-run generator.
 
-When changing generated files, update the generator source and regenerate derived outputs.
+`main.py` should remain a thin CLI router. Command behavior belongs in command modules.
+
+`AGENTS.md` and `SKILL.md` files are operating contracts. Keep them short, concrete, and positive. Use frontmatter descriptions for routing and `references/` for long material.
+
+If an issue is already fixed, report the evidence and stop instead of making unnecessary changes.
+
+Before final response, report files changed, tests run, and known risks.

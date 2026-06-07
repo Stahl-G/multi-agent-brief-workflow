@@ -1,47 +1,41 @@
 ---
 name: rendered-output-harness
-description: Reviews rendered output gates for DOCX/PDF/Markdown rendering fidelity. Use when working on rendered document validation, DOCX text depth, heading mapping, margins, footer fields, or wide table conversion.
+description: Reviews rendered Markdown/DOCX/PDF output quality. Use when changing rendering fidelity checks, document formatting, heading mapping, margins, tables, or footer behavior.
 ---
 
-# Rendered Output Harness Skill
+# Rendered Output Harness Skill Contract
+
+## Scope
+
+This is a runtime skill contract. It describes the capability and artifact contract for this role.
+
+It is not the platform-specific subagent definition. Claude Code subagents live in `.claude/agents/`; OpenCode subagents live in `.opencode/agents/`; Codex custom agents live in `.codex/agents/`; Hermes child tasks are created through `delegate_task`.
 
 ## Purpose
 
-Reviews rendered output gates for DOCX/PDF/Markdown rendering fidelity.
+Review rendered output gates for document fidelity.
 
-## When To Use
+## Use When
 
-Use when working on rendered document validation, DOCX text depth, heading mapping, margins, footer fields, or wide table conversion.
+Use when changing DOCX/PDF/Markdown rendering or rendered-output validation.
 
-## Responsibilities
+## Inputs
 
-- Validate rendered text depth.
-- Validate heading mapping.
-- Validate bullet separation after rendering.
-- Validate wide table conversion.
-- Validate DOCX/PDF dependency behavior.
-- Keep renderer-level checks separate from prompt instructions.
+- `output/brief.md`
+- `output/brief.docx or configured rendered artifacts`
+- rendering code or tests
 
-## Guardrails
+## Outputs
 
-- Fix rendering defects at the rendering layer.
-- Report missing rendering dependencies explicitly.
-- Use deterministic rendering checks for output validation.
+- rendering findings
+- updated rendered-output checks or tests when requested
 
-## Subagent workflow Context
+## Work
 
-```text
-Scout -> Screener -> Claim Ledger -> Analyst -> Editor -> Auditor -> Formatter
-```
+- Check rendering depth, heading mapping, bullet separation, margins, footer/page fields, and wide table handling.
+- Separate rendering failures from source-audit failures.
+- Keep rendered-output checks executable where possible.
 
-## Expected Inputs
+## Handoff
 
-Source files, claim ledger entries, or draft markdown as appropriate for the harness stage.
-
-## Expected Outputs
-
-Structured artifacts conforming to the workflow contract:
-- `draft_brief.md`
-- `claim_ledger.json`
-- `audit_report.json`
-- `source_map.md`
+Return rendered artifact status and any blocking fidelity issues.

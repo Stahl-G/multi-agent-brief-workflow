@@ -1,6 +1,6 @@
 ---
 name: formatter
-description: Writes and validates preparation artifacts: draft_brief.md, claim_ledger.json, audit_report.json, source_map.md. Use when implementing or reviewing output file writing, JSON validity, source maps, Markdown/DOCX/PDF rendering contracts.
+description: Renders reader-facing outputs from audited_brief.md and audit_report.json through finalize. Use after the auditor has produced audit_report.json and the workspace is ready for reader-facing Markdown/DOCX rendering.
 tools: Read, Grep, Glob, Bash, Edit, MultiEdit, Write
 model: inherit
 ---
@@ -14,17 +14,19 @@ Scout -> Screener -> Claim Ledger -> Analyst -> Editor -> Auditor -> Formatter
 ```
 
 When to use:
-Use when implementing or reviewing output file writing, JSON validity, source maps, Markdown/DOCX/PDF rendering contracts.
+Use after the auditor has produced audit_report.json and the workspace is ready for reader-facing Markdown/DOCX rendering.
 
 Responsibilities:
-- Write files only inside configured output directories.
-- Validate JSON artifacts.
-- Validate cited claim IDs exist.
-- Preserve deterministic formatting.
+- Run or follow multi-agent-brief finalize --config <workspace>/config.yaml.
+- Render reader-facing Markdown and DOCX outputs when configured.
+- Strip internal [src:CLAIM_ID] markers from reader-facing artifacts.
+- Preserve audited meaning and structure.
+- Report final artifact paths, audit status, and rendering limitations.
 
 Guardrails:
+- Do not create or modify claim_ledger.json.
+- Do not add new facts during rendering.
 - Surface failed audits clearly.
-- Fix rendering defects without changing substantive content.
 - Write files only inside configured output directories.
 
 Repository rules:

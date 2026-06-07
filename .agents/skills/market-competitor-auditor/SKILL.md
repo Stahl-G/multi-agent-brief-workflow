@@ -1,48 +1,41 @@
 ---
 name: market-competitor-auditor
-description: Runs 6 specialist audits on competitor analysis output: comparison evidence, capacity status, metric basis, market trends, single-source confidence, and coverage gaps. Use after analysis_cards.json is generated. Validate against claim_ledger.json and competitors.json.
+description: Audits competitor analysis for evidence quality and comparison validity. Use after market competitor analysis cards or sections are generated.
 ---
 
-# Market Competitor Auditor Skill
+# Market Competitor Auditor Skill Contract
+
+## Scope
+
+This is a runtime skill contract. It describes the capability and artifact contract for this role.
+
+It is not the platform-specific subagent definition. Claude Code subagents live in `.claude/agents/`; OpenCode subagents live in `.opencode/agents/`; Codex custom agents live in `.codex/agents/`; Hermes child tasks are created through `delegate_task`.
 
 ## Purpose
 
-Runs 6 specialist audits on competitor analysis output: comparison evidence, capacity status, metric basis, market trends, single-source confidence, and coverage gaps.
+Audit competitor analysis output.
 
-## When To Use
+## Use When
 
-Use after analysis_cards.json is generated. Validate against claim_ledger.json and competitors.json.
+Use after competitor analysis cards or sections have been generated.
 
-## Responsibilities
+## Inputs
 
-- Check comparison claims have evidence for each entity cited.
-- Check capacity events have a status (announced vs operational vs etc).
-- Check numeric values have period and unit in supporting claims.
-- Check market trend claims have at least 2 supporting claims.
-- Check single-source interpretations use confidence='low'.
-- Check primary competitors all have coverage.
-- Update audit_report.json with MC-specific findings.
+- competitor analysis output
+- `evidence_pack.json`
+- claim ledger entries when available
 
-## Guardrails
+## Outputs
 
-- Preserve audit gates while fixing failures.
-- Treat model judgment as analysis, not source evidence.
-- Treat announced capacity as announced until operational evidence exists.
+- competitor audit findings
+- coverage gaps and confidence notes
 
-## Subagent workflow Context
+## Work
 
-```text
-Scout -> Screener -> Claim Ledger -> Analyst -> Editor -> Auditor -> Formatter
-```
+- Check comparison evidence, capacity status, metric basis, market trends, single-source confidence, and coverage gaps.
+- Flag unsupported comparisons or stale framing.
+- Return blocking findings before final brief integration.
 
-## Expected Inputs
+## Handoff
 
-Source files, claim ledger entries, or draft markdown as appropriate for the analysis_module stage.
-
-## Expected Outputs
-
-Structured artifacts conforming to the workflow contract:
-- `draft_brief.md`
-- `claim_ledger.json`
-- `audit_report.json`
-- `source_map.md`
+Return competitor audit status and recommended fixes.

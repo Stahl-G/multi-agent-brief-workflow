@@ -1,0 +1,28 @@
+# Hermes Cron Patterns
+
+Use cron jobs for durable scheduling. Use `delegate_task` only inside a single run.
+
+## Daily Source Cache Prompt
+
+Run daily source cache collection for this MABW workspace.
+
+Workspace: `<workspace>`  
+Cache directory: `<workspace>/input/hermes_cache`
+
+Collect source signals, write `YYYY-MM-DD.json`, then report saved item count and source gaps. Daily cache mode ends after cache reporting.
+
+## Weekly Or Monthly Brief Prompt
+
+Run a Hermes-native delegated MABW brief workflow.
+
+Workspace: `<workspace>`  
+Repository workdir: `<repo>`
+
+Use the `multi-agent-brief-hermes` skill. Run doctor, then use Hermes `delegate_task` children for scout, screener, claim-ledger, analyst, editor, and auditor. After audit readiness, run finalize and report artifact paths.
+
+## Runtime Notes
+
+- Attach this skill to each cron job when the Hermes UI or CLI supports skill selection.
+- Use the repository root as workdir so commands resolve correctly.
+- Pin the Hermes profile when the profile already exists.
+- Keep daily cache jobs separate from weekly/monthly brief generation jobs.

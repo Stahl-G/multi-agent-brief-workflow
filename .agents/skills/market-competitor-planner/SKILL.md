@@ -1,45 +1,42 @@
 ---
 name: market-competitor-planner
-description: Recommends competitor candidates for a workspace based on user.md context (company, industry, market_scope, focus_areas). Use during workspace setup or when the user runs 'multi-agent-brief competitors propose'. Read user.md and recommend competitors for competitor_candidates.yaml.
+description: Plans competitor candidates for market competitor analysis. Use when a workspace needs competitor candidates before evidence-pack creation.
 ---
 
-# Market Competitor Planner Skill
+# Market Competitor Planner Skill Contract
+
+## Scope
+
+This is a runtime skill contract. It describes the capability and artifact contract for this role.
+
+It is not the platform-specific subagent definition. Claude Code subagents live in `.claude/agents/`; OpenCode subagents live in `.opencode/agents/`; Codex custom agents live in `.codex/agents/`; Hermes child tasks are created through `delegate_task`.
 
 ## Purpose
 
-Recommends competitor candidates for a workspace based on user.md context (company, industry, market_scope, focus_areas).
+Recommend competitor candidates for a workspace.
 
-## When To Use
+## Use When
 
-Use during workspace setup or when the user runs 'multi-agent-brief competitors propose'. Read user.md and recommend competitors for competitor_candidates.yaml.
+Use when market competitor analysis is enabled and competitor candidates need to be selected or reviewed.
 
-## Responsibilities
+## Inputs
 
-- Read user.md (company, industry, market_scope, focus_areas) for context.
-- Recommend 3-8 competitor entities based on industry knowledge.
-- Write competitor_candidates.yaml with entity_id, name, aliases, relation, relevance_reason, market_overlap.
-- Recommend candidates for user review.
+- `user.md`
+- `config.yaml`
+- market scope
+- focus areas
 
-## Guardrails
+## Outputs
 
-- Write recommendations to competitor_candidates.yaml for review.
-- Give every entity a relevance_reason.
-- Only use publicly known competitor information.
+- competitor candidates
+- competitor planning notes
 
-## Subagent workflow Context
+## Work
 
-```text
-Scout -> Screener -> Claim Ledger -> Analyst -> Editor -> Auditor -> Formatter
-```
+- Identify relevant competitors from company, industry, market scope, and focus areas.
+- Separate direct competitors from adjacent players.
+- Record rationale and coverage gaps.
 
-## Expected Inputs
+## Handoff
 
-Source files, claim ledger entries, or draft markdown as appropriate for the analysis_module stage.
-
-## Expected Outputs
-
-Structured artifacts conforming to the workflow contract:
-- `draft_brief.md`
-- `claim_ledger.json`
-- `audit_report.json`
-- `source_map.md`
+Pass competitor candidates to market-competitor-analyst.

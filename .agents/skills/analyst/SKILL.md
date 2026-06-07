@@ -1,53 +1,42 @@
 ---
 name: analyst
-description: Drafts executive-readable brief sections using only Claim Ledger entries. Use after the claim-ledger subagent or validator has produced claim_ledger.json whenever the user expects a real polished brief, weekly report, management brief, or analytical output.
+description: Drafts the auditable management brief from user context and the Claim Ledger. Use after output/intermediate/claim_ledger.json exists and write output/intermediate/audited_brief.md.
 ---
 
-# Analyst Skill
+# Analyst Skill Contract
+
+## Scope
+
+This is a runtime skill contract. It describes the capability and artifact contract for this role.
+
+It is not the platform-specific subagent definition. Claude Code subagents live in `.claude/agents/`; OpenCode subagents live in `.opencode/agents/`; Codex custom agents live in `.codex/agents/`; Hermes child tasks are created through `delegate_task`.
 
 ## Purpose
 
-Drafts executive-readable brief sections using only Claim Ledger entries.
+Draft the auditable management brief from the claim ledger and user context.
 
-## When To Use
+## Use When
 
-Use after the claim-ledger subagent or validator has produced claim_ledger.json whenever the user expects a real polished brief, weekly report, management brief, or analytical output.
+Use after claim-ledger has written claim_ledger.json.
 
-## Responsibilities
+## Inputs
 
-- Read claim_ledger.json and user.md to understand context and available evidence.
-- Draft management-ready sections using only Claim Ledger material.
-- Attach [src:CLAIM_ID] citations to every important statement.
-- Preserve every [src:CLAIM_ID] citation exactly.
-- Include source dates (published_at or retrieved_at) where available.
+- `user.md`
+- `config.yaml`
+- `output/intermediate/claim_ledger.json`
+
+## Outputs
+
+- `output/intermediate/audited_brief.md`
+
+## Work
+
+- Write a management-ready brief in the workspace output language.
+- Use claim ledger entries as the factual evidence base.
+- Attach valid [src:CLAIM_ID] citations to important factual statements.
+- Include dates, numbers, locations, parties, and caveats when the ledger supports them.
 - Preserve uncertainty and source limitations.
-- Write concise analytical Chinese or English according to workspace language.
-- Keep all added facts within Claim Ledger support.
-- Use claim_ledger.json and approved analysis artifacts as the evidence base.
-- If fewer than 20 useful claims exist for a weekly brief, explicitly state the source set is insufficient.
 
-## Guardrails
+## Handoff
 
-- Keep facts, numbers, and causality within Claim Ledger support.
-- Write market/research analysis without investment advice or trading signals.
-- Cite only claim IDs that exist in the ledger.
-- Preserve [src:CLAIM_ID] citations exactly.
-- Always read claim_ledger.json before writing.
-
-## Subagent workflow Context
-
-```text
-Scout -> Screener -> Claim Ledger -> Analyst -> Editor -> Auditor -> Formatter
-```
-
-## Expected Inputs
-
-Source files, claim ledger entries, or draft markdown as appropriate for the pipeline stage.
-
-## Expected Outputs
-
-Structured artifacts conforming to the workflow contract:
-- `draft_brief.md`
-- `claim_ledger.json`
-- `audit_report.json`
-- `source_map.md`
+Pass audited_brief.md to editor.
