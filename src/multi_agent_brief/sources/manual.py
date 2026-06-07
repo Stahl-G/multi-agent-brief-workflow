@@ -112,6 +112,7 @@ class ManualProvider(SourceProvider):
                 "source_tier": source_tier,
                 "claim_type": claim_type,
                 "category": src_config.get("category", ""),
+                "input_subdir": _input_subdir(path),
             },
         )
 
@@ -193,6 +194,28 @@ class ManualProvider(SourceProvider):
                 "category": src_config.get("category", ""),
             },
         )
+
+
+def _input_subdir(path: Path) -> str:
+    """Determine which input/ subdirectory a file belongs to.
+
+    Returns one of: "sources", "feedback", "instructions", "context", "root", "other".
+    """
+    parts = path.resolve().parts
+    # Walk parts backwards looking for "input"
+    for i in range(len(parts) - 1, -1, -1):
+        if parts[i] == "input":
+            # Next part after "input" is the subdirectory (if any)
+            if i + 1 < len(parts):
+                # Check if the next part is a file (last segment) or a dir
+                # If path is input/sources/file.md → subdir is "sources"
+                # If path is input/file.md → the subdir is the file itself, so "root"
+                if i + 1 == len(parts) - 1:
+                    # Parts[-1] is the file, so no intermediate directory → root
+                    return "root"
+                return parts[i + 1]
+            return "root"
+    return "other"
 
 
 def _html_to_text(content: str) -> str:

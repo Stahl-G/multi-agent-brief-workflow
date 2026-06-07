@@ -208,7 +208,7 @@ def _manual_handoff(workspace: Path, repo: Path, venv: str) -> AgentHandoff:
             "Run each step in order, verifying each artifact before continuing:\n\n"
             f"1. multi-agent-brief doctor --config {ws_path}/config.yaml\n"
             f"2. multi-agent-brief sources decide --config {ws_path}/config.yaml  (if configured)\n"
-            f"3. multi-agent-brief inputs classify --config {ws_path}/config.yaml  (if available)\n"
+            f"3. multi-agent-brief inputs classify --config {ws_path}/config.yaml\n"
             "4. Use the 'scout' subagent to write output/intermediate/candidate_claims.json\n"
             "5. Use the 'screener' subagent to write output/intermediate/screened_candidates.json\n"
             "6. Use the 'claim-ledger' subagent to write output/intermediate/claim_ledger.json\n"

@@ -372,7 +372,7 @@ multi-agent-brief sources decide --config <workspace>/config.yaml
 
 Review and merge according to workspace policy.
 
-4. If input governance is available:
+4. Classify input files:
 
 ```bash
 multi-agent-brief inputs classify --config <workspace>/config.yaml
