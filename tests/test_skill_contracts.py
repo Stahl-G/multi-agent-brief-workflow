@@ -78,7 +78,7 @@ def test_skills_do_not_restore_old_generic_contracts():
 def test_hermes_skill_uses_progressive_disclosure():
     skill = HERMES_SKILL / "SKILL.md"
     text = _read(skill)
-    assert len(text.splitlines()) <= 200
+    assert len(text.splitlines()) <= 140
     assert "references/delegate-task-sequence.md" in text
     assert "references/source-cache-contract.md" in text
     assert "references/cron-patterns.md" in text

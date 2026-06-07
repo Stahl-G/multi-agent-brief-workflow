@@ -589,9 +589,29 @@ Repository: {repo}
 Workspace: {workspace}
 Venv activate: source {venv}
 
-## New workspace: chat-to-JSON onboarding
+## Preferred: Hermes Plugin
 
-If this workspace does not yet have config.yaml, run the Hermes Onboarding Workflow:
+If the MABW Hermes plugin is installed and enabled, use the plugin path:
+
+```text
+/mabw {workspace}
+→ mabw_create_onboarding (if workspace is new)
+→ mabw_init_workspace
+→ mabw_run_handoff
+→ read agent_handoff.md
+→ continue delegated workflow
+```
+
+Install from the MABW repo:
+
+```bash
+cp -R integrations/hermes-plugin/mabw ~/.hermes/plugins/mabw
+hermes plugins enable mabw
+```
+
+## Fallback: chat-to-JSON onboarding
+
+If the plugin is not available and this workspace does not yet have config.yaml:
 
 1. Collect brief profile in chat — ask for company, industry, task objective, audience, language, cadence, source style, output style, must-watch topics, excluded sources, and source/search mode. Accept natural-language answers and confirm defaults.
 2. Write onboarding.json from the collected answers.

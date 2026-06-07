@@ -20,8 +20,6 @@ metadata:
 
 This skill is the Hermes runtime contract for MABW. It applies when Hermes is asked to set up, schedule, or run a MABW workspace.
 
-Hermes is a native runtime: the Hermes parent agent orchestrates the run and uses `delegate_task` children for role work. Python CLI commands provide setup, validation, source tooling, final rendering, and audit support.
-
 ## Use When
 
 Use this skill when the user asks Hermes to:
@@ -29,82 +27,39 @@ Use this skill when the user asks Hermes to:
 - create or continue a MABW brief workspace
 - generate a management, market, policy, competitor, or research brief
 - schedule daily source cache collection or weekly/monthly brief generation
-- run the MABW workflow inside Hermes rather than Claude Code
 
-## Hermes Onboarding Workflow
+## Preferred Path: Hermes Plugin
 
-When the user wants to initialize a real MABW workspace in Hermes, run onboarding as a chat-to-JSON workflow.
-
-### Step 1: Collect brief profile in chat
-
-Ask for these fields in plain language:
-
-- company or organization
-- industry or theme
-- task objective or brief title
-- audience
-- language
-- cadence: daily, weekly, or monthly
-- source style: official only, reliable research, or broad scan
-- output style
-- must-watch topics or entities
-- excluded sources or topics
-- source/search mode: local input, runtime web search, external API, or configure later
-
-Accept natural-language answers and apply sensible defaults after confirming them.
-
-### Step 2: Write onboarding.json
-
-Create `onboarding.json` in the repository or chosen setup directory.
-
-Use this shape:
-
-```json
-{
-  "company_or_org": "阿特斯",
-  "industry_or_theme": "光伏和储能",
-  "task_objective": "美国光储行业简报",
-  "audience_plain": "management team",
-  "language_plain": "中文",
-  "cadence_plain": "weekly",
-  "source_style_plain": "reliable research",
-  "output_style_plain": "executive brief, conclusion-first",
-  "must_watch": [],
-  "forbidden_sources": [],
-  "search_backend_plain": "runtime_websearch"
-}
-```
-
-### Step 3: Create the workspace
-
-```bash
-multi-agent-brief init <workspace> --from-onboarding onboarding.json
-```
-
-### Step 4: Create runtime handoff
-
-```bash
-multi-agent-brief run --workspace <workspace>
-```
-
-This writes:
+Install and enable the MABW Hermes plugin, then use the plugin tools in Hermes:
 
 ```text
-<workspace>/output/intermediate/agent_handoff.md
-<workspace>/output/intermediate/agent_handoff.json
+/mabw <workspace>
+→ mabw_create_onboarding
+→ mabw_init_workspace
+→ mabw_run_handoff
+→ read agent_handoff.md
+→ continue delegated workflow
 ```
 
-### Step 5: Continue the delegated workflow
+Install:
 
-Read `agent_handoff.md` and continue inside Hermes as the parent agent.
-
-Use `delegate_task` children for:
-
-```text
-scout → screener → claim-ledger → analyst → editor → auditor → finalize
+```bash
+cp -R integrations/hermes-plugin/mabw ~/.hermes/plugins/mabw
+hermes plugins enable mabw
 ```
 
-After each child returns, check the expected artifact path before starting the next step.
+The plugin's `references/onboarding-json.md` has the detailed JSON shape and field notes.
+
+## Fallback Path: chat-to-JSON Onboarding
+
+When the plugin is not available, run onboarding as a chat-to-JSON workflow:
+
+1. Collect brief profile in chat — ask for company, industry, task objective, audience, language, cadence, source style, output style, must-watch topics, excluded sources, and source/search mode. Accept natural-language answers and confirm defaults.
+2. Write `onboarding.json` from the collected answers.
+3. Validate: `multi-agent-brief onboard --validate onboarding.json`
+4. Create the workspace: `multi-agent-brief init <workspace> --from-onboarding onboarding.json`
+5. Create runtime handoff: `multi-agent-brief run --workspace <workspace>`
+6. Read `agent_handoff.md` and continue with the delegated workflow below.
 
 ## Existing Workspace Path
 
@@ -115,11 +70,7 @@ multi-agent-brief doctor --config <workspace>/config.yaml
 multi-agent-brief hermes prompt --config <workspace>/config.yaml
 ```
 
-After setup, report repository path, virtual environment path, workspace path, version, and doctor status. Offer to continue in Hermes using delegated child tasks.
-
 ## Delegated Brief Run
-
-Parent orchestration sequence:
 
 ```text
 doctor
@@ -134,7 +85,7 @@ doctor
 → finalize
 ```
 
-Read `references/delegate-task-sequence.md` before creating child tasks. Each child task needs complete context, explicit inputs, expected output path, and return summary requirements.
+Read `references/delegate-task-sequence.md` before creating child tasks.
 
 ## Daily Source Cache
 
