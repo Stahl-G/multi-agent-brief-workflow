@@ -244,7 +244,7 @@ multi-agent-brief sources decide --config ../mabw-workspace/config.yaml --merge
 multi-agent-brief doctor --config ../mabw-workspace/config.yaml
 ```
 
-然后在 agent runtime 中运行 workflow（Hermes: `delegate_task` 子代理管线；Claude Code: `/generate-brief ../mabw-workspace`）。
+然后在 agent runtime 中运行 `multi-agent-brief start --workspace ../mabw-workspace`，默认使用 Hermes `delegate_task` 子代理管线。其他 runtime 可通过 `--runtime` 切换（如 `--runtime claude`）。
 
 **Windows PowerShell：**
 
@@ -342,7 +342,7 @@ multi-agent-brief doctor --config ../mabw-workspace/config.yaml
 
 生成简报：
 
-使用 `multi-agent-brief start --workspace ../mabw-workspace` 将任务交给 agent runtime（默认 Hermes），或 `multi-agent-brief start --workspace ../mabw-workspace --runtime claude` 在 Claude Code 中运行 `/generate-brief`。
+使用 `multi-agent-brief start --workspace ../mabw-workspace` 将任务交给 agent runtime（默认 Hermes `delegate_task` 子代理管线），也可通过 `--runtime` 切换。
 
 或者先完成来源发现和配置检查：
 
