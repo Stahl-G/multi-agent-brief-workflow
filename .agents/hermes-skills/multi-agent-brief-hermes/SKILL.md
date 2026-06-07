@@ -31,17 +31,84 @@ Use this skill when the user asks Hermes to:
 - schedule daily source cache collection or weekly/monthly brief generation
 - run the MABW workflow inside Hermes rather than Claude Code
 
-## Standard Setup Path
+## Hermes Onboarding Workflow
 
-For a real workspace:
+When the user wants to initialize a real MABW workspace in Hermes, run onboarding as a chat-to-JSON workflow.
 
-```bash
-multi-agent-brief onboard
-multi-agent-brief init <workspace> --from-onboarding onboarding.json
-multi-agent-brief run --workspace <workspace> --runtime hermes
+### Step 1: Collect brief profile in chat
+
+Ask for these fields in plain language:
+
+- company or organization
+- industry or theme
+- task objective or brief title
+- audience
+- language
+- cadence: daily, weekly, or monthly
+- source style: official only, reliable research, or broad scan
+- output style
+- must-watch topics or entities
+- excluded sources or topics
+- source/search mode: local input, runtime web search, external API, or configure later
+
+Accept natural-language answers and apply sensible defaults after confirming them.
+
+### Step 2: Write onboarding.json
+
+Create `onboarding.json` in the repository or chosen setup directory.
+
+Use this shape:
+
+```json
+{
+  "company_or_org": "阿特斯",
+  "industry_or_theme": "光伏和储能",
+  "task_objective": "美国光储行业简报",
+  "audience_plain": "management team",
+  "language_plain": "中文",
+  "cadence_plain": "weekly",
+  "source_style_plain": "reliable research",
+  "output_style_plain": "executive brief, conclusion-first",
+  "must_watch": [],
+  "forbidden_sources": [],
+  "search_backend_plain": "runtime_websearch"
+}
 ```
 
-For an existing workspace:
+### Step 3: Create the workspace
+
+```bash
+multi-agent-brief init <workspace> --from-onboarding onboarding.json
+```
+
+### Step 4: Create runtime handoff
+
+```bash
+multi-agent-brief run --workspace <workspace>
+```
+
+This writes:
+
+```text
+<workspace>/output/intermediate/agent_handoff.md
+<workspace>/output/intermediate/agent_handoff.json
+```
+
+### Step 5: Continue the delegated workflow
+
+Read `agent_handoff.md` and continue inside Hermes as the parent agent.
+
+Use `delegate_task` children for:
+
+```text
+scout → screener → claim-ledger → analyst → editor → auditor → finalize
+```
+
+After each child returns, check the expected artifact path before starting the next step.
+
+## Existing Workspace Path
+
+For a workspace that already has `config.yaml`:
 
 ```bash
 multi-agent-brief doctor --config <workspace>/config.yaml

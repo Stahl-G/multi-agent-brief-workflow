@@ -120,3 +120,60 @@ def test_cli_prepare_is_deprecated_and_does_not_generate_outputs(tmp_path: Path,
 
 def test_core_brief_pipeline_is_removed():
     assert not Path("src/multi_agent_brief/core/pipeline.py").exists()
+
+
+def test_onboard_template_writes_json(tmp_path, capsys):
+    """onboard --template writes a template onboarding.json."""
+    out = tmp_path / "onboarding.json"
+    exit_code = main(["onboard", "--template", "--output", str(out)])
+    captured = capsys.readouterr()
+    assert exit_code == 0
+    assert out.exists()
+    data = json.loads(out.read_text(encoding="utf-8"))
+    assert "company_or_org" in data
+    assert "task_objective" in data
+    assert "audience_plain" in data
+
+
+def test_onboard_validate_accepts_valid_file(tmp_path, capsys):
+    """onboard --validate accepts a complete onboarding.json."""
+    valid = tmp_path / "valid.json"
+    valid.write_text(json.dumps({
+        "company_or_org": "阿特斯",
+        "industry_or_theme": "光伏",
+        "task_objective": "行业简报",
+    }), encoding="utf-8")
+    exit_code = main(["onboard", "--validate", str(valid)])
+    captured = capsys.readouterr()
+    assert exit_code == 0
+    assert "Required fields: OK" in captured.out
+
+
+def test_onboard_validate_rejects_missing_fields(tmp_path, capsys):
+    """onboard --validate returns 1 when required fields are missing."""
+    incomplete = tmp_path / "incomplete.json"
+    incomplete.write_text(json.dumps({
+        "audience_plain": "management",
+    }), encoding="utf-8")
+    exit_code = main(["onboard", "--validate", str(incomplete)])
+    captured = capsys.readouterr()
+    assert exit_code == 1
+    assert "Missing required fields" in captured.out
+
+
+def test_onboard_validate_rejects_invalid_json(tmp_path, capsys):
+    """onboard --validate returns 1 for invalid JSON."""
+    bad = tmp_path / "bad.json"
+    bad.write_text("{not json", encoding="utf-8")
+    exit_code = main(["onboard", "--validate", str(bad)])
+    captured = capsys.readouterr()
+    assert exit_code == 1
+    assert "Invalid JSON" in captured.out
+
+
+def test_onboard_validate_rejects_missing_file(tmp_path, capsys):
+    """onboard --validate returns 1 for nonexistent file."""
+    exit_code = main(["onboard", "--validate", str(tmp_path / "nope.json")])
+    captured = capsys.readouterr()
+    assert exit_code == 1
+    assert "not found" in captured.out

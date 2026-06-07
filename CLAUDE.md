@@ -145,6 +145,8 @@ Python CLI is harness/tooling, not the brief-generation runtime. Do not add a Py
 
 `AGENTS.md` and `SKILL.md` files are operating contracts. Keep them short, concrete, and positive. Use frontmatter descriptions for routing and `references/` for long material.
 
+When documenting agent behavior, describe the active path first: inputs, action, output, handoff. Place deprecated paths and failure cases in tests, validators, or legacy stubs rather than in runtime-facing prompt text.
+
 If an issue is already fixed, report the evidence and stop instead of making unnecessary changes.
 
 Before final response, report files changed, tests run, and known risks.

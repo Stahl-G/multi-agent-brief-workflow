@@ -1,6 +1,6 @@
 ---
 name: brief-onboarding
-description: Captures brief requirements and creates onboarding.json for workspace initialization. Use when a user wants to set up a real MABW workspace before init --from-onboarding.
+description: Captures brief requirements in chat and writes onboarding.json for workspace initialization. Use when a user wants to set up a real MABW workspace — collect answers in chat, write onboarding.json, then run init --from-onboarding.
 ---
 
 # Brief Onboarding Skill Contract
@@ -13,7 +13,7 @@ It is not the platform-specific subagent definition. Claude Code subagents live 
 
 ## Purpose
 
-Capture business requirements to initialize, start, configure, and set up a real brief workspace.
+Capture business requirements from chat answers to initialize, configure, and start a real brief workspace.
 
 ## Use When
 
@@ -30,11 +30,17 @@ Use before workspace creation when company, topic, audience, language, cadence, 
 
 ## Work
 
-- Collect company or organization, industry or theme, task objective, audience, language, cadence, source style, output style, must-watch topics, exclusions, and source/search preference.
-- Confirm required values before workspace creation.
-- Write onboarding.json in the schema expected by multi-agent-brief init --from-onboarding.
-- Explain setup in business language.
+### Human terminal path
+
+Run `multi-agent-brief onboard` for an interactive terminal wizard.
+
+### Agent runtime path (chat-to-JSON)
+
+1. Collect brief profile in chat — ask for company, industry, task objective, audience, language, cadence, source style, output style, must-watch topics, excluded sources, and source/search mode. Accept natural-language answers and confirm defaults.
+2. Write onboarding.json in the schema expected by `multi-agent-brief init --from-onboarding`.
+3. Validate with `multi-agent-brief onboard --validate onboarding.json`.
+4. Optionally generate a template with `multi-agent-brief onboard --template`.
 
 ## Handoff
 
-Run multi-agent-brief init <workspace> --from-onboarding onboarding.json, then multi-agent-brief run --workspace <workspace>.
+Run `multi-agent-brief init <workspace> --from-onboarding onboarding.json`, then `multi-agent-brief run --workspace <workspace>`.

@@ -311,3 +311,24 @@ def test_cli_hermes_prompt_output_contains_workflow_steps(capsys, tmp_path: Path
     assert "scout" in output
     assert "multi-agent-brief finalize" in output
     assert "/generate-brief" not in output
+    # Onboarding workflow path
+    assert "chat-to-JSON onboarding" in output
+    assert "Collect brief profile in chat" in output
+    assert "multi-agent-brief init <workspace> --from-onboarding onboarding.json" in output
+    assert "multi-agent-brief run --workspace <workspace>" in output
+
+
+def test_hermes_skill_contains_onboarding_workflow():
+    """Hermes SKILL.md must contain the chat-to-JSON onboarding workflow."""
+    skill_path = Path(__file__).resolve().parent.parent / ".agents" / "hermes-skills" / "multi-agent-brief-hermes" / "SKILL.md"
+    content = skill_path.read_text(encoding="utf-8")
+    assert "chat-to-json" in content.lower()
+    assert "Collect brief profile in chat" in content
+    assert "multi-agent-brief init <workspace> --from-onboarding onboarding.json" in content
+    assert "multi-agent-brief run --workspace <workspace>" in content
+    assert "delegate_task" in content
+    assert "Step 1: Collect brief profile" in content
+    assert "Step 2: Write onboarding.json" in content
+    assert "Step 3: Create the workspace" in content
+    assert "Step 4: Create runtime handoff" in content
+    assert "Step 5: Continue the delegated workflow" in content

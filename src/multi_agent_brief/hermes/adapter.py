@@ -589,6 +589,19 @@ Repository: {repo}
 Workspace: {workspace}
 Venv activate: source {venv}
 
+## New workspace: chat-to-JSON onboarding
+
+If this workspace does not yet have config.yaml, run the Hermes Onboarding Workflow:
+
+1. Collect brief profile in chat — ask for company, industry, task objective, audience, language, cadence, source style, output style, must-watch topics, excluded sources, and source/search mode. Accept natural-language answers and confirm defaults.
+2. Write onboarding.json from the collected answers.
+3. Validate with: multi-agent-brief onboard --validate onboarding.json
+4. Create the workspace: multi-agent-brief init <workspace> --from-onboarding onboarding.json
+5. Create runtime handoff: multi-agent-brief run --workspace <workspace>
+6. Read agent_handoff.md and continue with the delegated workflow below.
+
+## Existing workspace: delegated brief run
+
 As the Hermes parent orchestrator, execute:
 
 1. Run doctor:

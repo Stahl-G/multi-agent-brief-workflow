@@ -1,19 +1,31 @@
-"""onboard — interactive conversational onboarding command."""
+"""onboard — interactive and non-interactive onboarding commands.
+
+Two paths:
+  Human terminal:  multi-agent-brief onboard
+  Agent runtime:   collect answers in chat → write onboarding.json →
+                   multi-agent-brief init <workspace> --from-onboarding onboarding.json
+"""
 
 from __future__ import annotations
 
 import argparse
+import json
 import sys
+from dataclasses import asdict, fields
 from pathlib import Path
 
-from multi_agent_brief.onboarding.io import save_onboarding_result
+from multi_agent_brief.onboarding.io import load_onboarding_result, save_onboarding_result
+from multi_agent_brief.onboarding.schema import OnboardingResult
 
 
 def register(subparsers: argparse._SubParsersAction) -> None:
     """Register the onboard subparser."""
     onboard_parser = subparsers.add_parser(
         "onboard",
-        help="Start conversational onboarding: answer questions and generate onboarding.json.",
+        help="Start conversational onboarding: answer questions and generate onboarding.json. "
+        "Human terminal: run 'multi-agent-brief onboard'. "
+        "Agent runtime: create onboarding.json from chat answers, "
+        "then run 'multi-agent-brief init <workspace> --from-onboarding onboarding.json'.",
     )
     onboard_parser.add_argument(
         "--output",
@@ -25,22 +37,116 @@ def register(subparsers: argparse._SubParsersAction) -> None:
         choices=["en-US", "zh-CN", "bilingual"],
         help="Wizard/interface language.",
     )
+    onboard_parser.add_argument(
+        "--template",
+        action="store_true",
+        help="Write a template onboarding.json with all fields and exit (non-interactive).",
+    )
+    onboard_parser.add_argument(
+        "--validate",
+        metavar="PATH",
+        help="Validate an existing onboarding.json and report results (non-interactive).",
+    )
 
 
 def handle(args: argparse.Namespace) -> int:
-    """onboard — interactive conversational onboarding, outputs onboarding.json."""
+    """Dispatch onboard subcommand actions."""
+    if args.template:
+        return _onboard_template(args)
+    if args.validate:
+        return _onboard_validate(args)
+    return _onboard_interactive(args)
+
+
+def _onboard_template(args: argparse.Namespace) -> int:
+    """Write a template onboarding.json with default values."""
+    template = OnboardingResult()
+    output_path = Path(args.output)
+    save_onboarding_result(template, output_path)
+    print(f"[onboard] Template written to: {output_path}")
+    print()
+    print("Fill in the fields, then validate:")
+    print(f"  multi-agent-brief onboard --validate {output_path}")
+    print()
+    print("Then create the workspace:")
+    print(f"  multi-agent-brief init <workspace> --from-onboarding {output_path}")
+    print(f"  multi-agent-brief run --workspace <workspace>")
+    return 0
+
+
+def _onboard_validate(args: argparse.Namespace) -> int:
+    """Validate an onboarding.json file.
+
+    Reports:
+      - Whether the file parses as valid JSON
+      - Which required fields are present or missing
+      - Unknown or unexpected keys
+    """
+    path = Path(args.validate)
+    if not path.exists():
+        print(f"[error] File not found: {path}")
+        return 1
+
+    try:
+        raw = json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        print(f"[error] Invalid JSON in {path}: {exc}")
+        return 1
+
+    if not isinstance(raw, dict):
+        print(f"[error] onboarding.json must be a JSON object, got {type(raw).__name__}.")
+        return 1
+
+    # Load through the normal loader to get aliases and type coercion
+    try:
+        result = load_onboarding_result(path)
+    except Exception as exc:
+        print(f"[error] Failed to load onboarding.json: {exc}")
+        return 1
+
+    # Report
+    _REQUIRED_FIELDS = {"company_or_org", "industry_or_theme", "task_objective"}
+    dataclass_fields = {f.name for f in fields(OnboardingResult)}
+    present = {k for k, v in asdict(result).items()
+               if v not in (None, "", [], {}) and k != "missing"}
+    missing = _REQUIRED_FIELDS - present
+    unknown = set(raw.keys()) - dataclass_fields
+
+    printed_ok = False  # track if we printed anything good
+    if missing:
+        print(f"[onboard] Missing required fields: {', '.join(sorted(missing))}")
+    else:
+        print("[onboard] Required fields: OK")
+        printed_ok = True
+
+    if unknown:
+        print(f"[onboard] Unknown keys (ignored): {', '.join(sorted(unknown))}")
+
+    # Print a summary of what was found
+    field_names = sorted(dataclass_fields)
+    print()
+    print("Field summary:")
+    for name in field_names:
+        val = getattr(result, name)
+        display = repr(val) if val not in (None, "", [], {}) else "(not set)"
+        required = " [required]" if name in _REQUIRED_FIELDS else ""
+        print(f"  {name}: {display}{required}")
+
+    return 1 if missing else 0
+
+
+def _onboard_interactive(args: argparse.Namespace) -> int:
+    """Run interactive conversational onboarding (human terminal path)."""
     from multi_agent_brief.cli.init_wizard import prompt_for_profile
     from multi_agent_brief.onboarding.schema import OnboardingResult
 
     if not sys.stdin.isatty():
         print("[error] onboard requires an interactive terminal.")
-        print(
-            "        For non-interactive onboarding, create onboarding.json"
-            " directly:"
-        )
-        print(
-            "        https://github.com/Stahl-G/multi-agent-brief-workflow#readme"
-        )
+        print("        Agent runtime path: create onboarding.json from chat answers.")
+        print("        Then run: multi-agent-brief init <workspace> --from-onboarding onboarding.json")
+        print("        Non-interactive helpers:")
+        print("          multi-agent-brief onboard --template")
+        print("          multi-agent-brief onboard --validate onboarding.json")
         return 1
 
     print()
