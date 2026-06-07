@@ -3,8 +3,8 @@ class MultiAgentBrief < Formula
 
   desc "Source-grounded, audit-ready multi-agent workflow for business briefs"
   homepage "https://github.com/Stahl-G/multi-agent-brief-workflow"
-  url "https://github.com/Stahl-G/multi-agent-brief-workflow/archive/refs/tags/v0.3.4.tar.gz"
-  sha256 "004eae3b8706cc11365d951ffb4272357932a902ca92da618a6ef82cb114789b"
+  url "https://github.com/Stahl-G/multi-agent-brief-workflow/archive/refs/tags/v0.5.8.tar.gz"
+  sha256 "TODO_REPLACE_AFTER_RELEASE"
   license "MIT"
   head "https://github.com/Stahl-G/multi-agent-brief-workflow.git", branch: "main"
 

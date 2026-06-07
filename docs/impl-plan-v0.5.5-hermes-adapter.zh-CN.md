@@ -1,5 +1,7 @@
 # v0.5.5 Hermes Adapter Plan
 
+> **[遗留文档]** 本文件是历史实现计划。其中 `prepare` 引用已过时——Hermes 现在使用 `delegate_task` 原生子代理管线而非 `prepare`。最新架构见 `docs/architecture.zh-CN.md`。
+
 v0.5.5 定位为 Hermes 专属适配层。它不重写 MABW 主 pipeline，也不引入新的事实抽取逻辑，而是把 Hermes 的 cron、skill、fresh session 和消息交付能力接到现有 workspace / source provider / prepare / finalize 流程上。
 
 ## 设计判断

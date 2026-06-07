@@ -1,5 +1,7 @@
 # v0.5.0 Implementation Plan - Production Reference Workflow
 
+> **[遗留文档]** 本文件是历史实现计划。其中的 `prepare` 流程描述已过时——v0.5.5 后主路径改为 subagent-first runtime handoff（`multi-agent-brief run` → `/generate-brief`）。最新路线图见 `docs/roadmap.md`。
+
 v0.5.0 starts after the v0.4.0 contract foundation. v0.4.0 made claims, audit findings, contracts, manifests, and semantic audit status more explicit. v0.5.0 should turn those foundations into one official, reproducible, publishable reference workflow.
 
 The goal is not to add more providers or make the system look bigger. The goal is to make the current workflow reliable enough that a new user can install the tool, initialize a workspace, run preparation, use the agent workflow, pass final delivery gates, and produce Markdown/DOCX outputs that are ready for human review.
