@@ -724,7 +724,7 @@ def render_opencode_command_generate_brief(manifest: dict) -> str:
         "   - Run: `multi-agent-brief doctor --config $ARGUMENTS/config.yaml`\n"
         "   - Fix any issues before proceeding.\n"
         "\n"
-        "4. **Input governance gate (if available):**\n"
+        "4. **Input governance gate:**\n"
         "   - Run: `multi-agent-brief inputs classify --config $ARGUMENTS/config.yaml`\n"
         "   - Pass only evidence inputs to the scout subagent.\n"
         "\n"
