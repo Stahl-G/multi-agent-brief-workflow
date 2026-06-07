@@ -22,6 +22,7 @@ from multi_agent_brief.cli import (
     finalize_commands,
     analysis_commands,
     capability_commands,
+    input_commands,
 )
 
 
@@ -56,6 +57,9 @@ def build_parser() -> argparse.ArgumentParser:
     capability_commands.register_capability(subparsers)
     capability_commands.register_recommend(subparsers)
     capability_commands.register_setup(subparsers)
+
+    # Input governance
+    input_commands.register(subparsers)
 
     # Hermes runtime
     hermes_commands.register(subparsers)
@@ -120,6 +124,9 @@ def _dispatch(args: argparse.Namespace) -> int:
 
     if cmd == "setup":
         return capability_commands.handle_setup(args)
+
+    if cmd == "inputs":
+        return input_commands.handle(args)
 
     return 1
 

@@ -23,7 +23,7 @@ Follow this sequence:
    - Run: `multi-agent-brief doctor --config $ARGUMENTS/config.yaml`
    - Fix any issues before proceeding.
 
-4. **Input governance gate (if available):**
+4. **Input governance gate:**
    - Run: `multi-agent-brief inputs classify --config $ARGUMENTS/config.yaml`
    - Pass only evidence inputs to the scout subagent.
 

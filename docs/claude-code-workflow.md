@@ -60,7 +60,7 @@ Source discovery if llm_decide is enabled
 doctor
   |
   v
-inputs classify if available
+inputs classify
   |
   v
 scout subagent -> candidate_claims.json

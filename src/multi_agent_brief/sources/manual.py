@@ -9,6 +9,9 @@ from urllib.request import Request, urlopen
 
 from multi_agent_brief.sources.base import SourceItem, SourceProvider, SourceQuery
 
+# Known non-evidence input subdirectories that ManualProvider must block
+NON_EVIDENCE_SUBDIRS = {"feedback", "instructions", "context"}
+
 
 class ManualProvider(SourceProvider):
     """Loads sources from local files (md/txt/json) and manual URL entries."""
@@ -50,6 +53,17 @@ class ManualProvider(SourceProvider):
     def _load_local_path(self, path: Path, src_config: dict) -> list[SourceItem]:
         if not path.exists():
             return [self._path_error_item(path, "path_not_found", src_config)]
+
+        # ── hard gate: block non-evidence input subdirectories ──
+        subdir = _input_subdir(path)
+        if subdir in NON_EVIDENCE_SUBDIRS:
+            return [self._path_error_item(
+                path, "non_evidence_path_blocked", src_config,
+                detail=f"Manual source points to input/{subdir}/ which is not evidence material. "
+                       "Only input/sources/ (and input/ root for backward compatibility) "
+                       "are valid evidence paths.",
+            )]
+
         items: list[SourceItem] = []
         if path.is_file():
             item = self._load_file(path, src_config)
@@ -112,6 +126,7 @@ class ManualProvider(SourceProvider):
                 "source_tier": source_tier,
                 "claim_type": claim_type,
                 "category": src_config.get("category", ""),
+                "input_subdir": _input_subdir(path),
             },
         )
 
@@ -176,16 +191,18 @@ class ManualProvider(SourceProvider):
             },
         )
 
-    def _path_error_item(self, path: Path, error_type: str, src_config: dict) -> SourceItem:
+    def _path_error_item(self, path: Path, error_type: str, src_config: dict,
+                         detail: str = "") -> SourceItem:
         """Create a diagnostic SourceItem for a missing or unreadable manual path."""
         name = src_config.get("name", str(path))
         source_id = name.upper().replace(" ", "_").replace("-", "_")[:32]
+        content = detail or f"Path not accessible: {path} ({error_type})"
         return SourceItem(
             source_id=source_id,
             source_name=name,
             source_type="manual_error",
             title=f"Manual source error: {error_type}",
-            content=f"Path not accessible: {path} ({error_type})",
+            content=content,
             reliability="low",
             metadata={
                 "path": str(path),
@@ -193,6 +210,38 @@ class ManualProvider(SourceProvider):
                 "category": src_config.get("category", ""),
             },
         )
+
+
+def _input_subdir(path: Path) -> str:
+    """Determine which input/ subdirectory a file belongs to.
+
+    Returns one of: "sources", "feedback", "instructions", "context", "root", "other".
+    """
+    resolved = path.resolve()
+    parts = resolved.parts
+
+    # Walk parts backwards looking for "input"
+    for i in range(len(parts) - 1, -1, -1):
+        if parts[i] == "input":
+            # "input" found at index i
+            if i + 1 < len(parts):
+                subdir = parts[i + 1]
+                # If the path IS a directory, the subdir name is the last component
+                # If the path is a file, the file is at parts[-1] and subdir is before it
+                if resolved.is_dir():
+                    # The subdir IS the last component
+                    if subdir in {"sources", "feedback", "instructions", "context"}:
+                        return subdir
+                    return "other"
+                # It's a file — check if subdir is one of the known subdirs
+                if i + 1 == len(parts) - 1:
+                    # The next part after "input" = the file itself → root level
+                    return "root"
+                if subdir in {"sources", "feedback", "instructions", "context"}:
+                    return subdir
+                return "other"
+            return "root"
+    return "other"
 
 
 def _html_to_text(content: str) -> str:

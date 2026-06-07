@@ -5,7 +5,14 @@ All notable changes to the multi-agent-brief-workflow project will be documented
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.5.7] — 2026-06-07
+
+### Added
+
+- **`inputs classify` CLI 命令**：`multi-agent-brief inputs classify --config <path>` 扫描 `input/` 各子目录，按角色（evidence / feedback / instruction / context）分类输出 `input_classification.json`，作为 Scout 之前的输入治理门禁。
+- **Scout 技能合约收紧**：Scout 限定只从 `input/sources/`（和 `input/` 根目录，向后兼容）提取声明。`feedback/`、`instructions/`、`context/` 中的文件被显式排除——它们作为编辑指导、任务要求和背景参考路由给 Editor/Analyst，不进入 Claim Ledger。
+- **SourceItem `input_subdir` 元数据**：`ManualProvider._load_local_path()` 写入 `metadata["input_subdir"]`（值如 `"sources"`、`"root"`、`"feedback"`），标记文件所属输入子目录。
+- **Hermes adapter / start_commands / docs**：`inputs classify` 的 "(if available)" 后缀已移除，命令现已正式可用。
 
 ## [0.5.6] — 2026-06-07
 

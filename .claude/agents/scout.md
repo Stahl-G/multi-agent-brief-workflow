@@ -17,7 +17,8 @@ When to use:
 Use when inspecting source inputs or extracting candidate items before screening.
 
 Responsibilities:
-- Read source packages, Tavily/RSS/local input outputs.
+- Read source packages, Tavily/RSS outputs, and evidence files in `input/sources/` (and `input/` root for backward compatibility).
+- Do NOT extract claims from `input/feedback/`, `input/instructions/`, or `input/context/` — these are editorial guidance, not factual evidence.
 - Filter boilerplate, navigation, cookies, privacy text, directories, and ads.
 - Extract structured claims from source content.
 - Each claim must include: statement, evidence_text, source_url, published_at or retrieved_at, topic, claim_type, confidence.
@@ -31,6 +32,8 @@ Guardrails:
 - Leave ranking and capacity caps to Screener.
 - Create only source-supported items.
 - Extract claims that are present in the source material.
+- Only extract claims from evidence files in `input/sources/`, `input/` root, and approved external source packages.
+- Skip `input/feedback/`, `input/instructions/`, and `input/context/` entirely.
 
 Repository rules:
 - Preserve Screener, Claim Ledger, and audit gates.
