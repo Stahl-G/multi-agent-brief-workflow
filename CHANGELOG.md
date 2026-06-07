@@ -17,6 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **`docs/support-matrix.md`**：建表明确所有能力的 Supported / Experimental / Interface Only / CLI-only / Deprecated 状态。
 - **Issue [#49](https://github.com/Stahl-G/multi-agent-brief-workflow/issues/49) 边界明确化**：README 安装文档澄清 — agent assets（`.agents/`、`.claude/` 等）需 source clone 才能使用子智能体工作流。pip-only 安装仅提供确定性 CLI 命令。正式打包推迟到 v0.7。
+- **版本管理自动化**：`VERSION` 为唯一真源；新增 `scripts/bump_version.py`（同步到所有文件）、`scripts/check_version_consistency.py`（CI 检查）、`scripts/release.sh`（自动发布）。`__init__.py` 改为 `importlib.metadata.version()` 动态读取。
 
 ## [0.5.7] — 2026-06-07
 

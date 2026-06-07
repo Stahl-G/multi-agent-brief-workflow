@@ -573,9 +573,9 @@ multi-agent-brief sources decide --config ../mabw-workspace/config.yaml --merge
 
 Hermes 适配层提供原生 `delegate_task` 子代理管线（scout → screener → claim-ledger → analyst → editor → auditor）、daily source cache 收集、weekly/monthly cron 调度和 `cached_package` provider 对接。
 
-### v0.5.8：发布清理 + 支持矩阵 + 旧叙事收敛
+### v0.5.8：发布清理 + 支持矩阵 + 旧叙事收敛 + 版本管理自动化
 
-移除 README 中尚不可用的 CLI-only curl 安装路径。移除六份遗留 impl-plan 文档和 v1 ref roadmap。新增 `docs/support-matrix.md`。
+移除 README 中尚不可用的 CLI-only curl 安装路径。移除六份遗留 impl-plan 文档和 v1 ref roadmap。新增 `docs/support-matrix.md`。`VERSION` 单一真源 + `bump_version.py`/`check_version_consistency.py`/`release.sh` 自动化脚本。`__init__.py` 改为 `importlib.metadata.version()` 动态读取。
 
 ### v0.5.7：输入分类与反馈卫生
 
@@ -682,7 +682,7 @@ v2.0 不作为短期主路径。v1.0 冻结后，再探索 Shared World、Event 
 
 完整的版本历史和变更说明请参见 [CHANGELOG.md](CHANGELOG.md)。
 
-当前版本：**v0.5.8** — 发布与运行时合同清理 + 支持矩阵 + 旧叙事收敛
+当前版本：**v0.5.8** — 发布与运行时合同清理 + 支持矩阵 + 版本管理自动化
 
 v0.5.1 引入了本地信号发现能力：系统可以根据目标市场自动生成本地语言搜索任务，产出 `collector_tasks.json` 供人工/OpenCLI 采集，解析 `local_signal_samples.jsonl` 样本，生成 `local_signal_report.json` 记录信号发现和数据缺口，并通过 3 条审计规则阻止无来源支撑的消费者痛点 claim。支持 9 个市场（越南、日本、中国、印尼、泰国、巴西、墨西哥、德国、韩国）。
 
