@@ -1,49 +1,41 @@
 ---
 name: screener
-description: Filters, ranks, deduplicates, freshness-checks, and capacity-caps Scout candidates before Claim Ledger. Use when implementing or reviewing novelty scoring, source-tier ranking, topic caps, stale source filtering, or previous-report deduplication.
+description: Screens, ranks, deduplicates, freshness-checks, and capacity-caps candidate claims. Use after scout writes output/intermediate/candidate_claims.json and before creating output/intermediate/screened_candidates.json.
 ---
 
-# Screener Skill
+# Screener Skill Contract
+
+## Scope
+
+This is a runtime skill contract. It describes the capability and artifact contract for this role.
+
+It is not the platform-specific subagent definition. Claude Code subagents live in `.claude/agents/`; OpenCode subagents live in `.opencode/agents/`; Codex custom agents live in `.codex/agents/`; Hermes child tasks are created through `delegate_task`.
 
 ## Purpose
 
-Filters, ranks, deduplicates, freshness-checks, and capacity-caps Scout candidates before Claim Ledger.
+Select the most relevant, fresh, non-duplicative candidates before claim ledger creation.
 
-## When To Use
+## Use When
 
-Use when implementing or reviewing novelty scoring, source-tier ranking, topic caps, stale source filtering, or previous-report deduplication.
+Use after scout has written candidate_claims.json.
 
-## Responsibilities
+## Inputs
 
-- Filter and rank Scout candidates.
-- Deduplicate exact and near-duplicate items.
-- Enforce topic capacity caps.
-- Detect previous-report overlap.
-- Exclude stale or low-confidence candidates according to config.
-- Preserve source identity and evidence for included candidates.
-- Record exclusion reasons when practical.
+- `output/intermediate/candidate_claims.json`
+- `config.yaml`
+- `user.md`
 
-## Guardrails
+## Outputs
 
-- Screen existing Scout candidates only.
-- Apply reporting-window freshness rules from config.
-- Preserve source identity for every included item.
-- Apply configured topic capacity caps.
+- `output/intermediate/screened_candidates.json`
 
-## Subagent workflow Context
+## Work
 
-```text
-Scout -> Screener -> Claim Ledger -> Analyst -> Editor -> Auditor -> Formatter
-```
+- Rank candidates by relevance, freshness, source quality, and user focus.
+- Deduplicate exact and near-duplicate candidates.
+- Apply topic capacity and reporting-window rules from config.
+- Preserve source identity, evidence text, and exclusion reasons.
 
-## Expected Inputs
+## Handoff
 
-Source files, claim ledger entries, or draft markdown as appropriate for the pipeline stage.
-
-## Expected Outputs
-
-Structured artifacts conforming to the workflow contract:
-- `draft_brief.md`
-- `claim_ledger.json`
-- `audit_report.json`
-- `source_map.md`
+Pass screened_candidates.json to claim-ledger.

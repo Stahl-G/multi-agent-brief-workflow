@@ -1,48 +1,41 @@
 ---
 name: market-competitor-analyst
-description: Generates AnalysisCards from evidence_pack.json and writes competitor sections for the final brief. Use after the pipeline produces evidence_pack.json. Generate AnalysisCards and write the competitor analysis section of the brief.
+description: Generates competitor analysis cards from an evidence pack. Use after competitor evidence has been collected and write competitor sections for the final brief.
 ---
 
-# Market Competitor Analyst Skill
+# Market Competitor Analyst Skill Contract
+
+## Scope
+
+This is a runtime skill contract. It describes the capability and artifact contract for this role.
+
+It is not the platform-specific subagent definition. Claude Code subagents live in `.claude/agents/`; OpenCode subagents live in `.opencode/agents/`; Codex custom agents live in `.codex/agents/`; Hermes child tasks are created through `delegate_task`.
 
 ## Purpose
 
-Generates AnalysisCards from evidence_pack.json and writes competitor sections for the final brief.
+Generate competitor analysis from evidence packs.
 
-## When To Use
+## Use When
 
-Use after the pipeline produces evidence_pack.json. Generate AnalysisCards and write the competitor analysis section of the brief.
+Use when evidence_pack.json or equivalent competitor evidence is available.
 
-## Responsibilities
+## Inputs
 
-- Read evidence_pack.json, competitor_matrix.json, claim_ledger.json.
-- Generate analysis_cards.json — each card must have supporting_claim_ids.
-- Write competitor analysis section for the brief using only AnalysisCards and Claim Ledger.
-- Preserve [src:CLAIM_ID] citations for every source-backed statement.
-- Distinguish announced vs operational capacity in prose.
-- Flag evidence gaps clearly.
+- `evidence_pack.json`
+- competitor candidates
+- claim ledger entries when available
 
-## Guardrails
+## Outputs
 
-- Use claims present in claim_ledger.json.
-- Every AnalysisCard must have at least one supporting claim.
-- Single-source interpretations must set confidence='low'.
-- Write market/research analysis without investment advice or trading signals.
+- competitor AnalysisCards
+- competitor section draft or analysis module output
 
-## Subagent workflow Context
+## Work
 
-```text
-Scout -> Screener -> Claim Ledger -> Analyst -> Editor -> Auditor -> Formatter
-```
+- Compare competitors using sourced evidence.
+- Preserve metric basis, dates, source quality, and uncertainty.
+- Separate observed facts from analytical interpretation.
 
-## Expected Inputs
+## Handoff
 
-Source files, claim ledger entries, or draft markdown as appropriate for the analysis_module stage.
-
-## Expected Outputs
-
-Structured artifacts conforming to the workflow contract:
-- `draft_brief.md`
-- `claim_ledger.json`
-- `audit_report.json`
-- `source_map.md`
+Pass competitor analysis output to market-competitor-auditor or analyst.

@@ -1,50 +1,46 @@
 ---
 name: source-provider
-description: Configures, validates, and collects information sources from manual inputs, RSS feeds, web search, APIs, and MCP/CLI tools. Use when implementing or reviewing source provider configuration, source collection, source normalization, or the doctor health-check command.
+description: Configures, validates, collects, and normalizes source provider outputs. Use when working on sources.yaml, provider configuration, cached packages, source collection, or doctor findings.
 ---
 
-# Source Provider Skill
+# Source Provider Skill Contract
+
+## Scope
+
+This is a runtime skill contract. It describes the capability and artifact contract for this role.
+
+It is not the platform-specific subagent definition. Claude Code subagents live in `.claude/agents/`; OpenCode subagents live in `.opencode/agents/`; Codex custom agents live in `.codex/agents/`; Hermes child tasks are created through `delegate_task`.
 
 ## Purpose
 
-Configures, validates, and collects information sources from manual inputs, RSS feeds, web search, APIs, and MCP/CLI tools.
+Configure, validate, collect, and normalize source provider outputs.
 
-## When To Use
+## Use When
 
-Use when implementing or reviewing source provider configuration, source collection, source normalization, or the doctor health-check command.
+Use when working on sources.yaml, provider configuration, source collection, cached packages, or doctor checks.
 
-## Responsibilities
+## Inputs
 
-- Load and validate sources.yaml configuration.
-- Instantiate enabled source providers (manual, rss, web_search, api, mcp, cli).
-- Collect sources from all enabled providers.
-- Normalize source items into a unified SourceItem structure.
-- Deduplicate sources by dedupe_key.
-- Filter sources by recency.
-- Run doctor checks on source configuration health.
-- Generate proper sources.yaml templates in init wizard.
+- `sources.yaml`
+- `config.yaml`
+- provider outputs
+- `input/`
+- `input/hermes_cache/`
 
-## Guardrails
+## Outputs
 
-- Keep API keys in environment variables.
-- Apply source profile constraints consistently.
-- Label collected sources separately from verified sources.
-- Surface provider validation errors clearly.
+- normalized source packages
+- doctor report
+- provider validation findings
+- cached package source configuration when applicable
 
-## Subagent workflow Context
+## Work
 
-```text
-Scout -> Screener -> Claim Ledger -> Analyst -> Editor -> Auditor -> Formatter
-```
+- Validate enabled providers and source configuration.
+- Normalize collected source items.
+- Deduplicate and label collected items.
+- Surface provider configuration and collection issues clearly.
 
-## Expected Inputs
+## Handoff
 
-Source files, claim ledger entries, or draft markdown as appropriate for the coordination stage.
-
-## Expected Outputs
-
-Structured artifacts conforming to the workflow contract:
-- `draft_brief.md`
-- `claim_ledger.json`
-- `audit_report.json`
-- `source_map.md`
+Pass normalized evidence material to scout.

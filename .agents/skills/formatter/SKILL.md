@@ -1,45 +1,44 @@
 ---
 name: formatter
-description: Writes and validates preparation artifacts: draft_brief.md, claim_ledger.json, audit_report.json, source_map.md. Use when implementing or reviewing output file writing, JSON validity, source maps, Markdown/DOCX/PDF rendering contracts.
+description: Renders reader-facing outputs from the audited brief after audit readiness. Use after audit_report.json exists and run finalize to produce output/brief.md and configured DOCX/Markdown artifacts.
 ---
 
-# Formatter Skill
+# Formatter Skill Contract
+
+## Scope
+
+This is a runtime skill contract. It describes the capability and artifact contract for this role.
+
+It is not the platform-specific subagent definition. Claude Code subagents live in `.claude/agents/`; OpenCode subagents live in `.opencode/agents/`; Codex custom agents live in `.codex/agents/`; Hermes child tasks are created through `delegate_task`.
 
 ## Purpose
 
-Writes and validates preparation artifacts: draft_brief.md, claim_ledger.json, audit_report.json, source_map.md.
+Render reader-facing outputs from the audited internal brief after audit readiness.
 
-## When To Use
+## Use When
 
-Use when implementing or reviewing output file writing, JSON validity, source maps, Markdown/DOCX/PDF rendering contracts.
+Use after auditor has produced audit_report.json and audited_brief.md is ready for delivery.
 
-## Responsibilities
+## Inputs
 
-- Write files only inside configured output directories.
-- Validate JSON artifacts.
-- Validate cited claim IDs exist.
-- Preserve deterministic formatting.
+- `output/intermediate/audited_brief.md`
+- `output/intermediate/audit_report.json`
+- `config.yaml`
 
-## Guardrails
+## Outputs
 
-- Surface failed audits clearly.
-- Fix rendering defects without changing substantive content.
-- Write files only inside configured output directories.
+- `output/brief.md`
+- configured named Markdown output when enabled
+- `output/brief.docx when configured`
+- `output/intermediate/finalize_report.json when available`
 
-## Subagent workflow Context
+## Work
 
-```text
-Scout -> Screener -> Claim Ledger -> Analyst -> Editor -> Auditor -> Formatter
-```
+- Run or follow multi-agent-brief finalize --config <workspace>/config.yaml.
+- Strip internal [src:CLAIM_ID] markers from reader-facing artifacts.
+- Preserve the meaning and structure of the audited brief.
+- Report final artifact paths and rendering status.
 
-## Expected Inputs
+## Handoff
 
-Source files, claim ledger entries, or draft markdown as appropriate for the pipeline stage.
-
-## Expected Outputs
-
-Structured artifacts conforming to the workflow contract:
-- `draft_brief.md`
-- `claim_ledger.json`
-- `audit_report.json`
-- `source_map.md`
+Return final artifact paths, audit status, and remaining limitations.

@@ -1,53 +1,41 @@
 ---
 name: draft-audit-harness
-description: Reviews and implements the draft-level audit harness: deterministic source checks plus QualityHarnessAuditAgent checks. Use when working on DeterministicAuditAgent, QualityHarnessAuditAgent, CompositeAuditAgent, or draft-level source/freshness/redaction checks.
+description: Reviews draft-level audit harness behavior for claim support and citation quality. Use when changing deterministic or semantic draft audit gates and update tests or audit reports.
 ---
 
-# Draft Audit Harness Skill
+# Draft Audit Harness Skill Contract
+
+## Scope
+
+This is a runtime skill contract. It describes the capability and artifact contract for this role.
+
+It is not the platform-specific subagent definition. Claude Code subagents live in `.claude/agents/`; OpenCode subagents live in `.opencode/agents/`; Codex custom agents live in `.codex/agents/`; Hermes child tasks are created through `delegate_task`.
 
 ## Purpose
 
-Reviews and implements the draft-level audit harness: deterministic source checks plus QualityHarnessAuditAgent checks.
+Review and implement draft-level audit harness behavior.
 
-## When To Use
+## Use When
 
-Use when working on DeterministicAuditAgent, QualityHarnessAuditAgent, CompositeAuditAgent, or draft-level source/freshness/redaction checks.
+Use when changing audit logic for citations, source support, numbers, source dates, placeholders, confidence leakage, or process residue.
 
-## Responsibilities
+## Inputs
 
-- Check missing or orphan [src:CLAIM_ID] references.
-- Check number/source coverage.
-- Check strict reporting-window freshness.
-- Check missing source dates.
-- Check placeholders.
-- Check internal workflow residue.
-- Check unsupported certainty wording.
-- Check investment-advice style language.
-- Check needs_recrawl and low-confidence claims appearing in briefs.
-- Check low numeric source density.
-- Check possible unit inflation.
-- Check repeat/background claims in executive summaries.
+- `output/intermediate/audited_brief.md`
+- `output/intermediate/claim_ledger.json`
+- audit rule code or tests
 
-## Guardrails
+## Outputs
 
-- Preserve draft audit gates.
-- Keep CompositeAuditAgent in the draft audit path where applicable.
-- Treat semantic model output as review signal, not source truth.
+- audit findings
+- updated audit rules or tests when requested
 
-## Subagent workflow Context
+## Work
 
-```text
-Scout -> Screener -> Claim Ledger -> Analyst -> Editor -> Auditor -> Formatter
-```
+- Check citation coverage, orphan claim IDs, unsupported numbers, stale wording, and low-confidence leakage.
+- Map each finding to a concrete rule or test.
+- Keep deterministic gates in code and regression tests rather than prompt text.
 
-## Expected Inputs
+## Handoff
 
-Source files, claim ledger entries, or draft markdown as appropriate for the harness stage.
-
-## Expected Outputs
-
-Structured artifacts conforming to the workflow contract:
-- `draft_brief.md`
-- `claim_ledger.json`
-- `audit_report.json`
-- `source_map.md`
+Return rule/test changes and remaining audit risks.

@@ -1,56 +1,41 @@
 ---
 name: auditor
-description: Audits source support, freshness, unsupported numbers, redaction risk, duplicate claims, placeholders, and harness failures. Use before final delivery of any real brief. Must verify brief against claim_ledger.json and enforce quality thresholds.
+description: Audits the auditable brief against the Claim Ledger before delivery. Use after editor completes output/intermediate/audited_brief.md and write output/intermediate/audit_report.json.
 ---
 
-# Auditor Skill
+# Auditor Skill Contract
+
+## Scope
+
+This is a runtime skill contract. It describes the capability and artifact contract for this role.
+
+It is not the platform-specific subagent definition. Claude Code subagents live in `.claude/agents/`; OpenCode subagents live in `.opencode/agents/`; Codex custom agents live in `.codex/agents/`; Hermes child tasks are created through `delegate_task`.
 
 ## Purpose
 
-Audits source support, freshness, unsupported numbers, redaction risk, duplicate claims, placeholders, and harness failures.
+Audit the auditable brief against the claim ledger before final rendering.
 
-## When To Use
+## Use When
 
-Use before final delivery of any real brief. Must verify brief against claim_ledger.json and enforce quality thresholds.
+Use after editor has completed audited_brief.md.
 
-## Responsibilities
+## Inputs
 
-- Review final brief against claim_ledger.json and audit_report.json.
-- Check unsupported facts — every important statement must have a [src:CLAIM_ID].
-- Check missing citations — claims in ledger not cited in brief.
-- Check orphan citations — [src:CLAIM_ID] in brief not found in ledger.
-- Check stale sources — sources older than configured reporting window.
-- Check investment-advice language — no trading signals or investment recommendations.
-- Check redaction risks — no private identifiers, internal paths, or confidential content.
-- Check low-confidence source leakage.
-- Check process residue and placeholders.
-- Check [SRC:] or process residue remains in final text.
-- Check weekly brief has enough claims (default: >= 20) unless quiet-week exception configured.
-- Check source dates are present for claims in final brief.
-- Recommend fixes for each finding.
-- Prefer running python deterministic audit commands where available.
-- Coordinate draft and final harness agents when needed.
+- `output/intermediate/audited_brief.md`
+- `output/intermediate/claim_ledger.json`
+- `config.yaml`
 
-## Guardrails
+## Outputs
 
-- Preserve audit gates while fixing failures.
-- Treat model judgment as analysis, not source evidence.
-- Mark reports distribution-ready only after gates pass.
+- `output/intermediate/audit_report.json`
 
-## Subagent workflow Context
+## Work
 
-```text
-Scout -> Screener -> Claim Ledger -> Analyst -> Editor -> Auditor -> Formatter
-```
+- Check source support, orphan citations, unsupported numbers, missing dates, stale framing, advice language, process residue, and delivery readiness.
+- Run deterministic audit tools when available.
+- Record blocking findings and recommended fixes.
+- Mark distribution readiness only after delivery gates are satisfied.
 
-## Expected Inputs
+## Handoff
 
-Source files, claim ledger entries, or draft markdown as appropriate for the pipeline stage.
-
-## Expected Outputs
-
-Structured artifacts conforming to the workflow contract:
-- `draft_brief.md`
-- `claim_ledger.json`
-- `audit_report.json`
-- `source_map.md`
+Pass audit status to formatter/finalize.

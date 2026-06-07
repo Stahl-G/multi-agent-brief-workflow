@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Generate platform-specific agent adapter files from configs/agent_roles.yaml.
 
-AGENTS.md and .agents/skills/*/SKILL.md are hand-maintained operating
-contracts and are never overwritten by this generator.
+This script generates platform adapter files only. AGENTS.md and .agents/skills/
+are hand-maintained operating contracts, not generated prompt projections.
 
 Usage:
     python scripts/generate_agent_configs.py --write
@@ -15,7 +15,6 @@ Usage:
 from __future__ import annotations
 
 import argparse
-import sys
 import textwrap
 from pathlib import Path
 from typing import Any
@@ -888,15 +887,11 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     manifest = load_manifest(args.manifest)
-    try:
-        ok = generate_all(
-            manifest,
-            check=args.check,
-            target=args.target,
-        )
-    except RuntimeError as exc:
-        print(f"[error] {exc}", file=sys.stderr)
-        return 2
+    ok = generate_all(
+        manifest,
+        check=args.check,
+        target=args.target,
+    )
 
     if args.check:
         if ok:

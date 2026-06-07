@@ -1,47 +1,41 @@
 ---
 name: final-quality-harness
-description: Reviews and implements final text delivery gates for BRIEF_HARNESS_V2 final target. Use when working on FinalQualityAuditAgent, final Markdown quality gates, report depth, metadata, summary bullet separation, stale-current framing, or publication readiness.
+description: Reviews final text delivery gates for reader-facing brief quality. Use when changing final quality checks after source audit has passed.
 ---
 
-# Final Quality Harness Skill
+# Final Quality Harness Skill Contract
+
+## Scope
+
+This is a runtime skill contract. It describes the capability and artifact contract for this role.
+
+It is not the platform-specific subagent definition. Claude Code subagents live in `.claude/agents/`; OpenCode subagents live in `.opencode/agents/`; Codex custom agents live in `.codex/agents/`; Hermes child tasks are created through `delegate_task`.
 
 ## Purpose
 
-Reviews and implements final text delivery gates for BRIEF_HARNESS_V2 final target.
+Review final text delivery gates for publication readiness.
 
-## When To Use
+## Use When
 
-Use when working on FinalQualityAuditAgent, final Markdown quality gates, report depth, metadata, summary bullet separation, stale-current framing, or publication readiness.
+Use when changing final report depth, quiet-week handling, front-page metadata, stale-current framing, executive summary quality, or internal residue checks.
 
-## Responsibilities
+## Inputs
 
-- Validate final report depth unless quiet_week is explicit.
-- Validate front-page metadata when configured.
-- Validate executive summary bullet separation.
-- Block stale-current framing.
-- Block internal workflow residue.
-- Keep final gate separate from default MVP draft audit.
+- `output/brief.md`
+- `output/intermediate/audit_report.json`
+- final quality rule code or tests
 
-## Guardrails
+## Outputs
 
-- Require final text quality gates in addition to factual correctness.
-- Repair final prose within existing evidence.
-- Preserve required safety notes during formatting fixes.
+- final quality findings
+- updated final quality rules or tests when requested
 
-## Subagent workflow Context
+## Work
 
-```text
-Scout -> Screener -> Claim Ledger -> Analyst -> Editor -> Auditor -> Formatter
-```
+- Check whether reader-facing output is publication-ready after factual audit.
+- Identify delivery blockers that are not source-support problems.
+- Keep final quality checks as harness rules and regression tests.
 
-## Expected Inputs
+## Handoff
 
-Source files, claim ledger entries, or draft markdown as appropriate for the harness stage.
-
-## Expected Outputs
-
-Structured artifacts conforming to the workflow contract:
-- `draft_brief.md`
-- `claim_ledger.json`
-- `audit_report.json`
-- `source_map.md`
+Return delivery readiness status and any blocking final-quality issues.

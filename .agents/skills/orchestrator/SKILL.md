@@ -1,50 +1,48 @@
 ---
 name: orchestrator
-description: Coordinates Scout, Screener, Claim Ledger, Analyst, Editor, Auditor, Formatter, and harness-specific review agents. Use for multi-step feature planning, cross-role integration, pipeline changes, or agent config generation.
+description: Coordinates MABW runtime handoff and artifact sequencing across roles. Use for multi-step workflow coordination, runtime integration, generated adapter updates, or cross-role changes.
 ---
 
-# Orchestrator Skill
+# Orchestrator Skill Contract
+
+## Scope
+
+This is a runtime skill contract. It describes the capability and artifact contract for this role.
+
+It is not the platform-specific subagent definition. Claude Code subagents live in `.claude/agents/`; OpenCode subagents live in `.opencode/agents/`; Codex custom agents live in `.codex/agents/`; Hermes child tasks are created through `delegate_task`.
 
 ## Purpose
 
-Coordinates Scout, Screener, Claim Ledger, Analyst, Editor, Auditor, Formatter, and harness-specific review agents.
+Coordinate runtime handoff and role sequencing across MABW workflows.
 
-## When To Use
+## Use When
 
-Use for multi-step feature planning, cross-role integration, pipeline changes, or agent config generation.
+Use for multi-step workflow coordination, runtime integration, generated adapter config updates, or cross-role changes.
 
-## Responsibilities
+## Inputs
 
-- Preserve the full pipeline order.
-- Preserve Screener before Claim Ledger.
-- Preserve Claim Ledger before Analyst.
-- Preserve audit gates.
-- Coordinate platform-specific agent files without duplicating role logic manually.
-- Preserve Windows native PowerShell setup, test, demo, and agent-config check guidance.
-- Run or document tests before completion.
+- workspace path
+- runtime handoff artifact
+- `config.yaml`
+- `sources.yaml`
+- `user.md`
+- intermediate artifact status
 
-## Guardrails
+## Outputs
 
-- Keep Screener before downstream claim handling.
-- Keep Claim Ledger as the source of traceable facts.
-- Preserve audit and harness checks.
-- Use public or synthetic examples.
-- Support native Windows PowerShell setup.
+- workflow plan
+- runtime handoff updates
+- implementation checklist
+- test plan
 
-## Subagent workflow Context
+## Work
 
-```text
-Scout -> Screener -> Claim Ledger -> Analyst -> Editor -> Auditor -> Formatter
-```
+- Use multi-agent-brief run --workspace <workspace> as the standard launcher.
+- Keep role handoffs artifact-based.
+- Coordinate source-planner, scout, screener, claim-ledger, analyst, editor, auditor, and formatter.
+- Update generation sources when generated platform adapter files change.
+- Run focused tests for changed areas.
 
-## Expected Inputs
+## Handoff
 
-Source files, claim ledger entries, or draft markdown as appropriate for the coordination stage.
-
-## Expected Outputs
-
-Structured artifacts conforming to the workflow contract:
-- `draft_brief.md`
-- `claim_ledger.json`
-- `audit_report.json`
-- `source_map.md`
+Return the next role, expected artifact, and validation command.
