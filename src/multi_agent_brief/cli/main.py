@@ -943,8 +943,10 @@ def init_workspace_from_args(args: argparse.Namespace) -> int:
             print("        audience_plain, language_plain, cadence_plain, source_style_plain,")
             print("        output_style_plain, must_watch, forbidden_sources, tavily_enabled")
             print("        Aliases accepted: company, industry, title, audience, language, cadence, etc.")
-            print("        Run the interactive onboarding wizard: multi-agent-brief init <workspace>")
-            print("        Or provide all required fields in onboarding.json before using --from-onboarding.")
+            print("        Run conversational onboarding:")
+            print("          multi-agent-brief onboard")
+            print("        Then create the workspace:")
+            print("          multi-agent-brief init <workspace> --from-onboarding onboarding.json")
             return 1
 
         # Apply any explicit CLI overrides on top of onboarding values
@@ -962,15 +964,19 @@ def init_workspace_from_args(args: argparse.Namespace) -> int:
         missing = missing_required_direct_init_args(args)
         if missing and has_direct_init_args(args):
             print("[error] Direct init with CLI args is incomplete.")
-            print("        Start conversational onboarding first and run:")
-            print("        multi-agent-brief init <workspace> --from-onboarding onboarding.json")
+            print("        Run conversational onboarding:")
+            print("          multi-agent-brief onboard")
+            print("        Then create the workspace:")
+            print("          multi-agent-brief init <workspace> --from-onboarding onboarding.json")
             print("        Developer-only direct init must provide all business fields:")
             print(f"        missing: {', '.join(missing)}")
             return 1
         if not _is_interactive() and missing:
             print("[error] Non-interactive init cannot create a workspace from defaults.")
-            print("        Start conversational onboarding first and run:")
-            print("        multi-agent-brief init <workspace> --from-onboarding onboarding.json")
+            print("        Run conversational onboarding:")
+            print("          multi-agent-brief onboard")
+            print("        Then create the workspace:")
+            print("          multi-agent-brief init <workspace> --from-onboarding onboarding.json")
             print("        Developer-only direct init must provide all business fields:")
             print(f"        missing: {', '.join(missing)}")
             return 1
@@ -979,7 +985,9 @@ def init_workspace_from_args(args: argparse.Namespace) -> int:
             profile = build_profile_from_args(args)
         except InitOnboardingRequired as exc:
             print(f"[error] {exc}")
-            print("        Run init in an interactive terminal, or use --from-onboarding onboarding.json.")
+            print("        Run conversational onboarding:")
+            print("          multi-agent-brief onboard")
+            print("        Then: multi-agent-brief init <workspace> --from-onboarding onboarding.json")
             return 1
 
     create_workspace(target, profile, force=args.force)
