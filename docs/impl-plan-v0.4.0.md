@@ -1,5 +1,7 @@
 # v0.4.0 Implementation Plan — Knowledge & Governance Contracts
 
+> **[遗留文档]** 本文件是历史实现计划。`prepare` 命令已在 v0.5.5 后废弃，主路径改为 `multi-agent-brief run`（runtime handoff launcher）+ 子智能体工作流。最新路线图见 `docs/roadmap.zh-CN.md`。
+
 This plan supersedes the old Capability Center v0.4 plan. Capability Center has already landed; v0.4.0 now means **data contracts, Claim semantics, audit status, run traceability, and release consistency**.
 
 The goal is not to add more features. The goal is to make the existing workflow stable enough to become the v1.0 baseline and the future v2.0 MAS Runtime comparison engine.

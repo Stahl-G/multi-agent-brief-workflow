@@ -5,6 +5,19 @@ All notable changes to the multi-agent-brief-workflow project will be documented
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.8] — 2026-06-07
+
+### Changed
+
+- **版本号 0.5.7 → 0.5.8**：上游 `check_release_consistency.py` 要求版号与 tag 一致；0.5.7 从未打 tag，本次统一发布。
+- **README 清理**：移除尚不可用的 CLI-only curl 安装路径和 Homebrew 引用（打包工作推迟到 v0.7）。
+- **旧 `prepare` 叙事收敛**：`docs/impl-plan-*.md`、`docs/agents/reference/v1-pre-mas-refactor-roadmap.zh-CN.md` 中的 `prepare` 引用标记为 `[遗留]`，主路径已统一为 `subagent-first runtime handoff → /generate-brief`。
+
+### Added
+
+- **`docs/support-matrix.md`**：建表明确所有能力的 Supported / Experimental / Interface Only / CLI-only / Deprecated 状态。
+- **Issue [#49](https://github.com/Stahl-G/multi-agent-brief-workflow/issues/49) 边界明确化**：README 安装文档澄清 — agent assets（`.agents/`、`.claude/` 等）需 source clone 才能使用子智能体工作流。pip-only 安装仅提供确定性 CLI 命令。正式打包推迟到 v0.7。
+
 ## [0.5.7] — 2026-06-07
 
 ### Added
