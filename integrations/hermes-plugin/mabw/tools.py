@@ -163,6 +163,140 @@ def init_workspace(args: dict, **kwargs) -> str:
         return _json({"ok": False, "error": f"{type(exc).__name__}: {exc}"})
 
 
+def _find_repo_root() -> Path | None:
+    """Walk upward from cwd and common locations to find the MABW source repo."""
+    candidates = [Path.cwd().resolve()]
+    # Also check common clone locations
+    for d in ("~", "~/Developer", "~/dev", "~/projects", "~/workspace"):
+        expanded = Path(d).expanduser()
+        if expanded.is_dir():
+            for child in sorted(expanded.iterdir()):
+                if child.is_dir() and "multi-agent-brief" in child.name.lower():
+                    candidates.append(child.resolve())
+    seen = set()
+    for start in candidates:
+        for parent in [start] + list(start.parents):
+            if parent in seen:
+                continue
+            seen.add(parent)
+            if (parent / "pyproject.toml").exists() and (parent / "CLAUDE.md").exists():
+                return parent
+            # Allow single-marker match for shallow clones
+            if (parent / "pyproject.toml").exists() and (parent / "src" / "multi_agent_brief").exists():
+                return parent
+    return None
+
+
+def _find_workspace_dirs(repo_root: Path | None) -> list[Path]:
+    """Discover plausible MABW workspace directories."""
+    found: list[Path] = []
+    seen: set[str] = set()
+    # Always scan cwd and home-adjacent paths
+    search_roots = [Path.cwd().resolve(), Path.home()]
+    if repo_root is not None:
+        search_roots.append(repo_root)
+    for base in search_roots:
+        for depth, candidate in enumerate([base] + list(base.parents)):
+            if depth > 4:
+                break
+            key = str(candidate.resolve())
+            if key in seen:
+                continue
+            seen.add(key)
+            config = candidate / "config.yaml"
+            sources = candidate / "sources.yaml"
+            if config.exists() and sources.exists():
+                found.append(candidate)
+    return found
+
+
+def env_doctor(_args: dict, **kwargs) -> str:
+    """Check MABW environment and return a diagnostic report."""
+    del _args, kwargs
+
+    report: dict[str, Any] = {
+        "repo_found": False,
+        "plugin_enabled": False,
+        "mabw_bin": _mabw_bin(),
+        "version": "unknown",
+        "venv_found": False,
+        "workspace_found": False,
+        "workspaces": [],
+        "next_action": "collect_onboarding",
+    }
+
+    # 1. Repo detection
+    repo_root = _find_repo_root()
+    if repo_root is not None:
+        report["repo_found"] = True
+        report["repo_root"] = str(repo_root)
+
+    # 2. Plugin presence
+    plugin_dir = Path.home() / ".hermes" / "plugins" / "mabw"
+    report["plugin_enabled"] = plugin_dir.is_dir()
+
+    # 3. Binary and version
+    mabw = _mabw_bin()
+    found_bin = mabw if shutil.which(mabw) else None
+    if found_bin is None and repo_root is not None:
+        # Try venv path
+        for bindir in (repo_root / ".venv" / "bin", repo_root / ".venv" / "Scripts"):
+            candidate = bindir / "multi-agent-brief"
+            if candidate.exists():
+                found_bin = str(candidate)
+                report["mabw_bin"] = found_bin
+                break
+    elif found_bin:
+        report["mabw_bin"] = found_bin
+
+    if found_bin:
+        version_result = _run([found_bin, "version"])
+        if version_result["ok"]:
+            version_line = version_result["stdout"].strip().split("\n")[0]
+            report["version"] = version_line
+
+    # 4. Venv
+    if repo_root is not None:
+        for venv_dir in (repo_root / ".venv", repo_root / "venv"):
+            activate = venv_dir / "bin" / "activate" if not _is_windows() else venv_dir / "Scripts" / "activate"
+            if activate.exists():
+                report["venv_found"] = True
+                report["venv_path"] = str(venv_dir)
+                break
+
+    # 5. Workspaces
+    workspaces = _find_workspace_dirs(repo_root)
+    report["workspaces"] = [str(w) for w in workspaces]
+    report["workspace_found"] = len(report["workspaces"]) > 0
+
+    # 6. Next action
+    if not report["repo_found"]:
+        report["next_action"] = "clone_repo"
+        report["hint"] = "Clone https://github.com/Stahl-G/multi-agent-brief-workflow.git first."
+    elif not report["venv_found"]:
+        report["next_action"] = "run_setup"
+        report["hint"] = "Run bash scripts/setup.sh from the repo root."
+    elif not found_bin:
+        report["next_action"] = "activate_venv"
+        report["hint"] = "Activate the venv: source .venv/bin/activate (or Scripts\\activate on Windows)."
+    elif not report["plugin_enabled"]:
+        report["next_action"] = "install_plugin"
+        report["hint"] = "Run multi-agent-brief hermes install-plugin."
+    elif report["workspace_found"]:
+        report["next_action"] = "run_existing_workspace"
+        report["hint"] = "Use mabw_run_handoff with the first existing workspace."
+    else:
+        report["next_action"] = "collect_onboarding"
+        report["hint"] = "Ask the user for brief profile fields, then call mabw_create_onboarding."
+
+    return _json(report)
+
+
+def _is_windows() -> bool:
+    import platform
+    return platform.system() == "Windows"
+
+
 def run_handoff(args: dict, **kwargs) -> str:
     """Run MABW runtime handoff for an initialized workspace."""
     del kwargs

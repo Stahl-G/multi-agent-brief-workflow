@@ -73,6 +73,7 @@ def test_plugin_registers_tools_command_and_skill():
     mabw.register(ctx)
 
     assert set(ctx.tools) == {
+        "mabw_env_doctor",
         "mabw_create_onboarding",
         "mabw_init_workspace",
         "mabw_run_handoff",

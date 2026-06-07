@@ -69,6 +69,21 @@ MABW_INIT_WORKSPACE = {
     },
 }
 
+MABW_ENV_DOCTOR = {
+    "name": "mabw_env_doctor",
+    "description": (
+        "Check the MABW environment: source repo, plugin status, binary path, "
+        "venv status, and workspace presence. Run this FIRST before any other MABW tool "
+        "to confirm the environment is ready. Hermes should never assume mabw is installed "
+        "or guess the next step — run this tool and follow next_action."
+    ),
+    "parameters": {
+        "type": "object",
+        "properties": {},
+        "required": [],
+    },
+}
+
 MABW_RUN_HANDOFF = {
     "name": "mabw_run_handoff",
     "description": (

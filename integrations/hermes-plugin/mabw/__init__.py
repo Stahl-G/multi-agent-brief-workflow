@@ -2,23 +2,128 @@
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 from . import schemas, tools
 
 
-def handle_mabw(ctx, argstr: str):
-    """Slash command entrypoint: /mabw <workspace>."""
-    workspace = argstr.strip() or "./mabw-workspace"
+def _usage() -> str:
     return (
-        "MABW Hermes workflow\n\n"
-        f"Workspace: {workspace}\n\n"
-        "Collect the brief profile in chat, then use the MABW tools in this order:\n"
-        "1. mabw_create_onboarding\n"
-        "2. mabw_init_workspace\n"
-        "3. mabw_run_handoff\n\n"
-        "After handoff is created, read agent_handoff.md and continue the delegated workflow."
+        "Usage:\n"
+        "  /mabw doctor                  — Check environment and report status.\n"
+        "  /mabw new                      — Start a fresh brief from onboarding.\n"
+        "  /mabw run <workspace>          — Handoff + delegated sequence for an existing workspace.\n"
+        "  /mabw continue <workspace>     — Read handoff and resume delegated workflow."
     )
+
+
+def handle_mabw(ctx, argstr: str):
+    """Slash command router: /mabw doctor | new | run <ws> | continue <ws>."""
+    parts = argstr.strip().split(maxsplit=1)
+    sub = parts[0].lower() if parts else ""
+    rest = parts[1].strip() if len(parts) > 1 else ""
+
+    if sub == "doctor":
+        report = json.loads(tools.env_doctor({}))
+        lines = ["[mabw doctor] Environment status:"]
+        lines.append(f"  repo_found:      {report.get('repo_found')}")
+        if report.get("repo_root"):
+            lines.append(f"  repo_root:       {report['repo_root']}")
+        lines.append(f"  plugin_enabled:  {report.get('plugin_enabled')}")
+        lines.append(f"  mabw_bin:        {report.get('mabw_bin')}")
+        lines.append(f"  version:         {report.get('version')}")
+        lines.append(f"  venv_found:      {report.get('venv_found')}")
+        lines.append(f"  workspace_found: {report.get('workspace_found')}")
+        if report.get("workspaces"):
+            lines.append(f"  workspaces:      {', '.join(report['workspaces'])}")
+        lines.append(f"  next_action:     {report.get('next_action')}")
+        if report.get("hint"):
+            lines.append(f"  hint:            {report['hint']}")
+        return "\n".join(lines)
+
+    if sub == "new":
+        report = json.loads(tools.env_doctor({}))
+        if report.get("next_action") not in ("collect_onboarding",):
+            return (
+                f"[mabw new] Environment not ready: next_action={report.get('next_action')}\n"
+                f"Hint: {report.get('hint')}\n\n"
+                "Run /mabw doctor for full status."
+            )
+        return (
+            "[mabw new] Starting fresh brief workflow.\n\n"
+            "Step 1 — Collect these fields in chat:\n"
+            "  company_or_org, industry_or_theme, task_objective,\n"
+            "  audience, language, cadence, source_style, output_style,\n"
+            "  must_watch, forbidden_sources, web_search_mode.\n\n"
+            "Step 2 — Call tools in order:\n"
+            "  mabw_create_onboarding → mabw_init_workspace → mabw_run_handoff\n\n"
+            "Step 3 — Read <workspace>/output/intermediate/agent_handoff.md\n\n"
+            "Step 4 — Continue with delegate_task:\n"
+            "  scout → screener → claim-ledger → analyst → editor → auditor\n\n"
+            "Step 5 — Run: multi-agent-brief finalize --config <workspace>/config.yaml"
+        )
+
+    if sub == "run":
+        workspace = rest if rest else "./mabw-workspace"
+        ws_path = tools._resolve_workspace(workspace)
+
+        # 1. env doctor
+        report = json.loads(tools.env_doctor({}))
+        if report.get("next_action") in ("clone_repo", "run_setup", "activate_venv"):
+            return (
+                f"[mabw run] Environment not ready: next_action={report.get('next_action')}\n"
+                f"Hint: {report.get('hint')}\n\n"
+                "Run /mabw doctor for full status."
+            )
+
+        # 2. run handoff
+        handoff = tools.run_handoff({"workspace": str(ws_path), "runtime": "hermes"})
+        ho = json.loads(handoff)
+        if not ho.get("ok"):
+            return f"[mabw run] Handoff failed:\n{handoff}"
+
+        lines = [
+            f"[mabw run] Handoff complete for: {ws_path}",
+            f"  handoff_md: {ho.get('handoff_md')}",
+        ]
+        if ho.get("handoff_md_exists"):
+            lines.append("")
+            lines.append("Continue in this Hermes session with delegate_task:")
+            lines.append("  scout → screener → claim-ledger → analyst → editor → auditor")
+            lines.append("")
+            lines.append("After pipeline, run:")
+            lines.append(f"  multi-agent-brief finalize --config {ws_path}/config.yaml")
+        else:
+            lines.append("")
+            lines.append(f"Handoff not found. Check init state of {ws_path}.")
+        return "\n".join(lines)
+
+    if sub == "continue":
+        workspace = rest if rest else "./mabw-workspace"
+        ws_path = tools._resolve_workspace(workspace)
+        handoff_md = ws_path / "output" / "intermediate" / "agent_handoff.md"
+
+        if not handoff_md.exists():
+            return (
+                f"[mabw continue] Handoff not found at: {handoff_md}\n"
+                f"Run /mabw run {workspace} first, or /mabw new for a fresh brief."
+            )
+
+        lines = [
+            f"[mabw continue] Resuming from: {ws_path}",
+            f"Handoff: {handoff_md}",
+            "",
+            "Read the handoff file, then continue with delegate_task:",
+            "  scout → screener → claim-ledger → analyst → editor → auditor",
+            "",
+            "After pipeline, run:",
+            f"  multi-agent-brief finalize --config {ws_path}/config.yaml",
+        ]
+        return "\n".join(lines)
+
+    # No recognized subcommand — show usage
+    return _usage()
 
 
 def _register_command_compat(ctx, name: str, handler, description: str) -> None:
@@ -31,6 +136,12 @@ def _register_command_compat(ctx, name: str, handler, description: str) -> None:
 
 def register(ctx):
     """Register MABW tools, slash command, and bundled skill."""
+    ctx.register_tool(
+        name="mabw_env_doctor",
+        toolset="mabw",
+        schema=schemas.MABW_ENV_DOCTOR,
+        handler=tools.env_doctor,
+    )
     ctx.register_tool(
         name="mabw_create_onboarding",
         toolset="mabw",
@@ -54,7 +165,7 @@ def register(ctx):
         ctx,
         "mabw",
         handle_mabw,
-        "Start a Multi-Agent Brief Workflow onboarding and handoff flow.",
+        "MABW workflow router — /mabw doctor | new | run <ws> | continue <ws>.",
     )
 
     skill_md = Path(__file__).parent / "skills" / "mabw-workflow" / "SKILL.md"

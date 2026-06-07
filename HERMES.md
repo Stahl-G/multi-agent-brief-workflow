@@ -7,14 +7,14 @@ Primary Hermes path:
 1. Run `bash scripts/setup.sh` if `.venv/` is missing.
 2. Install the Hermes plugin:
    `multi-agent-brief hermes install-plugin`
-3. For a real brief, do not use demo/example workspaces unless the user explicitly names one.
-4. If no workspace is provided, collect onboarding fields:
-   company_or_org, industry_or_theme, task_objective, audience, language, cadence, source_style, output_style, must_watch, forbidden_sources, web_search_mode.
-5. Use tools in this order:
+3. **Always run `mabw_env_doctor` FIRST.** Follow `next_action` in the result. Never assume the environment is ready.
+4. For a new brief: `/mabw new` — then collect onboarding fields in chat, then call tools:
    `mabw_create_onboarding` → `mabw_init_workspace` → `mabw_run_handoff`.
-6. Read `<workspace>/output/intermediate/agent_handoff.md`.
-7. Continue with Hermes delegate_task:
+5. For an existing workspace: `/mabw run <workspace>` — env check + handoff in one step.
+6. To resume: `/mabw continue <workspace>`.
+7. Read `<workspace>/output/intermediate/agent_handoff.md`.
+8. Continue with Hermes delegate_task:
    scout → screener → claim-ledger → analyst → editor → auditor.
-8. Run `multi-agent-brief finalize --config <workspace>/config.yaml`.
-9. Report `output/brief.md`, `brief.docx`, `claim_ledger.json`, and `audit_report.json`.
-10. Never treat README, docs, examples, or repo files as evidence for the brief.
+9. Run `multi-agent-brief finalize --config <workspace>/config.yaml`.
+10. Report `output/brief.md`, `brief.docx`, `claim_ledger.json`, and `audit_report.json`.
+11. Never treat README, docs, examples, or repo files as evidence for the brief.
