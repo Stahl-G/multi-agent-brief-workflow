@@ -222,6 +222,11 @@ jobs:
         run: |
           multi-agent-brief run --workspace /tmp/mabw-ci-smoke --skip-doctor
           test -f /tmp/mabw-ci-smoke/output/intermediate/agent_handoff.json
+          test -f /tmp/mabw-ci-smoke/output/intermediate/runtime_manifest.json
+          test -f /tmp/mabw-ci-smoke/output/intermediate/workflow_state.json
+          test -f /tmp/mabw-ci-smoke/output/intermediate/artifact_registry.json
+          test -f /tmp/mabw-ci-smoke/output/intermediate/event_log.jsonl
+          test ! -f /tmp/mabw-ci-smoke/output/brief.md
 
       - name: Assert prepare stays removed
         run: python scripts/ci/smoke_pipeline.py /tmp/mabw-ci-smoke/config.yaml /tmp/mabw-ci-smoke/input

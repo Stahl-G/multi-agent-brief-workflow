@@ -5,6 +5,24 @@ All notable changes to the multi-agent-brief-workflow project will be documented
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.1] — 2026-06-08
+
+### Added
+
+- **Minimum runtime state**: `multi-agent-brief run`, `start`, and `handoff` now initialize Orchestrator control files: `runtime_manifest.json`, `workflow_state.json`, `artifact_registry.json`, and `event_log.jsonl`.
+- **State CLI**: added `multi-agent-brief state init`, `state check`, `state show --json`, and `state decide` for runtime inspection, artifact status refresh, and Orchestrator decision recording.
+- **Runtime state references in handoff**: `agent_handoff.json` and `agent_handoff.md` now expose `runtime_state_files` separately from workflow `expected_artifacts`.
+
+### Changed
+
+- **Stage-scoped artifact blocking**: required artifacts block only the consumer stage that needs them, so a fresh workspace starts with downstream artifacts as `expected/pending` rather than globally blocked.
+- **Artifact path contract**: artifact registry paths are workspace-root relative, and `input_classification` now points to the CLI's actual default output path.
+- **Runtime docs and Hermes surfaces**: runtime prompts and public docs now describe the v0.6.1 minimum state layer while keeping feedback repair and provenance graph work deferred.
+
+### Fixed
+
+- **Manifest semantic split**: v0.6.1 uses `runtime_manifest.json` for Orchestrator runtime state and leaves the legacy pipeline `run_manifest.json` semantics untouched.
+
 ## [0.6.0] — 2026-06-08
 
 ### Added

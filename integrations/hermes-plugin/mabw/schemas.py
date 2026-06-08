@@ -88,7 +88,8 @@ MABW_RUN_HANDOFF = {
     "name": "mabw_run_handoff",
     "description": (
         "Run the MABW runtime handoff launcher for an initialized workspace. "
-        "Use this after workspace initialization to create agent_handoff.md and agent_handoff.json."
+        "Use this after workspace initialization to create agent_handoff.md, "
+        "agent_handoff.json, and runtime state control files."
     ),
     "parameters": {
         "type": "object",

@@ -126,6 +126,8 @@ def main() -> int:
         hermes_ok = False
     if hermes_ok:
         _ok("hermes/adapter.py version")
+    else:
+        errors.append("hermes/adapter.py")
 
     # 8. Hermes skill SKILL.md
     skill_path = ROOT / ".agents" / "hermes-skills" / "multi-agent-brief-hermes" / "SKILL.md"

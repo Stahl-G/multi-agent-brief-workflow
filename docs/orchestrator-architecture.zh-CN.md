@@ -27,7 +27,7 @@ v0.6.0 引入公开安全的 contract references：
 - `configs/artifact_contracts.yaml`
 - `configs/policy_packs/default.yaml`
 
-这些文件描述共享 authority、decision vocabulary、stage order、artifact expectations 和 default policy shell。它们不实现持久化 runtime state，也不执行 artifact registry validation。
+这些文件描述共享 authority、decision vocabulary、stage order、artifact expectations 和 default policy shell。v0.6.1 增加最小 runtime state control files 和 artifact status checks，但不实现 feedback repair 或 provenance graph。
 
 ## 四类 Contract
 
@@ -49,13 +49,13 @@ Orchestrator 使用统一 decision vocabulary：
 - `block_run`
 - `finalize`
 
-在 v0.6.0 中，这些 decision 是 runtime entry 和 handoff artifacts 的 contract language。持久化 event log 和 runtime state 属于后续 milestone。
+在 v0.6.1 中，这些 decision 也可以通过 runtime state event log 记录。这个 event log 是 control trace，不是完整 provenance graph。
 
 ## Runtime Loop
 
 每个 runtime 都应表达同一套 loop：
 
-1. 读取 `config.yaml`、`sources.yaml`、`user.md`、inputs 和 handoff artifacts。
+1. 读取 `config.yaml`、`sources.yaml`、`user.md`、inputs、handoff artifacts 和 runtime state files。
 2. 从 handoff 读取 contract references。
 3. 判断当前 stage 和 expected artifact。
 4. 将 stage 委派给对应 specialist role 或 Python tool。
@@ -81,8 +81,6 @@ v0.6.0 不构建 provenance graph。但 contract 形状要兼容后续 provenanc
 
 后续 v0.6 milestone 负责：
 
-- persisted runtime state
-- minimum artifact registry
 - feedback issue handling
 - bounded repair
 - material-fact and freshness gates

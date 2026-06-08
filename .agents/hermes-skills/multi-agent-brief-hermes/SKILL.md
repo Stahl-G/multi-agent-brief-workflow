@@ -5,7 +5,7 @@ license: MIT
 compatibility: Requires Hermes with delegate_task support plus terminal and file access to a workspace with the multi-agent-brief CLI installed.
 metadata:
   author: multi-agent-brief-workflow
-  version: 0.6.0
+  version: 0.6.1
   tags:
     - hermes
     - cron
@@ -20,7 +20,7 @@ metadata:
 
 This skill is the Hermes runtime contract for MABW. It applies when Hermes is asked to set up, schedule, or run a MABW workspace.
 
-The Hermes parent agent is the Orchestrator main agent. It reads shared contract references, controls delegated stages, checks expected artifacts, and selects the next workflow decision.
+The Hermes parent agent is the Orchestrator main agent. It reads shared contract references and runtime state files, controls delegated stages, checks expected artifacts, and selects the next workflow decision.
 
 Contract references:
 
@@ -28,6 +28,13 @@ Contract references:
 - `configs/stage_specs.yaml`
 - `configs/artifact_contracts.yaml`
 - `configs/policy_packs/default.yaml`
+
+Runtime state files:
+
+- `output/intermediate/runtime_manifest.json`
+- `output/intermediate/workflow_state.json`
+- `output/intermediate/artifact_registry.json`
+- `output/intermediate/event_log.jsonl`
 
 Orchestrator control loop:
 
@@ -74,7 +81,7 @@ When the plugin is not available, run onboarding as a chat-to-JSON workflow:
 3. Validate: `multi-agent-brief onboard --validate onboarding.json`
 4. Create the workspace: `multi-agent-brief init <workspace> --from-onboarding onboarding.json`
 5. Create runtime handoff: `multi-agent-brief run --workspace <workspace>`
-6. Read `agent_handoff.md` and continue with the delegated workflow below.
+6. Read `agent_handoff.md`, `workflow_state.json`, and `artifact_registry.json`, then continue with the delegated workflow below.
 
 ## Existing Workspace Path
 

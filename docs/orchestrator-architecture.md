@@ -27,7 +27,7 @@ v0.6.0 introduces public-safe contract references:
 - `configs/artifact_contracts.yaml`
 - `configs/policy_packs/default.yaml`
 
-These files describe shared authority, decision vocabulary, stage order, artifact expectations, and the default policy shell. They do not implement persisted runtime state or execute artifact registry validation.
+These files describe shared authority, decision vocabulary, stage order, artifact expectations, and the default policy shell. v0.6.1 adds minimum runtime state control files and artifact status checks, but it does not implement feedback repair or a provenance graph.
 
 ## Four Contract Categories
 
@@ -49,13 +49,13 @@ The Orchestrator uses a shared decision vocabulary:
 - `block_run`
 - `finalize`
 
-In v0.6.0 these decisions are contract language for runtime entries and handoff artifacts. Persisted event logs and runtime state are later milestones.
+In v0.6.1 these decisions can also be recorded through the runtime state event log. The event log is a control trace, not a full provenance graph.
 
 ## Runtime Loop
 
 Each runtime should communicate the same loop:
 
-1. Read `config.yaml`, `sources.yaml`, `user.md`, inputs, and handoff artifacts.
+1. Read `config.yaml`, `sources.yaml`, `user.md`, inputs, handoff artifacts, and runtime state files.
 2. Read contract references from the handoff.
 3. Identify the current stage and expected artifact.
 4. Delegate the stage to the appropriate specialist role or Python tool.
@@ -81,8 +81,6 @@ v0.6.0 does not build a provenance graph. It does keep the contract shape compat
 
 Later v0.6 milestones own:
 
-- persisted runtime state
-- minimum artifact registry
 - feedback issue handling
 - bounded repair
 - material-fact and freshness gates

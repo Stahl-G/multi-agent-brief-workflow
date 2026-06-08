@@ -16,6 +16,7 @@ from multi_agent_brief.cli.start_commands import (
 )
 from multi_agent_brief.orchestrator_contract import contract_references_exist
 from multi_agent_brief.orchestrator_contract import resolve_repo_workdir
+from multi_agent_brief.orchestrator.runtime_state import RUNTIME_STATE_FILES
 
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -64,11 +65,18 @@ def _assert_orchestrator_contract_handoff(data: dict[str, object]) -> None:
         for key in ("next_steps", "prompt", "notes")
     )
     assert data["contract_references"] == CONTRACT_REFERENCES
+    assert data["runtime_state_files"] == RUNTIME_STATE_FILES
+    for rel_path in data["runtime_state_files"].values():
+        assert not Path(str(rel_path)).is_absolute()
+    for rel_path in data["expected_artifacts"]:
+        assert not Path(str(rel_path)).is_absolute()
     assert "Orchestrator main agent" in text or "Orchestrator main-agent" in text
     assert "configs/orchestrator_contract.yaml" in text
     assert "configs/stage_specs.yaml" in text
     assert "configs/artifact_contracts.yaml" in text
     assert "configs/policy_packs/default.yaml" in text
+    assert "runtime_manifest.json" in text
+    assert "workflow_state.json" in text
     assert "retry_stage" in text
     assert "request_human_review" in text
     assert "block_run" in text
@@ -161,6 +169,10 @@ def test_start_auto_detects_workspace_in_cwd(tmp_path, monkeypatch):
     assert (ws / "output" / "intermediate" / "agent_handoff.md").exists()
     json_path = ws / "output" / "intermediate" / "agent_handoff.json"
     assert json_path.exists()
+    assert (ws / "output" / "intermediate" / "runtime_manifest.json").exists()
+    assert (ws / "output" / "intermediate" / "workflow_state.json").exists()
+    assert (ws / "output" / "intermediate" / "artifact_registry.json").exists()
+    assert (ws / "output" / "intermediate" / "event_log.jsonl").exists()
     data = json.loads(json_path.read_text(encoding="utf-8"))
     assert Path(data["repo_workdir"]).resolve() == ROOT
     _assert_orchestrator_contract_handoff(data)
@@ -184,6 +196,7 @@ def test_start_with_workspace_generates_handoff(tmp_path):
     js = ws / "output" / "intermediate" / "agent_handoff.json"
     assert md.exists()
     assert js.exists()
+    assert (ws / "output" / "intermediate" / "runtime_manifest.json").exists()
 
     data = json.loads(js.read_text(encoding="utf-8"))
     assert data["runtime"] == "hermes"
@@ -203,6 +216,9 @@ def test_start_does_not_generate_brief(tmp_path):
     assert not (ws / "output" / "brief.md").exists()
     assert not (ws / "output" / "intermediate" / "claim_ledger.json").exists()
     assert not (ws / "output" / "intermediate" / "audited_brief.md").exists()
+    assert not (ws / "output" / "intermediate" / "candidate_claims.json").exists()
+    assert not (ws / "output" / "intermediate" / "screened_candidates.json").exists()
+    assert not (ws / "output" / "intermediate" / "audit_report.json").exists()
 
 
 # ---------------------------------------------------------------------------
@@ -293,6 +309,10 @@ def test_handoff_with_config_generates_artifacts(tmp_path):
     assert rc == 0
     assert (ws / "output" / "intermediate" / "agent_handoff.md").exists()
     assert (ws / "output" / "intermediate" / "agent_handoff.json").exists()
+    assert (ws / "output" / "intermediate" / "runtime_manifest.json").exists()
+    assert (ws / "output" / "intermediate" / "workflow_state.json").exists()
+    assert (ws / "output" / "intermediate" / "artifact_registry.json").exists()
+    assert (ws / "output" / "intermediate" / "event_log.jsonl").exists()
 
 
 def test_handoff_no_config_fails(tmp_path):
@@ -388,7 +408,9 @@ def test_write_handoff_artifacts_writes_both_files(tmp_path):
     md_content = md_path.read_text(encoding="utf-8")
     assert "# Agent Handoff" in md_content
     assert "## Contract References" in md_content
+    assert "## Runtime State Files" in md_content
     assert "`orchestrator_contract`: `configs/orchestrator_contract.yaml`" in md_content
+    assert "`runtime_manifest`: `output/intermediate/runtime_manifest.json`" in md_content
     assert "delegate_task" in md_content
     data = json.loads(json_path.read_text(encoding="utf-8"))
     assert data["runtime"] == "hermes"

@@ -31,3 +31,7 @@ v060_boundaries:
   runtime_state: deferred
   artifact_registry_execution: deferred
   feedback_repair_loop: deferred
+v061_boundaries:
+  runtime_state: minimum_control_files
+  artifact_registry_execution: minimum_file_status_check
+  feedback_repair_loop: deferred

@@ -7,9 +7,17 @@ from pathlib import Path
 
 from multi_agent_brief.cli.start_commands import (
     VALID_RUNTIMES,
+    AgentHandoff,
     build_handoff,
     render_handoff_cli,
     write_handoff_artifacts,
+)
+from multi_agent_brief.orchestrator.runtime_state import (
+    RuntimeStateError,
+    check_runtime_state,
+    initialize_runtime_state,
+    record_decision,
+    record_handoff_written,
 )
 from multi_agent_brief.orchestrator_contract import resolve_repo_workdir
 
@@ -175,7 +183,15 @@ def _run_launcher(args: argparse.Namespace) -> int:
         run_doctor=not getattr(args, "skip_doctor", False),
     )
 
-    md_path, json_path = write_handoff_artifacts(handoff, workspace_path)
+    written = _write_handoff_and_state(
+        handoff=handoff,
+        workspace=workspace_path,
+        repo_workdir=repo_workdir,
+        prefix=prefix,
+    )
+    if written is None:
+        return 1
+    md_path, json_path = written
     print(render_handoff_cli(handoff))
     print(f"{prefix} Handoff written: {md_path}")
     print(f"{prefix} Handoff JSON:  {json_path}")
@@ -215,8 +231,80 @@ def _run_handoff(args: argparse.Namespace) -> int:
         run_doctor=not getattr(args, "skip_doctor", False),
     )
 
-    md_path, json_path = write_handoff_artifacts(handoff, workspace)
+    written = _write_handoff_and_state(
+        handoff=handoff,
+        workspace=workspace,
+        repo_workdir=repo_workdir,
+        prefix="[handoff]",
+    )
+    if written is None:
+        return 1
+    md_path, json_path = written
     print(render_handoff_cli(handoff))
     print(f"[handoff] Written: {md_path}")
     print(f"[handoff] JSON:   {json_path}")
     return 0
+
+
+def _write_handoff_and_state(
+    *,
+    handoff: AgentHandoff,
+    workspace: Path,
+    repo_workdir: Path,
+    prefix: str,
+) -> tuple[Path, Path] | None:
+    """Initialize runtime control files and write handoff artifacts."""
+    try:
+        initialize_runtime_state(
+            workspace=workspace,
+            runtime=handoff.runtime,
+            repo_workdir=repo_workdir,
+            actor="cli",
+        )
+        _record_doctor_state(
+            handoff=handoff,
+            workspace=workspace,
+            repo_workdir=repo_workdir,
+        )
+        md_path, json_path = write_handoff_artifacts(handoff, workspace)
+        record_handoff_written(
+            workspace=workspace,
+            handoff_markdown=md_path,
+            handoff_json=json_path,
+            actor="cli",
+        )
+        check_runtime_state(
+            workspace=workspace,
+            repo_workdir=repo_workdir,
+            actor="cli",
+        )
+        return md_path, json_path
+    except RuntimeStateError as exc:
+        print(f"{prefix} {exc}")
+        return None
+
+
+def _record_doctor_state(
+    *,
+    handoff: AgentHandoff,
+    workspace: Path,
+    repo_workdir: Path,
+) -> None:
+    if handoff.doctor_status == "passed":
+        record_decision(
+            workspace=workspace,
+            repo_workdir=repo_workdir,
+            stage_id="doctor",
+            decision="continue",
+            reason="Doctor passed during runtime handoff launch.",
+            actor="cli",
+        )
+    elif handoff.doctor_status == "failed":
+        record_decision(
+            workspace=workspace,
+            repo_workdir=repo_workdir,
+            stage_id="doctor",
+            decision="block_run",
+            reason="Doctor failed during runtime handoff launch.",
+            actor="cli",
+        )

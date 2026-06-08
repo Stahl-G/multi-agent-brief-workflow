@@ -577,7 +577,7 @@ multi-agent-brief sources decide --config ../mabw-workspace/config.yaml --merge
 
 v2.0 不作为短期主路径。v1.0 冻结后，再探索 Shared World、Event Store、TaskBoard、AgentMessage、ClaimProposal / ClaimReducer、run replay 和最小协调协议。
 
-公开路线图见 [docs/roadmap.zh-CN.md](docs/roadmap.zh-CN.md)，v0.6 控制模型见 [docs/orchestrator-architecture.zh-CN.md](docs/orchestrator-architecture.zh-CN.md)，v2.0 技术评估见 [docs/mas-v2-evaluation.zh-CN.md](docs/mas-v2-evaluation.zh-CN.md)。v0.6.0 只建立共享 Orchestrator authority、decision vocabulary、contract references 和 runtime role parity；它不表示已经实现持久化 runtime state、artifact registry 执行或 provenance graph。详细实现规划、schema 草案、私有评测样例和商业场景设计不会放进公开仓库，直到对应能力稳定并适合发布。
+公开路线图见 [docs/roadmap.zh-CN.md](docs/roadmap.zh-CN.md)，v0.6 控制模型见 [docs/orchestrator-architecture.zh-CN.md](docs/orchestrator-architecture.zh-CN.md)，v2.0 技术评估见 [docs/mas-v2-evaluation.zh-CN.md](docs/mas-v2-evaluation.zh-CN.md)。v0.6.1 在共享 Orchestrator authority、decision vocabulary、contract references 和 runtime role parity 之上，增加最小 runtime state、artifact registry status 和 decision event 入口；它不表示已经实现 feedback repair、material-fact gates 或 provenance graph。详细实现规划、schema 草案、私有评测样例和商业场景设计不会放进公开仓库，直到对应能力稳定并适合发布。
 
 ---
 
@@ -666,7 +666,7 @@ v2.0 不作为短期主路径。v1.0 冻结后，再探索 Shared World、Event 
 
 完整的版本历史和变更说明请参见 [CHANGELOG.md](CHANGELOG.md)。
 
-当前版本：**v0.6.0** — Orchestrator contract runtime + packaged contract references + runtime role parity
+当前版本：**v0.6.1** — minimum runtime state + artifact registry status + Orchestrator decision events
 
 v0.5.1 引入了本地信号发现能力：系统可以根据目标市场自动生成本地语言搜索任务，产出 `collector_tasks.json` 供人工/OpenCLI 采集，解析 `local_signal_samples.jsonl` 样本，生成 `local_signal_report.json` 记录信号发现和数据缺口，并通过 3 条审计规则阻止无来源支撑的消费者痛点 claim。支持 9 个市场（越南、日本、中国、印尼、泰国、巴西、墨西哥、德国、韩国）。
 

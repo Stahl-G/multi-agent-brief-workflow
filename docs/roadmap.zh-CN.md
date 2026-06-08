@@ -38,7 +38,15 @@ v1.0 前不优先重建完整分布式 multi-agent runtime。Python 继续作为
 - 已建立共享 Orchestrator authority、decision vocabulary、contract references 和 runtime role parity。
 - Runtime handoff artifacts 已将所有支持的 runtime 指向同一套 Orchestrator control model。
 - Contract references 已随 Python distribution 打包，非 editable 安装后也能运行 `run`。
-- 持久化 runtime state、artifact registry 执行、feedback repair 和 provenance graph 仍属于后续 v0.6 milestone。
+- 持久化 runtime state、artifact registry 执行、feedback repair 和 provenance graph 当时仍属于后续 v0.6 milestone。
+
+### v0.6.1
+
+- 已为 Orchestrator handoff run 增加最小 runtime state control files。
+- Artifact registry 现在记录最小文件状态，但不执行 workflow stages。
+- Stage-scoped blocking 区分尚未轮到的下游 artifacts 和真正阻断当前 stage 的 artifacts。
+- `state init`、`state check`、`state show`、`state decide` 提供 runtime inspection 和 decision recording 入口。
+- Feedback repair、material-fact gates、public-safe evaluation cases 和 provenance graph 仍属于后续 v0.6 milestone。
 
 ## 下一阶段
 
@@ -79,9 +87,8 @@ Non-goals:
 - 在反馈闭环和质量门可测试后，再加入 provenance。
 - 保持 Python 作为 tools、validators、renderers，而不是 workflow runtime。
 
-v0.6.0 之后的公开顺序：
+v0.6.1 之后的公开顺序：
 
-- v0.6.1：runtime state and minimum artifact registry。
 - v0.6.2：feedback issue handling and bounded repair MVP。
 - v0.6.3：material-fact、freshness、target-relevance gates。
 - v0.6.4：real failure patterns 抽象出的 public-safe evaluation cases。

@@ -311,6 +311,12 @@ def run_handoff(args: dict, **kwargs) -> str:
         result = _run(cmd, cwd=str(repo_root) if repo_root is not None else None)
         handoff_md = workspace / "output" / "intermediate" / "agent_handoff.md"
         handoff_json = workspace / "output" / "intermediate" / "agent_handoff.json"
+        runtime_state_files = {
+            "runtime_manifest": workspace / "output" / "intermediate" / "runtime_manifest.json",
+            "workflow_state": workspace / "output" / "intermediate" / "workflow_state.json",
+            "artifact_registry": workspace / "output" / "intermediate" / "artifact_registry.json",
+            "event_log": workspace / "output" / "intermediate" / "event_log.jsonl",
+        }
 
         result.update({
             "workspace": str(workspace),
@@ -320,10 +326,13 @@ def run_handoff(args: dict, **kwargs) -> str:
             "handoff_json": str(handoff_json),
             "handoff_md_exists": handoff_md.exists(),
             "handoff_json_exists": handoff_json.exists(),
+            "runtime_state_files": {key: str(path) for key, path in runtime_state_files.items()},
+            "runtime_state_files_exist": {key: path.exists() for key, path in runtime_state_files.items()},
             "next": (
                 "Read agent_handoff.md and continue in Hermes as the Orchestrator main agent. "
                 "Read configs/orchestrator_contract.yaml, configs/stage_specs.yaml, "
-                "configs/artifact_contracts.yaml, and configs/policy_packs/default.yaml before delegation."
+                "configs/artifact_contracts.yaml, configs/policy_packs/default.yaml, "
+                "workflow_state.json, and artifact_registry.json before delegation."
             ),
         })
 

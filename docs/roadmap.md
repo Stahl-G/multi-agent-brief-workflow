@@ -38,7 +38,15 @@ The project is not trying to rebuild a full distributed multi-agent runtime befo
 - Shared Orchestrator authority, decision vocabulary, contract references, and runtime role parity were established.
 - Runtime handoff artifacts now point every supported runtime to the same Orchestrator control model.
 - Contract references are packaged with the Python distribution so `run` works after non-editable installs.
-- Persisted runtime state, artifact registry execution, feedback repair, and provenance graph work remain later v0.6 milestones.
+- Persisted runtime state, artifact registry execution, feedback repair, and provenance graph work remained later v0.6 milestones.
+
+### v0.6.1
+
+- Minimum runtime state control files were added for Orchestrator handoff runs.
+- The artifact registry now records minimum file status without executing workflow stages.
+- Stage-scoped blocking distinguishes pending downstream artifacts from artifacts that block the current stage.
+- `state init`, `state check`, `state show`, and `state decide` provide CLI entry points for runtime inspection and decision recording.
+- Feedback repair, material-fact gates, public-safe evaluation cases, and provenance graph work remain later v0.6 milestones.
 
 ## Next Milestones
 
@@ -79,9 +87,8 @@ Public scope:
 - Add provenance once the feedback loop and quality gates are testable.
 - Keep Python positioned as tools, validators, and renderers rather than the workflow runtime.
 
-Public sequencing after v0.6.0:
+Public sequencing after v0.6.1:
 
-- v0.6.1: runtime state and minimum artifact registry.
 - v0.6.2: feedback issue handling and bounded repair MVP.
 - v0.6.3: material-fact, freshness, and target-relevance gates.
 - v0.6.4: public-safe evaluation cases from real failure patterns.

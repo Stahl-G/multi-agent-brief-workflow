@@ -99,6 +99,11 @@ def test_cli_run_command_creates_handoff(capsys):
     assert exit_code == 0
     assert "Runtime:" in captured.out
     assert (d / "output" / "intermediate" / "agent_handoff.md").exists()
+    assert (d / "output" / "intermediate" / "agent_handoff.json").exists()
+    assert (d / "output" / "intermediate" / "runtime_manifest.json").exists()
+    assert (d / "output" / "intermediate" / "workflow_state.json").exists()
+    assert (d / "output" / "intermediate" / "artifact_registry.json").exists()
+    assert (d / "output" / "intermediate" / "event_log.jsonl").exists()
     assert "/generate-brief" not in captured.out
 
 
@@ -116,6 +121,10 @@ def test_cli_prepare_is_deprecated_and_does_not_generate_outputs(tmp_path: Path,
     assert "/generate-brief" not in captured.out
     assert not (ws / "output" / "brief.md").exists()
     assert not (ws / "output" / "intermediate" / "claim_ledger.json").exists()
+    assert not (ws / "output" / "intermediate" / "candidate_claims.json").exists()
+    assert not (ws / "output" / "intermediate" / "screened_candidates.json").exists()
+    assert not (ws / "output" / "intermediate" / "audited_brief.md").exists()
+    assert not (ws / "output" / "intermediate" / "audit_report.json").exists()
 
 
 def test_core_brief_pipeline_is_removed():

@@ -11,6 +11,10 @@
 
 - `output/intermediate/agent_handoff.md`
 - `output/intermediate/agent_handoff.json`
+- `output/intermediate/runtime_manifest.json`
+- `output/intermediate/workflow_state.json`
+- `output/intermediate/artifact_registry.json`
+- `output/intermediate/event_log.jsonl`
 - `output/intermediate/candidate_claims.json`
 - `output/intermediate/screened_candidates.json`
 - `output/intermediate/claim_ledger.json`

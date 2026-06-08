@@ -71,3 +71,14 @@ v060_boundaries:
     - feedback_repair_loop
     - evidence_execution_graph
     - public_golden_cases
+v061_boundaries:
+  implements:
+    - persisted_runtime_state_control_files
+    - minimum_artifact_registry_status_check
+    - stage_scoped_blocking_summary
+    - orchestrator_decision_event_entrypoint
+  deferred:
+    - feedback_repair_loop
+    - material_fact_freshness_target_relevance_gates
+    - evidence_execution_graph
+    - public_golden_cases

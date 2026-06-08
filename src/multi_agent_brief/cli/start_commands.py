@@ -19,6 +19,7 @@ from multi_agent_brief.orchestrator_contract import (
     ORCHESTRATOR_LOOP,
     resolve_repo_workdir,
 )
+from multi_agent_brief.orchestrator.runtime_state import RUNTIME_STATE_FILES
 
 
 RUNTIME_AUTO = "auto"
@@ -29,6 +30,14 @@ RUNTIME_CODEX = "codex"
 RUNTIME_MANUAL = "manual"
 VALID_RUNTIMES = (RUNTIME_AUTO, RUNTIME_HERMES, RUNTIME_CLAUDE, RUNTIME_OPENCODE, RUNTIME_CODEX, RUNTIME_MANUAL)
 RUNTIME_RESOLVED = {RUNTIME_AUTO: RUNTIME_HERMES}  # auto resolves to hermes in v0.5.5
+EXPECTED_WORKFLOW_ARTIFACTS = [
+    "output/intermediate/candidate_claims.json",
+    "output/intermediate/screened_candidates.json",
+    "output/intermediate/claim_ledger.json",
+    "output/intermediate/audited_brief.md",
+    "output/intermediate/audit_report.json",
+    "output/brief.md",
+]
 
 
 @dataclass
@@ -41,6 +50,7 @@ class AgentHandoff:
     next_steps: str = ""
     prompt: str = ""
     expected_artifacts: list[str] = field(default_factory=list)
+    runtime_state_files: dict[str, str] = field(default_factory=lambda: dict(RUNTIME_STATE_FILES))
     contract_references: dict[str, str] = field(default_factory=lambda: dict(CONTRACT_REFERENCES))
     notes: list[str] = field(default_factory=list)
 
@@ -97,18 +107,12 @@ def _hermes_handoff(workspace: Path, repo: Path, venv: str) -> AgentHandoff:
             "Orchestrator main agent and will run the contract-guided delegated workflow."
         ),
         prompt=prompt,
-        expected_artifacts=[
-            str(workspace.resolve() / "output" / "intermediate" / "candidate_claims.json"),
-            str(workspace.resolve() / "output" / "intermediate" / "screened_candidates.json"),
-            str(workspace.resolve() / "output" / "intermediate" / "claim_ledger.json"),
-            str(workspace.resolve() / "output" / "intermediate" / "audited_brief.md"),
-            str(workspace.resolve() / "output" / "intermediate" / "audit_report.json"),
-            str(workspace.resolve() / "output" / "brief.md"),
-        ],
+        expected_artifacts=list(EXPECTED_WORKFLOW_ARTIFACTS),
         notes=[
             "Install the MABW Hermes plugin: cp -R integrations/hermes-plugin/mabw ~/.hermes/plugins/mabw && hermes plugins enable mabw",
             "Then in Hermes: /mabw <workspace> → mabw_create_onboarding → mabw_init_workspace → mabw_run_handoff → read agent_handoff.md → continue delegated workflow.",
             "Read configs/orchestrator_contract.yaml, configs/stage_specs.yaml, configs/artifact_contracts.yaml, and configs/policy_packs/default.yaml before delegation.",
+            "Read output/intermediate/runtime_manifest.json, workflow_state.json, artifact_registry.json, and event_log.jsonl before selecting the next stage.",
             f"Orchestrator loop: {ORCHESTRATOR_LOOP}",
             "Each delegate_task child needs complete goal, context, input paths, and output paths.",
             "Parent must verify each artifact before proceeding to the next child.",
@@ -134,16 +138,16 @@ def _claude_handoff(workspace: Path, repo: Path, venv: str) -> AgentHandoff:
             f"Orchestrator loop: {ORCHESTRATOR_LOOP}\n\n"
             "Delegated stage order:\n"
             "scout → screener → claim-ledger → analyst → editor → auditor → finalize.\n\n"
+            "Read runtime state files before selecting the next stage:\n"
+            "- output/intermediate/runtime_manifest.json\n"
+            "- output/intermediate/workflow_state.json\n"
+            "- output/intermediate/artifact_registry.json\n"
+            "- output/intermediate/event_log.jsonl\n\n"
             f"Repository: {repo.resolve()}\n"
             f"Workspace: {ws_path}\n"
             f"Activate venv: source {venv}"
         ),
-        expected_artifacts=[
-            str(workspace.resolve() / "output" / "intermediate" / "claim_ledger.json"),
-            str(workspace.resolve() / "output" / "intermediate" / "audited_brief.md"),
-            str(workspace.resolve() / "output" / "intermediate" / "audit_report.json"),
-            str(workspace.resolve() / "output" / "brief.md"),
-        ],
+        expected_artifacts=list(EXPECTED_WORKFLOW_ARTIFACTS),
         notes=[
             "Claude Code must be opened from the repository root.",
             "The /generate-brief command handles the Orchestrator-led delegated workflow.",
@@ -171,14 +175,14 @@ def _opencode_handoff(workspace: Path, repo: Path, venv: str) -> AgentHandoff:
             "- configs/policy_packs/default.yaml\n\n"
             f"Orchestrator loop: {ORCHESTRATOR_LOOP}\n\n"
             "Delegated stage order:\n"
-            "scout → screener → claim-ledger → analyst → editor → auditor → finalize."
+            "scout → screener → claim-ledger → analyst → editor → auditor → finalize.\n\n"
+            "Read runtime state files before selecting the next stage:\n"
+            "- output/intermediate/runtime_manifest.json\n"
+            "- output/intermediate/workflow_state.json\n"
+            "- output/intermediate/artifact_registry.json\n"
+            "- output/intermediate/event_log.jsonl"
         ),
-        expected_artifacts=[
-            str(workspace.resolve() / "output" / "intermediate" / "claim_ledger.json"),
-            str(workspace.resolve() / "output" / "intermediate" / "audited_brief.md"),
-            str(workspace.resolve() / "output" / "intermediate" / "audit_report.json"),
-            str(workspace.resolve() / "output" / "brief.md"),
-        ],
+        expected_artifacts=list(EXPECTED_WORKFLOW_ARTIFACTS),
         notes=[
             "OpenCode agent configs are in .opencode/.",
         ],
@@ -205,14 +209,14 @@ def _codex_handoff(workspace: Path, repo: Path, venv: str) -> AgentHandoff:
             "- configs/policy_packs/default.yaml\n\n"
             f"Orchestrator loop: {ORCHESTRATOR_LOOP}\n\n"
             "Delegated stage order:\n"
-            "scout → screener → claim-ledger → analyst → editor → auditor → finalize."
+            "scout → screener → claim-ledger → analyst → editor → auditor → finalize.\n\n"
+            "Read runtime state files before selecting the next stage:\n"
+            "- output/intermediate/runtime_manifest.json\n"
+            "- output/intermediate/workflow_state.json\n"
+            "- output/intermediate/artifact_registry.json\n"
+            "- output/intermediate/event_log.jsonl"
         ),
-        expected_artifacts=[
-            str(workspace.resolve() / "output" / "intermediate" / "claim_ledger.json"),
-            str(workspace.resolve() / "output" / "intermediate" / "audited_brief.md"),
-            str(workspace.resolve() / "output" / "intermediate" / "audit_report.json"),
-            str(workspace.resolve() / "output" / "brief.md"),
-        ],
+        expected_artifacts=list(EXPECTED_WORKFLOW_ARTIFACTS),
         notes=[
             "Codex agent configs are in .codex/agents/.",
         ],
@@ -240,6 +244,11 @@ def _manual_handoff(workspace: Path, repo: Path, venv: str) -> AgentHandoff:
             "- configs/artifact_contracts.yaml\n"
             "- configs/policy_packs/default.yaml\n\n"
             f"Orchestrator loop: {ORCHESTRATOR_LOOP}\n\n"
+            "Read runtime state files before selecting the next stage:\n"
+            "- output/intermediate/runtime_manifest.json\n"
+            "- output/intermediate/workflow_state.json\n"
+            "- output/intermediate/artifact_registry.json\n"
+            "- output/intermediate/event_log.jsonl\n\n"
             "Run each step in order, verifying each artifact before continuing:\n\n"
             f"1. multi-agent-brief doctor --config {ws_path}/config.yaml\n"
             f"2. multi-agent-brief sources decide --config {ws_path}/config.yaml  (if configured)\n"
@@ -252,14 +261,7 @@ def _manual_handoff(workspace: Path, repo: Path, venv: str) -> AgentHandoff:
             "9. Use the 'auditor' subagent to write output/intermediate/audit_report.json\n"
             f"10. multi-agent-brief finalize --config {ws_path}/config.yaml"
         ),
-        expected_artifacts=[
-            str(workspace.resolve() / "output" / "intermediate" / "candidate_claims.json"),
-            str(workspace.resolve() / "output" / "intermediate" / "screened_candidates.json"),
-            str(workspace.resolve() / "output" / "intermediate" / "claim_ledger.json"),
-            str(workspace.resolve() / "output" / "intermediate" / "audited_brief.md"),
-            str(workspace.resolve() / "output" / "intermediate" / "audit_report.json"),
-            str(workspace.resolve() / "output" / "brief.md"),
-        ],
+        expected_artifacts=list(EXPECTED_WORKFLOW_ARTIFACTS),
         notes=[
             "Each subagent step must complete before the next begins.",
             "Verify each artifact exists and is non-empty before continuing.",
@@ -348,6 +350,13 @@ def write_handoff_artifacts(handoff: AgentHandoff, workspace: Path) -> tuple[Pat
         "",
     ]
     for label, rel_path in handoff.contract_references.items():
+        md_content.append(f"- `{label}`: `{rel_path}`")
+    md_content.extend([
+        "",
+        "## Runtime State Files",
+        "",
+    ])
+    for label, rel_path in handoff.runtime_state_files.items():
         md_content.append(f"- `{label}`: `{rel_path}`")
     md_content.extend([
         "",

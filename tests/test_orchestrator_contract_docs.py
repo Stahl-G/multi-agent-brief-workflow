@@ -81,6 +81,13 @@ def test_orchestrator_contract_defines_main_agent_and_decisions():
         "evidence_execution_graph",
         "public_golden_cases",
     ]
+    assert contract["v061_boundaries"]["implements"] == [
+        "persisted_runtime_state_control_files",
+        "minimum_artifact_registry_status_check",
+        "stage_scoped_blocking_summary",
+        "orchestrator_decision_event_entrypoint",
+    ]
+    assert "feedback_repair_loop" in contract["v061_boundaries"]["deferred"]
 
     refs = contract["orchestrator"]["contract_references"]
     for rel_path in refs.values():
