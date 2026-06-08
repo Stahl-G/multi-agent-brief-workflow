@@ -556,6 +556,107 @@ def test_planned_blocking_issue_rejects_continue_until_resolved(tmp_path, capsys
     assert rc == 0
 
 
+def test_resolving_one_issue_does_not_complete_shared_repair_plan(tmp_path, capsys):
+    ws = _write_workspace(tmp_path)
+    feedback_a = tmp_path / "feedback-a.txt"
+    feedback_b = tmp_path / "feedback-b.txt"
+    feedback_a.write_text("The analyst draft needs clearer citations.\n", encoding="utf-8")
+    feedback_b.write_text("The analyst draft has confusing wording.\n", encoding="utf-8")
+
+    for feedback_path, category in (
+        (feedback_a, "citation_error"),
+        (feedback_b, "clarity"),
+    ):
+        assert main([
+            "feedback",
+            "ingest",
+            "--workspace",
+            str(ws),
+            "--feedback",
+            str(feedback_path),
+            "--source",
+            "human",
+            "--stage",
+            "analyst",
+            "--artifact",
+            "audited_brief",
+            "--category",
+            category,
+            "--severity",
+            "blocking",
+            "--repo-workdir",
+            str(ROOT),
+        ]) == 0
+    capsys.readouterr()
+
+    assert main([
+        "feedback",
+        "plan",
+        "--workspace",
+        str(ws),
+        "--repo-workdir",
+        str(ROOT),
+        "--json",
+    ]) == 0
+    planned = json.loads(capsys.readouterr().out)
+    plan = planned["repair_plan"]["repair_plans"][0]
+    issue_ids = plan["issue_ids"]
+    assert len(issue_ids) == 2
+    assert plan["status"] == "planned"
+
+    assert main([
+        "feedback",
+        "resolve",
+        "--workspace",
+        str(ws),
+        "--repo-workdir",
+        str(ROOT),
+        "--issue-id",
+        issue_ids[0],
+        "--repair-plan-id",
+        plan["repair_plan_id"],
+        "--reason",
+        "First issue resolved.",
+        "--json",
+    ]) == 0
+    partial = json.loads(capsys.readouterr().out)
+    partial_plan = partial["repair_plan"]["repair_plans"][0]
+    statuses = {
+        issue["issue_id"]: issue["status"]
+        for issue in partial["feedback_issues"]["issues"]
+    }
+    assert statuses[issue_ids[0]] == "resolved"
+    assert statuses[issue_ids[1]] == "planned"
+    assert partial_plan["status"] == "planned"
+    assert "completed_at" not in partial_plan
+    assert "completion_reason" not in partial_plan
+    event_types = [event["event_type"] for event in _events(ws)]
+    assert "feedback_issue_resolved" in event_types
+    assert "repair_plan_completed" not in event_types
+
+    assert main([
+        "feedback",
+        "resolve",
+        "--workspace",
+        str(ws),
+        "--repo-workdir",
+        str(ROOT),
+        "--issue-id",
+        issue_ids[1],
+        "--repair-plan-id",
+        plan["repair_plan_id"],
+        "--reason",
+        "All shared plan issues resolved.",
+        "--json",
+    ]) == 0
+    completed = json.loads(capsys.readouterr().out)
+    completed_plan = completed["repair_plan"]["repair_plans"][0]
+    assert completed_plan["status"] == "completed"
+    assert completed_plan["completion_reason"] == "All shared plan issues resolved."
+    event_types = [event["event_type"] for event in _events(ws)]
+    assert event_types.count("repair_plan_completed") == 1
+
+
 def test_missing_delta_audit_report_is_not_blocking_without_active_repair(tmp_path):
     ws = _write_workspace(tmp_path)
     initialize_runtime_state(workspace=ws, repo_workdir=ROOT)

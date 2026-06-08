@@ -742,16 +742,30 @@ def resolve_feedback(
         else:
             updated_issues.append(issue)
 
+    updated_issue_status_by_id = {
+        str(issue.get("issue_id")): str(issue.get("status") or "")
+        for issue in updated_issues
+        if isinstance(issue, dict) and issue.get("issue_id")
+    }
+    target_plan_issue_ids = [str(item) for item in (target_plan.get("issue_ids") or [])]
+    unresolved_plan_issue_ids = [
+        plan_issue_id
+        for plan_issue_id in target_plan_issue_ids
+        if updated_issue_status_by_id.get(plan_issue_id) != "resolved"
+    ]
+    plan_completed = not unresolved_plan_issue_ids
+
     updated_plans: list[dict[str, Any]] = []
     for plan in plans:
         if plan.get("repair_plan_id") == repair_plan_id:
             updated = dict(plan)
-            updated["status"] = "completed"
             updated["updated_at"] = now
-            updated["completed_at"] = now
-            updated["completion_reason"] = reason
-            if delta_ref is not None:
-                updated["delta_audit_report"] = delta_ref
+            if plan_completed:
+                updated["status"] = "completed"
+                updated["completed_at"] = now
+                updated["completion_reason"] = reason
+                if delta_ref is not None:
+                    updated["delta_audit_report"] = delta_ref
             updated_plans.append(updated)
         else:
             updated_plans.append(plan)
@@ -790,21 +804,23 @@ def resolve_feedback(
             "issue_id": issue_id,
             "repair_plan_id": repair_plan_id,
             "delta_audit_report": delta_ref,
+            "remaining_issue_ids": unresolved_plan_issue_ids,
         },
     )
-    append_event(
-        workspace=ws,
-        run_id=run_id,
-        event_type="repair_plan_completed",
-        actor=actor,
-        stage_id=str(target_stage) if target_stage else None,
-        reason=reason,
-        metadata={
-            "repair_plan_id": repair_plan_id,
-            "issue_id": issue_id,
-            "delta_audit_report": delta_ref,
-        },
-    )
+    if plan_completed:
+        append_event(
+            workspace=ws,
+            run_id=run_id,
+            event_type="repair_plan_completed",
+            actor=actor,
+            stage_id=str(target_stage) if target_stage else None,
+            reason=reason,
+            metadata={
+                "repair_plan_id": repair_plan_id,
+                "issue_id": issue_id,
+                "delta_audit_report": delta_ref,
+            },
+        )
 
     _write_json_atomic(feedback_state_paths(ws)["feedback_issues"], issues_payload)
     _write_json_atomic(feedback_state_paths(ws)["repair_plan"], plan_payload)
