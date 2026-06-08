@@ -94,3 +94,17 @@ v062_boundaries:
     - material_fact_freshness_target_relevance_gates
     - evidence_execution_graph
     - public_golden_cases
+v063_boundaries:
+  implements:
+    - deterministic_material_fact_gate
+    - deterministic_freshness_gate
+    - deterministic_target_relevance_gate
+    - quality_gate_report_control_artifact
+    - current_stage_quality_gate_blocking
+  deferred:
+    - automatic_repair_execution
+    - semantic_truth_judgment
+    - live_market_quote_fetching
+    - automatic_source_recrawl
+    - evidence_execution_graph
+    - public_golden_cases

@@ -8,6 +8,7 @@
 - `multi-agent-brief run` 生成 runtime handoff artifacts，而不是自己生成完整 brief。
 - Runtime handoff 会初始化最小 runtime state 和 artifact registry control files。
 - Feedback issues 和 bounded repair plans 可以被结构化、校验和记录，但不会自动执行 repair。
+- Deterministic material-fact、freshness 和 target-relevance gates 可以写入 quality gate report，但不会自动找源、改稿或 repair。
 - Python 命令负责 setup、source tooling、validation、audit support 和 rendering。
 - Hermes、Claude Code、Codex、OpenCode 和 manual fallback 都是 agent runtime surfaces。
 - Input governance 已区分 evidence、feedback、instructions 和 background context。

@@ -29,6 +29,12 @@ These files are created or updated only by `multi-agent-brief feedback ingest`, 
 - `output/intermediate/repair_plan.json`
 - `output/intermediate/delta_audit_report.json`
 
+## Optional Quality Gate Control Files
+
+This file is created only by `multi-agent-brief gates check`.
+
+- `output/intermediate/quality_gate_report.json`
+
 ## Final Outputs
 
 - `output/brief.md`

@@ -5,6 +5,28 @@ All notable changes to the multi-agent-brief-workflow project will be documented
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.3] — 2026-06-08
+
+### Added
+
+- **Quality Gates CLI**: added `multi-agent-brief gates check`, `gates show --json`, and `gates validate` for deterministic material-fact, freshness, and target-relevance checks.
+- **Quality gate control artifact**: added optional `output/intermediate/quality_gate_report.json` as a separate Orchestrator control artifact.
+- **Runtime gate events**: event logs now record quality gate checks and whether they produced blocking findings.
+
+### Changed
+
+- **Current-stage gate blocking**: `state check` and `state decide` now enforce blocking quality gate findings only for the current stage.
+- **Gate-stage and repair-target separation**: quality gate findings now distinguish the stage being blocked from the stage/artifact that should own repair.
+- **Required gate semantics**: `quality_gates.enabled` can require `quality_gate_report.json` before configured current stages continue.
+- **Runtime handoff references**: handoff JSON/Markdown, Hermes prompts, and Hermes plugin references expose optional quality gate state separately from expected workflow artifacts.
+- **Hermes main path**: Hermes guidance now runs `gates check`, `state check --strict`, and `state decide` before `finalize`; `finalize` alone is not a quality-gate executor.
+- **Gate boundaries**: quality gates remain deterministic validators; they do not live-fetch market data, recrawl sources, rewrite briefs, execute repair, or make semantic truth judgments.
+
+### Fixed
+
+- **Optional control artifact activation**: `quality_gate_report.json` stays `expected/not_checked` until gates are explicitly run or enabled, avoiding misleading `missing` status in normal runs.
+- **Reader-facing checks**: `output/brief.md` quality gates do not require internal `[src:CLAIM_ID]` markers.
+
 ## [0.6.2] — 2026-06-08
 
 ### Added

@@ -5,7 +5,7 @@ license: MIT
 compatibility: Requires Hermes with delegate_task support plus terminal and file access to a workspace with the multi-agent-brief CLI installed.
 metadata:
   author: multi-agent-brief-workflow
-  version: 0.6.2
+  version: 0.6.3
   tags:
     - hermes
     - cron
@@ -36,7 +36,7 @@ Runtime state files:
 - `output/intermediate/artifact_registry.json`
 - `output/intermediate/event_log.jsonl`
 
-Optional feedback state files: `output/intermediate/feedback_issues.json`, `output/intermediate/repair_plan.json`, and `output/intermediate/delta_audit_report.json`.
+Optional control files: feedback uses `output/intermediate/feedback_issues.json`, `output/intermediate/repair_plan.json`, and `output/intermediate/delta_audit_report.json`; gates check creates `output/intermediate/quality_gate_report.json`.
 
 Orchestrator control loop:
 
@@ -106,9 +106,10 @@ doctor
 → delegate_task analyst
 → delegate_task editor
 → delegate_task auditor
-→ finalize
+→ gates check + state check/decide → finalize
 ```
 
+Before finalize, run `multi-agent-brief gates check --workspace <workspace>`, `state check --strict`, and `state decide --stage auditor --decision continue`; `finalize` is not a quality-gate executor.
 Use `multi-agent-brief feedback ingest`, `feedback plan`, `feedback resolve`, `feedback show --json`, and `feedback validate` only when audit findings or human feedback exist. These commands structure and record issues but do not execute repair.
 
 Read `references/delegate-task-sequence.md` before creating child tasks.
@@ -135,6 +136,5 @@ After a delegated run, report:
 - `output/intermediate/audited_brief.md`
 - `output/intermediate/claim_ledger.json`
 - `output/intermediate/audit_report.json`
-- `output/intermediate/feedback_issues.json` when feedback was ingested
-- `output/intermediate/repair_plan.json` when repair planning was created
+- optional feedback, repair, and quality gate control files when created
 - audit status and remaining limitations

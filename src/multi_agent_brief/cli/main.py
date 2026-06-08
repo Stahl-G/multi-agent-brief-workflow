@@ -25,6 +25,7 @@ from multi_agent_brief.cli import (
     input_commands,
     state_commands,
     feedback_commands,
+    gates_commands,
 )
 
 
@@ -68,6 +69,9 @@ def build_parser() -> argparse.ArgumentParser:
 
     # Feedback and repair planning
     feedback_commands.register(subparsers)
+
+    # Deterministic quality gate controls
+    gates_commands.register(subparsers)
 
     # Hermes runtime
     hermes_commands.register(subparsers)
@@ -141,6 +145,9 @@ def _dispatch(args: argparse.Namespace) -> int:
 
     if cmd == "feedback":
         return feedback_commands.handle(args)
+
+    if cmd == "gates":
+        return gates_commands.handle(args)
 
     return 1
 

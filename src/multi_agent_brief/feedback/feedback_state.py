@@ -319,15 +319,21 @@ def _audit_issue(
 
     stage_id = explicit_stage_id
     if stage_id is None:
+        stage_id = _valid_or_none(finding.get("repair_stage_id"), known_stages)
+    if stage_id is None:
         stage_id = _valid_or_none(finding.get("stage_id"), known_stages)
     if stage_id is None:
         stage_id = _valid_or_none(repair_owner, known_stages)
 
     artifact_id = explicit_artifact_id
     if artifact_id is None:
+        artifact_id = _valid_or_none(finding.get("repair_artifact_id"), known_artifacts)
+    if artifact_id is None:
         artifact_id = _valid_or_none(finding.get("artifact_id"), known_artifacts)
 
     category = explicit_category
+    if category is None:
+        category = _valid_or_none(finding.get("category"), ISSUE_CATEGORIES)
     if category is None:
         category = _valid_or_none(finding_type, ISSUE_CATEGORIES)
 

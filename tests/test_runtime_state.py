@@ -106,6 +106,8 @@ def test_state_check_fresh_workspace_is_not_globally_blocked(tmp_path):
     assert registry["claim_ledger"]["status"] == "expected"
     assert registry["audited_brief"]["status"] == "expected"
     assert registry["reader_brief"]["status"] == "expected"
+    assert registry["quality_gate_report"]["status"] == "expected"
+    assert registry["quality_gate_report"]["validation_result"] == "not_checked"
 
 
 def test_state_check_strict_fresh_workspace_returns_zero(tmp_path):
@@ -198,9 +200,11 @@ def test_optional_feedback_artifacts_do_not_become_missing_after_auditor_complet
     assert registry["feedback_issues"]["status"] == "expected"
     assert registry["repair_plan"]["status"] == "expected"
     assert registry["delta_audit_report"]["status"] == "expected"
+    assert registry["quality_gate_report"]["status"] == "expected"
     assert registry["feedback_issues"]["validation_result"] == "not_checked"
     assert registry["repair_plan"]["validation_result"] == "not_checked"
     assert registry["delta_audit_report"]["validation_result"] == "not_checked"
+    assert registry["quality_gate_report"]["validation_result"] == "not_checked"
 
 
 def test_delta_audit_report_missing_only_when_repair_active(tmp_path):

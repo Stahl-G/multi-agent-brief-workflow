@@ -27,7 +27,7 @@ v0.6.0 引入公开安全的 contract references：
 - `configs/artifact_contracts.yaml`
 - `configs/policy_packs/default.yaml`
 
-这些文件描述共享 authority、decision vocabulary、stage order、artifact expectations 和 default policy shell。v0.6.1 增加最小 runtime state control files 和 artifact status checks。v0.6.2 增加最小 feedback issue 和 repair-plan 控制面，但不实现 automatic repair execution、自动改 brief artifacts 或 provenance graph。
+这些文件描述共享 authority、decision vocabulary、stage order、artifact expectations 和 default policy shell。v0.6.1 增加最小 runtime state control files 和 artifact status checks。v0.6.2 增加最小 feedback issue 和 repair-plan 控制面。v0.6.3 增加 deterministic material-fact、freshness 和 target-relevance gate controls。Python 仍不自动改 brief artifacts、不执行 repair、不 live-fetch sources、不做 semantic truth judgment，也不实现 provenance graph。
 
 ## 四类 Contract
 
@@ -49,7 +49,7 @@ Orchestrator 使用统一 decision vocabulary：
 - `block_run`
 - `finalize`
 
-在 v0.6.1 中，这些 decision 也可以通过 runtime state event log 记录。v0.6.2 也会记录 feedback issue 和 repair-plan events。这个 event log 是 control trace，不是完整 provenance graph。
+在 v0.6.1 中，这些 decision 也可以通过 runtime state event log 记录。v0.6.2 也会记录 feedback issue 和 repair-plan events。v0.6.3 也会记录 quality gate check/pass/block events。这个 event log 是 control trace，不是完整 provenance graph。
 
 ## Runtime Loop
 

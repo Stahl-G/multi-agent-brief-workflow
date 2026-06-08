@@ -40,3 +40,11 @@ v062_boundaries:
   bounded_repair_planning: deterministic_control_plan
   automatic_repair_execution: deferred
   semantic_repair_verification: deferred
+v063_boundaries:
+  quality_gates: deterministic_control_report
+  material_fact_gate: deterministic_claim_ledger_grounding
+  freshness_gate: deterministic_existing_metadata_only
+  target_relevance_gate: deterministic_workspace_context_check
+  live_market_quote_fetching: deferred
+  semantic_truth_judgment: deferred
+  automatic_source_recrawl: deferred
