@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import json
 from pathlib import Path
+from typing import Any
 
 from multi_agent_brief.core.schemas import Claim
 
@@ -45,7 +46,27 @@ class ClaimLedger:
     @classmethod
     def import_json(cls, path: str | Path) -> "ClaimLedger":
         data = json.loads(Path(path).read_text(encoding="utf-8"))
-        return cls([Claim.from_dict(item) for item in data])
+        claims_data = cls._claim_items_from_json(data)
+        return cls([Claim.from_dict(item) for item in claims_data])
+
+    @staticmethod
+    def _claim_items_from_json(data: Any) -> list[dict[str, Any]]:
+        if isinstance(data, list):
+            claims = data
+        elif isinstance(data, dict):
+            claims = None
+            for key in ("claims", "claim_ledger", "items"):
+                value = data.get(key)
+                if isinstance(value, list):
+                    claims = value
+                    break
+            if claims is None:
+                raise ValueError("Claim Ledger JSON object must contain a claims list.")
+        else:
+            raise ValueError("Claim Ledger JSON must be a list or an object containing a claims list.")
+        if not all(isinstance(item, dict) for item in claims):
+            raise ValueError("Claim Ledger claims must be JSON objects.")
+        return claims
 
     def detect_missing_sources(self) -> list[Claim]:
         return [
@@ -71,4 +92,3 @@ class ClaimLedger:
             if not claim.source_id.strip():
                 errors.append(f"{claim.claim_id}: missing source_id")
         return errors
-

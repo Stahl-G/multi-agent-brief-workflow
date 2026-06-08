@@ -149,6 +149,33 @@ def test_sufficient_claims_passes():
     assert not any(f.finding_type == "insufficient_claims" for f in report.findings)
 
 
+def test_sufficient_hyphenated_claim_refs_pass_claim_count():
+    ledger = ClaimLedger([
+        Claim(
+            claim_id=f"CLM-{i:03d}",
+            statement=f"Test claim {i}",
+            source_id=f"src_{i}",
+            evidence_text=f"Evidence for claim {i}",
+            metadata={"published_at": f"2026-06-{(i % 28) + 1:02d}"},
+        )
+        for i in range(20)
+    ])
+    cited_lines = "\n".join(f"- Claim {i} [src:CLM-{i:03d}]" for i in range(20))
+    markdown = f"# Brief\n\n## Executive Summary\n\n{cited_lines}\n"
+
+    config = FinalQualityConfig(
+        min_markdown_chars=0,
+        expected_summary_bullets=None,
+        required_metadata_labels=[],
+        min_selected_claims=20,
+        require_dates=True,
+    )
+    report = FinalQualityAuditAgent(config).run_audit(markdown, ledger)
+
+    assert not any(f.finding_type == "insufficient_claims" for f in report.findings)
+    assert not any(f.finding_type == "missing_date" for f in report.findings)
+
+
 def test_reader_brief_claim_count_uses_audited_context(tmp_path):
     """A stripped reader brief can pass claim checks via prepared_markdown."""
     ledger = _make_ledger_with_claims(25)

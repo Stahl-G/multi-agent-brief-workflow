@@ -22,6 +22,25 @@ def test_audit_passes_valid_reference():
     assert report.findings == []
 
 
+def test_audit_passes_hyphenated_claim_reference():
+    ledger = ClaimLedger(
+        [
+            Claim(
+                claim_id="CLM-001",
+                statement="The company announced a 2 GW capacity expansion.",
+                source_id="SRC",
+                evidence_text="The company announced a 2 GW capacity expansion.",
+            )
+        ]
+    )
+    markdown = "- The company announced a 2 GW capacity expansion. [src:CLM-001]"
+
+    report = run_deterministic_audit(markdown, ledger)
+
+    assert report.audit_status == "pass"
+    assert report.findings == []
+
+
 def test_audit_flags_orphan_reference():
     ledger = ClaimLedger()
     markdown = "- A claim appears here. [src:SRC_MISSING]"

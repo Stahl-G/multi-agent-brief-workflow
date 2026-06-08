@@ -81,6 +81,40 @@ def test_cli_audit_existing_brief(tmp_path):
     assert '"audit_status": "warning"' in audit_output.read_text(encoding="utf-8")
 
 
+def test_cli_audit_accepts_wrapped_ledger_and_hyphenated_claim_id(tmp_path):
+    brief = tmp_path / "brief.md"
+    ledger = tmp_path / "claim_ledger.json"
+    brief.write_text("Revenue grew 5%. [src:CLM-001]\n", encoding="utf-8")
+    ledger.write_text(
+        json.dumps(
+            {
+                "metadata": {"generated_by": "synthetic fixture"},
+                "claims": [
+                    {
+                        "claim_id": "CLM-001",
+                        "statement": "Revenue grew 5%.",
+                        "source_id": "SRC001",
+                        "evidence_text": "Revenue grew 5%.",
+                        "source_url": "https://example.com/report",
+                        "source_type": "manual",
+                        "claim_type": "fact",
+                        "confidence": "high",
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    audit_output = tmp_path / "audit.json"
+    exit_code = main(["audit", str(brief), "--ledger", str(ledger), "--output", str(audit_output)])
+
+    assert exit_code == 0
+    report = json.loads(audit_output.read_text(encoding="utf-8"))
+    assert report["audit_status"] == "pass"
+    assert report["findings"] == []
+
+
 def test_cli_version(capsys):
     assert main(["version"]) == 0
     captured = capsys.readouterr()

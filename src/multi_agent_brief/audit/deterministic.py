@@ -6,11 +6,11 @@ import re
 from multi_agent_brief.audit.redaction import scan_redaction_risks
 from multi_agent_brief.audit.interfaces import AuditAgentInterface
 from multi_agent_brief.audit.rule_packs import tag_finding
+from multi_agent_brief.core.citations import SRC_REF_PATTERN
 from multi_agent_brief.core.claim_ledger import ClaimLedger
 from multi_agent_brief.core.schemas import AuditFinding, AuditReport, PipelineContext
 
 
-SRC_REF_PATTERN = re.compile(r"\[src:([A-Z0-9_]{6,})\]")
 NUMBER_PATTERN = re.compile(r"(\$[\d,.]+|[\d,.]+%|\b\d+(?:\.\d+)?\s?(?:GW|GWh|MW|MWh|million|billion)\b)")
 
 

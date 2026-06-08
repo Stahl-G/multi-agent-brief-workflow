@@ -13,6 +13,7 @@ import yaml
 
 from multi_agent_brief.audit.deterministic import run_deterministic_audit
 from multi_agent_brief.audit.harness import QualityHarnessAuditAgent
+from multi_agent_brief.core.citations import SRC_REF_PATTERN
 from multi_agent_brief.core.claim_ledger import ClaimLedger
 from multi_agent_brief.core.schemas import AuditFinding
 from multi_agent_brief.orchestrator.runtime_state import (
@@ -594,7 +595,7 @@ def _target_relevance_findings(
         and str((claim.metadata or {}).get("importance", "")).lower() in {"high", "critical", "blocking", "direct"}
     ]
     if summary and target_claims and not reader_facing_mode:
-        refs = set(re.findall(r"\[src:([A-Z0-9_]{6,})\]", summary))
+        refs = set(SRC_REF_PATTERN.findall(summary))
         if not any(claim.claim_id in refs for claim in target_claims):
             findings.append(
                 _finding(

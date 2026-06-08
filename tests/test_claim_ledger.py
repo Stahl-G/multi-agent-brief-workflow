@@ -1,3 +1,5 @@
+import json
+
 from multi_agent_brief.core.claim_ledger import ClaimLedger
 from multi_agent_brief.core.schemas import Claim
 
@@ -32,3 +34,27 @@ def test_claim_ledger_detects_missing_sources():
     assert len(ledger.detect_missing_sources()) == 1
     assert ledger.validate_claims()
 
+
+def test_claim_ledger_import_accepts_manifest_wrapper(tmp_path):
+    path = tmp_path / "claim_ledger.json"
+    path.write_text(
+        json.dumps(
+            {
+                "metadata": {"generated_by": "synthetic fixture"},
+                "claims": [
+                    {
+                        "claim_id": "CLM-001",
+                        "statement": "Revenue increased 10%.",
+                        "source_id": "SOURCE_A",
+                        "evidence_text": "Revenue increased 10% in the synthetic source.",
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    ledger = ClaimLedger.import_json(path)
+
+    assert len(ledger) == 1
+    assert ledger.get_claim("CLM-001") is not None

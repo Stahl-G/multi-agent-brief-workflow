@@ -7,6 +7,7 @@ import re
 from multi_agent_brief.tools.draft_cleanup import strip_claim_citations
 from multi_agent_brief.audit.deterministic import parse_date
 from multi_agent_brief.audit.interfaces import AuditAgentInterface, recompute_report_status
+from multi_agent_brief.core.citations import SRC_REF_PATTERN
 from multi_agent_brief.core.claim_ledger import ClaimLedger
 from multi_agent_brief.core.schemas import AuditFinding, AuditReport, PipelineContext
 from multi_agent_brief.core.config import _as_bool
@@ -312,7 +313,7 @@ def _claim_count_findings(
         return []
     # Count claims that are actually cited in the markdown
     citation_markdown = _markdown_for_claim_refs(markdown, context)
-    cited_ids = set(re.findall(r"\[src:([A-Z0-9_]{6,})\]", citation_markdown))
+    cited_ids = set(SRC_REF_PATTERN.findall(citation_markdown))
     if len(cited_ids) >= config.min_selected_claims:
         return []
     if config.allow_quiet_week_exception and config.quiet_week:
@@ -386,7 +387,7 @@ def _date_requirement_findings(
         return []
 
     citation_markdown = _markdown_for_claim_refs(markdown, context)
-    cited_ids = set(re.findall(r"\[src:([A-Z0-9_]{6,})\]", citation_markdown))
+    cited_ids = set(SRC_REF_PATTERN.findall(citation_markdown))
     findings: list[AuditFinding] = []
     for claim in ledger:
         if claim.claim_id not in cited_ids:
@@ -409,7 +410,7 @@ def _date_requirement_findings(
 
 
 def _markdown_for_claim_refs(markdown: str, context: PipelineContext | None) -> str:
-    if re.search(r"\[src:[A-Z0-9_]{6,}\]", markdown):
+    if SRC_REF_PATTERN.search(markdown):
         return markdown
     audited = context.report_state.prepared_markdown if context else ""
     if audited and strip_claim_citations(audited).strip() == markdown.strip():

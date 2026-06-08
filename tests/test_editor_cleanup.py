@@ -65,6 +65,11 @@ class TestCleanProcessResidue:
         result = clean_process_residue(text)
         assert "[src:ABC123XYZ]" in result
 
+    def test_preserves_hyphenated_valid_citation(self):
+        text = "Important fact [src:CLM-001]"
+        result = clean_process_residue(text)
+        assert "[src:CLM-001]" in result
+
     def test_removes_residue_preserves_citation(self):
         text = "Fact [src:ABC123XYZ] [SRC:] Thought for 3s"
         result = clean_process_residue(text)
@@ -85,6 +90,11 @@ class TestValidateCitationsIntact:
     def test_all_citations_preserved(self):
         original = "Fact [src:ABC123XYZ] and [src:DEF456UVW]"
         cleaned = "Fact [src:ABC123XYZ] and [src:DEF456UVW]"
+        assert validate_citations_intact(original, cleaned) is True
+
+    def test_hyphenated_citation_preserved(self):
+        original = "Fact [src:CLM-001]"
+        cleaned = "Fact [src:CLM-001]"
         assert validate_citations_intact(original, cleaned) is True
 
     def test_citation_lost(self):

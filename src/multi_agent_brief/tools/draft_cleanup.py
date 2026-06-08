@@ -6,6 +6,8 @@ from __future__ import annotations
 
 import re
 
+from multi_agent_brief.core.citations import VALID_SRC_REF_PATTERN
+
 # Patterns that match internal process residue — must be removed from final text.
 _RESIDUE_PATTERNS: list[re.Pattern[str]] = [
     re.compile(r"\[SRC:\]"),
@@ -59,8 +61,8 @@ FINAL_CLEAN_PATTERNS: list[tuple[re.Pattern[str], str, str, str]] = [
      "Investment recommendation language found"),
 ]
 
-# Valid claim citation pattern: [src:CLAIM_ID] where CLAIM_ID is 6+ uppercase/digit/underscore.
-_VALID_SRC_REF = re.compile(r"\[src:[A-Z0-9_]{6,}\]")
+# Valid claim citation pattern: [src:CLAIM_ID] with stable alnum, underscore, or hyphen IDs.
+_VALID_SRC_REF = VALID_SRC_REF_PATTERN
 
 
 def clean_process_residue(text: str) -> str:

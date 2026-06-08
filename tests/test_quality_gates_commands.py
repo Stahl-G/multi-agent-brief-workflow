@@ -360,6 +360,39 @@ def test_explicit_reader_brief_skips_source_reference_material_gate(tmp_path, ca
     assert report["metadata"]["gate_artifact_id"] == "reader_brief"
 
 
+def test_auditable_brief_hyphenated_target_claim_ref_counts_for_summary(tmp_path, capsys):
+    ws = _write_workspace(tmp_path)
+    _write_ledger(ws, [
+        {
+            "claim_id": "CLM-001",
+            "statement": "TargetCo revenue was $42 million.",
+            "source_id": "SRC",
+            "evidence_text": "TargetCo revenue was $42 million.",
+            "metadata": {"importance": "high"},
+        }
+    ])
+    _write_audited_brief(
+        ws,
+        "## Executive Summary\nTargetCo revenue was $42 million. [src:CLM-001]\n",
+    )
+
+    rc = main([
+        "gates",
+        "check",
+        "--workspace",
+        str(ws),
+        "--repo-workdir",
+        str(ROOT),
+        "--json",
+    ])
+
+    assert rc == 0
+    report = json.loads(capsys.readouterr().out)["quality_gate_report"]
+    finding_types = {finding["finding_type"] for finding in report["findings"]}
+    assert "target_priority_claim_missing_from_summary" not in finding_types
+    assert "number_without_source" not in finding_types
+
+
 def test_reader_brief_missing_target_blocks_finalize_stage(tmp_path, capsys):
     ws = _write_workspace(tmp_path)
     _write_ledger(ws, [])
