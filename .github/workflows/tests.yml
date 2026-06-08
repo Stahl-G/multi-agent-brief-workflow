@@ -77,10 +77,30 @@ jobs:
           set -euo pipefail
           test -s docs/roadmap.md
           test -s docs/roadmap.zh-CN.md
-          grep -q "Explicit Orchestrator Contract" docs/roadmap.md
-          grep -q "Explicit Orchestrator Contract" docs/roadmap.zh-CN.md
-          grep -q "provenance_graph.json" docs/roadmap.md
-          grep -q "provenance_graph.json" docs/roadmap.zh-CN.md
+          grep -q "Orchestrator Contracts And Feedback Loop" docs/roadmap.md
+          grep -q "Planning Privacy" docs/roadmap.md
+          grep -q "Orchestrator Contracts And Feedback Loop" docs/roadmap.zh-CN.md
+          grep -q "规划保密边界" docs/roadmap.zh-CN.md
+          python3 - <<'PY'
+          from pathlib import Path
+
+          forbidden = [
+              "schema_version",
+              "tests/test_",
+              "feedback_issues.json",
+              "repair_plan.json",
+              "golden_cases",
+              "provenance_graph.json",
+              "policy_material_terms",
+          ]
+          for file_name in ("docs/roadmap.md", "docs/roadmap.zh-CN.md"):
+              text = Path(file_name).read_text(encoding="utf-8")
+              hits = [token for token in forbidden if token in text]
+              if hits:
+                  raise SystemExit(
+                      f"{file_name} contains internal planning details: {', '.join(hits)}"
+                  )
+          PY
 
   test:
     name: ${{ matrix.os }} / Python ${{ matrix.python-version }}
