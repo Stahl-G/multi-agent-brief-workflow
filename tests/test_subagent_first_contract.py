@@ -63,8 +63,13 @@ def test_agents_md_states_python_commands_are_support_tools():
     assert "subagent-first" in text
 
 
-def test_agents_md_stays_short():
-    assert len(Path("AGENTS.md").read_text(encoding="utf-8").splitlines()) <= 120
+def test_agents_md_stays_bounded_and_actionable():
+    text = Path("AGENTS.md").read_text(encoding="utf-8")
+    assert len(text.splitlines()) <= 220
+    assert "Environment Separation" in text
+    assert "Version And Release Semantics" in text
+    assert "Packaging And Install Paths" in text
+    assert "Common Validation" in text
 
 
 def test_agents_md_uses_standard_entry_path():
