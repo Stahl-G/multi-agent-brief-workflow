@@ -1,6 +1,19 @@
 # Hermes Delegate Task Sequence
 
-Hermes parent agents use `delegate_task` children for role work. Each child starts with a fresh context, so include the workspace path, inputs, output artifact path, role goal, and return summary requirements in the child context.
+The Hermes parent agent is the Orchestrator main agent. It uses `delegate_task` children for role work and Python CLI tools for setup, validation, and rendering. Each child starts with a fresh context, so include the workspace path, inputs, output artifact path, role goal, and return summary requirements in the child context.
+
+Read these contract references before delegation:
+
+- `configs/orchestrator_contract.yaml`
+- `configs/stage_specs.yaml`
+- `configs/artifact_contracts.yaml`
+- `configs/policy_packs/default.yaml`
+
+Control loop:
+
+```text
+Read workspace context -> read contract references -> identify the next stage -> delegate a specialist or Python tool -> check the expected artifact -> decide continue / retry_stage / delegate_repair / request_human_review / block_run / finalize.
+```
 
 ## Parent Responsibilities
 
@@ -10,8 +23,9 @@ Hermes parent agents use `delegate_task` children for role work. Each child star
 4. Run input governance when available.
 5. Create `output/intermediate/` when needed.
 6. Delegate child tasks in sequence.
-7. Verify each expected artifact exists and is non-empty before continuing.
-8. Run `multi-agent-brief finalize --config <workspace>/config.yaml` after audit readiness.
+7. Verify each expected artifact exists and is non-empty before selecting the next decision.
+8. Decide `continue`, `retry_stage`, `delegate_repair`, `request_human_review`, `block_run`, or `finalize`.
+9. Run `multi-agent-brief finalize --config <workspace>/config.yaml` after audit readiness.
 
 ## Child Task Templates
 

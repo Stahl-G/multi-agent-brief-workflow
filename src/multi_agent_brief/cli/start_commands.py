@@ -14,6 +14,12 @@ from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any
 
+from multi_agent_brief.orchestrator_contract import (
+    CONTRACT_REFERENCES,
+    ORCHESTRATOR_LOOP,
+    resolve_repo_workdir,
+)
+
 
 RUNTIME_AUTO = "auto"
 RUNTIME_HERMES = "hermes"
@@ -35,6 +41,7 @@ class AgentHandoff:
     next_steps: str = ""
     prompt: str = ""
     expected_artifacts: list[str] = field(default_factory=list)
+    contract_references: dict[str, str] = field(default_factory=lambda: dict(CONTRACT_REFERENCES))
     notes: list[str] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:
@@ -86,9 +93,8 @@ def _hermes_handoff(workspace: Path, repo: Path, venv: str) -> AgentHandoff:
         repo_workdir=str(repo.resolve()),
         venv_activate=venv,
         next_steps=(
-            "Paste the prompt below into Hermes to run the delegated brief workflow. "
-            "Hermes parent agent will orchestrate: "
-            "scout → screener → claim-ledger → analyst → editor → auditor → finalize."
+            "Paste the prompt below into Hermes. The Hermes parent agent is the "
+            "Orchestrator main agent and will run the contract-guided delegated workflow."
         ),
         prompt=prompt,
         expected_artifacts=[
@@ -102,6 +108,8 @@ def _hermes_handoff(workspace: Path, repo: Path, venv: str) -> AgentHandoff:
         notes=[
             "Install the MABW Hermes plugin: cp -R integrations/hermes-plugin/mabw ~/.hermes/plugins/mabw && hermes plugins enable mabw",
             "Then in Hermes: /mabw <workspace> → mabw_create_onboarding → mabw_init_workspace → mabw_run_handoff → read agent_handoff.md → continue delegated workflow.",
+            "Read configs/orchestrator_contract.yaml, configs/stage_specs.yaml, configs/artifact_contracts.yaml, and configs/policy_packs/default.yaml before delegation.",
+            f"Orchestrator loop: {ORCHESTRATOR_LOOP}",
             "Each delegate_task child needs complete goal, context, input paths, and output paths.",
             "Parent must verify each artifact before proceeding to the next child.",
         ],
@@ -115,9 +123,16 @@ def _claude_handoff(workspace: Path, repo: Path, venv: str) -> AgentHandoff:
         workspace=ws_path,
         repo_workdir=str(repo.resolve()),
         venv_activate=venv,
-        next_steps=f"In Claude Code, run: /generate-brief {ws_path}",
+        next_steps=f"In Claude Code, run: /generate-brief {ws_path}. The command context is the Orchestrator main agent.",
         prompt=(
-            f"Use /generate-brief {ws_path} to run the full subagent workflow:\n"
+            f"Use /generate-brief {ws_path} as the Orchestrator main-agent entrypoint.\n"
+            "Read contract references before delegation:\n"
+            "- configs/orchestrator_contract.yaml\n"
+            "- configs/stage_specs.yaml\n"
+            "- configs/artifact_contracts.yaml\n"
+            "- configs/policy_packs/default.yaml\n\n"
+            f"Orchestrator loop: {ORCHESTRATOR_LOOP}\n\n"
+            "Delegated stage order:\n"
             "scout → screener → claim-ledger → analyst → editor → auditor → finalize.\n\n"
             f"Repository: {repo.resolve()}\n"
             f"Workspace: {ws_path}\n"
@@ -131,7 +146,7 @@ def _claude_handoff(workspace: Path, repo: Path, venv: str) -> AgentHandoff:
         ],
         notes=[
             "Claude Code must be opened from the repository root.",
-            "The /generate-brief command handles the full subagent pipeline.",
+            "The /generate-brief command handles the Orchestrator-led delegated workflow.",
         ],
     )
 
@@ -143,12 +158,19 @@ def _opencode_handoff(workspace: Path, repo: Path, venv: str) -> AgentHandoff:
         workspace=ws_path,
         repo_workdir=str(repo.resolve()),
         venv_activate=venv,
-        next_steps=f"In OpenCode, use the generate-brief command to run the full subagent workflow for {ws_path}.",
+        next_steps=f"In OpenCode, use the generate-brief command for {ws_path}. brief-orchestrator is the primary Orchestrator main agent.",
         prompt=(
             f"Workspace: {ws_path}\n"
             f"Repository: {repo.resolve()}\n"
             f"Activate venv: source {venv}\n\n"
-            "Run the OpenCode generate-brief command. It will orchestrate:\n"
+            "Run the OpenCode generate-brief command through brief-orchestrator.\n"
+            "Read contract references before delegation:\n"
+            "- configs/orchestrator_contract.yaml\n"
+            "- configs/stage_specs.yaml\n"
+            "- configs/artifact_contracts.yaml\n"
+            "- configs/policy_packs/default.yaml\n\n"
+            f"Orchestrator loop: {ORCHESTRATOR_LOOP}\n\n"
+            "Delegated stage order:\n"
             "scout → screener → claim-ledger → analyst → editor → auditor → finalize."
         ),
         expected_artifacts=[
@@ -170,12 +192,19 @@ def _codex_handoff(workspace: Path, repo: Path, venv: str) -> AgentHandoff:
         workspace=ws_path,
         repo_workdir=str(repo.resolve()),
         venv_activate=venv,
-        next_steps=f"In Codex, invoke the generate-brief agent workflow for {ws_path}.",
+        next_steps=f"In Codex, invoke the Orchestrator-led agent workflow for {ws_path}.",
         prompt=(
             f"Workspace: {ws_path}\n"
             f"Repository: {repo.resolve()}\n"
             f"Activate venv: source {venv}\n\n"
-            "Codex agent roles are in .codex/agents/. Use the Codex agent workflow:\n"
+            "Codex agent roles are in .codex/agents/. Use the Orchestrator main-agent workflow.\n"
+            "Read contract references before delegation:\n"
+            "- configs/orchestrator_contract.yaml\n"
+            "- configs/stage_specs.yaml\n"
+            "- configs/artifact_contracts.yaml\n"
+            "- configs/policy_packs/default.yaml\n\n"
+            f"Orchestrator loop: {ORCHESTRATOR_LOOP}\n\n"
+            "Delegated stage order:\n"
             "scout → screener → claim-ledger → analyst → editor → auditor → finalize."
         ),
         expected_artifacts=[
@@ -198,13 +227,19 @@ def _manual_handoff(workspace: Path, repo: Path, venv: str) -> AgentHandoff:
         repo_workdir=str(repo.resolve()),
         venv_activate=venv,
         next_steps=(
-            "Manually run each subagent step. After all artifacts are ready, "
+            "Use the manual fallback as the Orchestrator main agent. After all artifacts are ready, "
             f"run: multi-agent-brief finalize --config {ws_path}/config.yaml"
         ),
         prompt=(
             f"Manual workflow for workspace: {ws_path}\n"
             f"Repository: {repo.resolve()}\n"
             f"Activate venv: source {venv}\n\n"
+            "Read contract references before delegation:\n"
+            "- configs/orchestrator_contract.yaml\n"
+            "- configs/stage_specs.yaml\n"
+            "- configs/artifact_contracts.yaml\n"
+            "- configs/policy_packs/default.yaml\n\n"
+            f"Orchestrator loop: {ORCHESTRATOR_LOOP}\n\n"
             "Run each step in order, verifying each artifact before continuing:\n\n"
             f"1. multi-agent-brief doctor --config {ws_path}/config.yaml\n"
             f"2. multi-agent-brief sources decide --config {ws_path}/config.yaml  (if configured)\n"
@@ -251,7 +286,7 @@ def build_handoff(
     run_doctor: bool = True,
 ) -> AgentHandoff:
     ws = Path(workspace).resolve()
-    repo = Path(repo_workdir).resolve()
+    repo = resolve_repo_workdir(repo_workdir, workspace=ws)
     venv_activate = venv or _find_venv_activate(repo)
 
     # resolve auto -> hermes in v0.5.5
@@ -309,6 +344,13 @@ def write_handoff_artifacts(handoff: AgentHandoff, workspace: Path) -> tuple[Pat
         "",
         handoff.next_steps,
         "",
+        "## Contract References",
+        "",
+    ]
+    for label, rel_path in handoff.contract_references.items():
+        md_content.append(f"- `{label}`: `{rel_path}`")
+    md_content.extend([
+        "",
         "## Prompt",
         "",
         "```text",
@@ -317,7 +359,7 @@ def write_handoff_artifacts(handoff: AgentHandoff, workspace: Path) -> tuple[Pat
         "",
         "## Expected Artifacts",
         "",
-    ]
+    ])
     for a in handoff.expected_artifacts:
         md_content.append(f"- `{a}`")
     md_content.append("")

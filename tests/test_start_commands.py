@@ -8,11 +8,16 @@ import yaml
 
 from multi_agent_brief.cli.main import main
 from multi_agent_brief.cli.start_commands import (
+    CONTRACT_REFERENCES,
     VALID_RUNTIMES,
     build_handoff,
     render_handoff_cli,
     write_handoff_artifacts,
 )
+from multi_agent_brief.orchestrator_contract import contract_references_exist
+
+
+ROOT = Path(__file__).resolve().parent.parent
 
 
 def _write_workspace(tmp_path: Path) -> Path:
@@ -50,6 +55,26 @@ manual:
         encoding="utf-8",
     )
     return ws
+
+
+def _assert_orchestrator_contract_handoff(data: dict[str, object]) -> None:
+    text = "\n".join(
+        str(data.get(key, ""))
+        for key in ("next_steps", "prompt", "notes")
+    )
+    assert data["contract_references"] == CONTRACT_REFERENCES
+    assert "Orchestrator main agent" in text or "Orchestrator main-agent" in text
+    assert "configs/orchestrator_contract.yaml" in text
+    assert "configs/stage_specs.yaml" in text
+    assert "configs/artifact_contracts.yaml" in text
+    assert "configs/policy_packs/default.yaml" in text
+    assert "retry_stage" in text
+    assert "request_human_review" in text
+    assert "block_run" in text
+    repo = Path(str(data["repo_workdir"]))
+    assert contract_references_exist(repo)
+    for rel_path in data["contract_references"].values():
+        assert (repo / str(rel_path)).exists()
 
 
 # ---------------------------------------------------------------------------
@@ -114,7 +139,11 @@ def test_start_auto_detects_workspace_in_cwd(tmp_path, monkeypatch):
     rc = main(["start", "--skip-doctor"])
     assert rc == 0
     assert (ws / "output" / "intermediate" / "agent_handoff.md").exists()
-    assert (ws / "output" / "intermediate" / "agent_handoff.json").exists()
+    json_path = ws / "output" / "intermediate" / "agent_handoff.json"
+    assert json_path.exists()
+    data = json.loads(json_path.read_text(encoding="utf-8"))
+    assert Path(data["repo_workdir"]).resolve() == ROOT
+    _assert_orchestrator_contract_handoff(data)
 
 
 # ---------------------------------------------------------------------------
@@ -138,6 +167,7 @@ def test_start_with_workspace_generates_handoff(tmp_path):
 
     data = json.loads(js.read_text(encoding="utf-8"))
     assert data["runtime"] == "hermes"
+    _assert_orchestrator_contract_handoff(data)
 
 
 def test_start_does_not_generate_brief(tmp_path):
@@ -174,6 +204,7 @@ def test_start_hermes_handoff_contains_delegate_task(tmp_path):
     assert "scout" in data["prompt"]
     assert "auditor" in data["prompt"]
     assert "multi-agent-brief finalize" in data["prompt"]
+    _assert_orchestrator_contract_handoff(data)
 
 
 def test_start_hermes_output_no_generate_brief(tmp_path, capsys):
@@ -223,6 +254,7 @@ def test_start_manual_handoff_contains_artifact_contract(tmp_path):
     data = json.loads((ws / "output" / "intermediate" / "agent_handoff.json").read_text(encoding="utf-8"))
     assert "candidate_claims.json" in data["prompt"]
     assert "multi-agent-brief finalize" in data["prompt"]
+    _assert_orchestrator_contract_handoff(data)
 
 
 # ---------------------------------------------------------------------------
@@ -256,7 +288,7 @@ def test_build_handoff_hermes_has_delegate_task(tmp_path):
     ws = _write_workspace(tmp_path)
     handoff = build_handoff(
         workspace=ws,
-        repo_workdir=tmp_path,
+        repo_workdir=ROOT,
         runtime="hermes",
         venv="/tmp/.venv/bin/activate",
         run_doctor=False,
@@ -266,18 +298,20 @@ def test_build_handoff_hermes_has_delegate_task(tmp_path):
     assert "scout" in handoff.prompt
     assert "auditor" in handoff.prompt
     assert "/generate-brief" not in handoff.prompt
+    _assert_orchestrator_contract_handoff(handoff.to_dict())
 
 
 def test_build_handoff_claude_has_generate_brief(tmp_path):
     ws = _write_workspace(tmp_path)
     handoff = build_handoff(
         workspace=ws,
-        repo_workdir=tmp_path,
+        repo_workdir=ROOT,
         runtime="claude",
         venv="/tmp/.venv/bin/activate",
         run_doctor=False,
     )
     assert "/generate-brief" in handoff.prompt
+    _assert_orchestrator_contract_handoff(handoff.to_dict())
 
 
 def test_build_handoff_unknown_runtime_raises(tmp_path):
@@ -285,7 +319,7 @@ def test_build_handoff_unknown_runtime_raises(tmp_path):
     try:
         build_handoff(
             workspace=ws,
-            repo_workdir=tmp_path,
+            repo_workdir=ROOT,
             runtime="nonexistent",
             run_doctor=False,
         )
@@ -300,7 +334,7 @@ def test_build_handoff_all_runtimes_valid(tmp_path):
     for runtime in VALID_RUNTIMES:
         handoff = build_handoff(
             workspace=ws,
-            repo_workdir=tmp_path,
+            repo_workdir=ROOT,
             runtime=runtime,
             run_doctor=False,
         )
@@ -311,6 +345,7 @@ def test_build_handoff_all_runtimes_valid(tmp_path):
             assert handoff.runtime == runtime
         assert len(handoff.expected_artifacts) >= 2
         assert len(handoff.prompt) > 50
+        _assert_orchestrator_contract_handoff(handoff.to_dict())
 
 
 # ---------------------------------------------------------------------------
@@ -321,7 +356,7 @@ def test_write_handoff_artifacts_writes_both_files(tmp_path):
     ws = _write_workspace(tmp_path)
     handoff = build_handoff(
         workspace=ws,
-        repo_workdir=tmp_path,
+        repo_workdir=ROOT,
         runtime="hermes",
         run_doctor=False,
     )
@@ -332,16 +367,19 @@ def test_write_handoff_artifacts_writes_both_files(tmp_path):
     assert json_path.exists()
     md_content = md_path.read_text(encoding="utf-8")
     assert "# Agent Handoff" in md_content
+    assert "## Contract References" in md_content
+    assert "`orchestrator_contract`: `configs/orchestrator_contract.yaml`" in md_content
     assert "delegate_task" in md_content
     data = json.loads(json_path.read_text(encoding="utf-8"))
     assert data["runtime"] == "hermes"
+    _assert_orchestrator_contract_handoff(data)
 
 
 def test_render_handoff_cli_contains_runtime(tmp_path):
     ws = _write_workspace(tmp_path)
     handoff = build_handoff(
         workspace=ws,
-        repo_workdir=tmp_path,
+        repo_workdir=ROOT,
         runtime="opencode",
         run_doctor=False,
     )
@@ -380,6 +418,7 @@ def test_run_default_auto_resolves_to_hermes(tmp_path):
     assert data["runtime"] == "hermes"
     assert "delegate_task" in data["prompt"]
     assert "/generate-brief" not in data["prompt"]
+    _assert_orchestrator_contract_handoff(data)
 
 
 def test_run_claude_contains_generate_brief(tmp_path):

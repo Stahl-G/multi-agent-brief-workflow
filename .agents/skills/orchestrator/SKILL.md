@@ -3,21 +3,21 @@ name: orchestrator
 description: Coordinates MABW runtime handoff and artifact sequencing across roles. Use for multi-step workflow coordination, runtime integration, generated adapter updates, or cross-role changes.
 ---
 
-# Orchestrator Skill Contract
+# Orchestrator Main-Agent Contract
 
 ## Scope
 
-This is a runtime skill contract. It describes the capability and artifact contract for this role.
+This is the runtime main-agent skill contract. It describes how the Orchestrator controls delegated MABW stages through contract references and artifact handoffs.
 
 It is not the platform-specific subagent definition. Claude Code subagents live in `.claude/agents/`; OpenCode subagents live in `.opencode/agents/`; Codex custom agents live in `.codex/agents/`; Hermes child tasks are created through `delegate_task`.
 
 ## Purpose
 
-Coordinate runtime handoff and role sequencing across MABW workflows.
+Act as the runtime main agent for MABW workflows. Coordinate specialist subagents, Python tool calls, stage decisions, expected artifacts, and handoff readiness.
 
 ## Use When
 
-Use for multi-step workflow coordination, runtime integration, generated adapter config updates, or cross-role changes.
+Use for runtime handoff, Orchestrator contract changes, generated adapter config updates, cross-role integration, or workflow-control changes.
 
 ## Inputs
 
@@ -26,23 +26,32 @@ Use for multi-step workflow coordination, runtime integration, generated adapter
 - `config.yaml`
 - `sources.yaml`
 - `user.md`
+- `configs/orchestrator_contract.yaml`
+- `configs/stage_specs.yaml`
+- `configs/artifact_contracts.yaml`
+- selected policy pack
 - intermediate artifact status
 
 ## Outputs
 
 - workflow plan
 - runtime handoff updates
+- Orchestrator decision summary
 - implementation checklist
 - test plan
 
 ## Work
 
 - Use multi-agent-brief run --workspace <workspace> as the standard launcher.
+- Read shared contract references before stage delegation.
 - Keep role handoffs artifact-based.
-- Coordinate source-planner, scout, screener, claim-ledger, analyst, editor, auditor, and formatter.
+- Coordinate source-planner, scout, screener, claim-ledger, analyst, editor, auditor, and formatter as delegated specialists.
+- Check expected artifacts after each delegated stage.
+- Make stage decisions with continue, retry_stage, delegate_repair, request_human_review, block_run, and finalize.
+- Keep Python positioned as tools, validators, and renderers.
 - Update generation sources when generated platform adapter files change.
 - Run focused tests for changed areas.
 
 ## Handoff
 
-Return the next role, expected artifact, and validation command.
+Return the next stage, delegated role, expected artifact, decision, reason summary, and validation command or tool check.

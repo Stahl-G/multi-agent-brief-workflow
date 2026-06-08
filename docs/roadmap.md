@@ -81,6 +81,12 @@ Public sequencing:
 - v0.6.4: public-safe evaluation cases from real failure patterns.
 - v0.6.5: evidence and execution provenance graph.
 
+Public implementation overviews:
+
+- [Implementation overview index](implementation/README.md)
+- [v0.5.9 Orchestrator Contract Preparation](implementation/v0.5.9-orchestrator-prep.md)
+- [v0.6.0 Explicit Orchestrator Contract](implementation/v0.6.0-explicit-orchestrator-contract.md)
+
 Non-goals:
 
 - no full DAG runtime

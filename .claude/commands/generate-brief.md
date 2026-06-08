@@ -1,11 +1,24 @@
 ---
-description: Generate a real source-grounded brief using explicit Claude Code subagents
+description: Generate a real source-grounded brief through the Orchestrator main agent and explicit Claude Code subagents
 argument-hint: "<workspace-path>"
 ---
 
-You are generating a real user-facing brief for workspace: $ARGUMENTS.
+You are the Orchestrator main agent generating a real user-facing brief for workspace: $ARGUMENTS.
 
 MABW uses an external subagent workflow. Python CLI commands provide setup, source planning, validation, audit checks, and final rendering tools.
+
+Read shared contract references before delegation:
+
+- `configs/orchestrator_contract.yaml`
+- `configs/stage_specs.yaml`
+- `configs/artifact_contracts.yaml`
+- `configs/policy_packs/default.yaml`
+
+Orchestrator control loop:
+
+```text
+Read workspace context -> read contract references -> identify the next stage -> delegate a specialist or Python tool -> check the expected artifact -> decide continue / retry_stage / delegate_repair / request_human_review / block_run / finalize.
+```
 
 Follow this sequence:
 
@@ -36,14 +49,17 @@ Follow this sequence:
    - Read approved workspace sources, evidence inputs, and cached packages.
    - Extract candidate reportable items.
    - Write `$ARGUMENTS/output/intermediate/candidate_claims.json`.
+   - Check the expected artifact before selecting the next decision.
 
 6. Invoke the **screener** subagent:
    - Rank, deduplicate, freshness-check, and capacity-cap candidate items.
    - Write `$ARGUMENTS/output/intermediate/screened_candidates.json`.
+   - Check the expected artifact before selecting the next decision.
 
 7. Invoke the **claim-ledger** subagent:
    - Convert screened candidates into stable, source-grounded claims.
    - Write `$ARGUMENTS/output/intermediate/claim_ledger.json`.
+   - Check the expected artifact before selecting the next decision.
 
 8. **Market & Competitor Module (if enabled):**
    - Check whether `$ARGUMENTS/competitor_universe.yaml` has non-empty entities.
@@ -56,16 +72,19 @@ Follow this sequence:
    - Preserve valid `[src:CLAIM_ID]` citations.
    - Include dates for news items.
    - Write `$ARGUMENTS/output/intermediate/audited_brief.md`.
+   - Check the expected artifact before selecting the next decision.
 
 10. Invoke the **editor** subagent:
     - Polish for management or research-team readability.
     - Clean invalid citation markers and process residue.
     - Preserve valid `[src:CLAIM_ID]` citations in `audited_brief.md`.
+    - Check the expected artifact before selecting the next decision.
 
 11. Invoke the **auditor** subagent:
     - Audit `$ARGUMENTS/output/intermediate/audited_brief.md` against `$ARGUMENTS/output/intermediate/claim_ledger.json`.
     - Check citation support, numbers, dates, advice language, and process residue.
     - Write or update `$ARGUMENTS/output/intermediate/audit_report.json`.
+    - Check the expected artifact before selecting the next decision.
 
 12. Invoke the **formatter** subagent / finalize tool:
     - Run `multi-agent-brief finalize --config $ARGUMENTS/config.yaml`.

@@ -549,6 +549,7 @@ multi-agent-brief sources decide --config ../mabw-workspace/config.yaml --merge
 * [当前架构状态](docs/architecture-status.zh-CN.md)
 * [迁移说明](docs/MIGRATION.zh-CN.md)
 * [Orchestrator Contract 模型](docs/orchestrator-contracts.zh-CN.md)
+* [Orchestrator 架构](docs/orchestrator-architecture.zh-CN.md)
 * [Claude Code 工作流](docs/claude-code-workflow.md)
 * [Claude Code 快速开始](docs/claude-code-quickstart.md)
 * [Agent 协作设计](docs/agent-collaboration.md)
@@ -576,7 +577,7 @@ multi-agent-brief sources decide --config ../mabw-workspace/config.yaml --merge
 
 v2.0 不作为短期主路径。v1.0 冻结后，再探索 Shared World、Event Store、TaskBoard、AgentMessage、ClaimProposal / ClaimReducer、run replay 和最小协调协议。
 
-公开路线图见 [docs/roadmap.zh-CN.md](docs/roadmap.zh-CN.md)，v2.0 技术评估见 [docs/mas-v2-evaluation.zh-CN.md](docs/mas-v2-evaluation.zh-CN.md)。详细实现规划、schema 草案、私有评测样例和商业场景设计不会放进公开仓库，直到对应能力稳定并适合发布。
+公开路线图见 [docs/roadmap.zh-CN.md](docs/roadmap.zh-CN.md)，v0.6 控制模型见 [docs/orchestrator-architecture.zh-CN.md](docs/orchestrator-architecture.zh-CN.md)，v2.0 技术评估见 [docs/mas-v2-evaluation.zh-CN.md](docs/mas-v2-evaluation.zh-CN.md)。v0.6.0 只建立共享 Orchestrator authority、decision vocabulary、contract references 和 runtime role parity；它不表示已经实现持久化 runtime state、artifact registry 执行或 provenance graph。详细实现规划、schema 草案、私有评测样例和商业场景设计不会放进公开仓库，直到对应能力稳定并适合发布。
 
 ---
 

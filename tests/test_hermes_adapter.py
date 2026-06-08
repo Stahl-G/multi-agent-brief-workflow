@@ -83,6 +83,9 @@ def test_build_hermes_cron_plan_has_daily_weekly_monthly(tmp_path: Path):
     assert weekly.context_from == [plan.jobs[0].name]
     assert "Hermes-native delegated" in weekly.prompt
     assert "delegate_task" in weekly.prompt
+    assert "Orchestrator main agent" in weekly.prompt
+    assert "configs/orchestrator_contract.yaml" in weekly.prompt
+    assert "retry_stage" in weekly.prompt
     assert "scout" in weekly.prompt
     assert "auditor" in weekly.prompt
     assert "finalize" in weekly.prompt
@@ -93,6 +96,9 @@ def test_build_hermes_cron_plan_has_daily_weekly_monthly(tmp_path: Path):
     assert monthly.context_from == [plan.jobs[0].name]
     assert "Hermes-native delegated" in monthly.prompt
     assert "delegate_task" in monthly.prompt
+    assert "Orchestrator main agent" in monthly.prompt
+    assert "configs/orchestrator_contract.yaml" in monthly.prompt
+    assert "request_human_review" in monthly.prompt
     assert "month-level patterns" in monthly.prompt.lower()
 
     # Shared properties
@@ -108,6 +114,13 @@ def test_hermes_skill_uses_delegate_task_runtime():
     skill = render_hermes_skill()
     assert "delegate_task" in skill
     assert "Hermes-native delegated" in skill
+    assert "Orchestrator main agent" in skill
+    assert "configs/orchestrator_contract.yaml" in skill
+    assert "configs/stage_specs.yaml" in skill
+    assert "configs/artifact_contracts.yaml" in skill
+    assert "retry_stage" in skill
+    assert "request_human_review" in skill
+    assert "block_run" in skill
     assert "scout" in skill
     assert "screener" in skill
     assert "claim-ledger" in skill
@@ -169,6 +182,13 @@ def test_hermes_prompt_keeps_user_inside_hermes():
     )
     assert "delegate_task" in prompt
     assert "Hermes" in prompt
+    assert "Orchestrator main agent" in prompt
+    assert "configs/orchestrator_contract.yaml" in prompt
+    assert "configs/stage_specs.yaml" in prompt
+    assert "configs/artifact_contracts.yaml" in prompt
+    assert "retry_stage" in prompt
+    assert "request_human_review" in prompt
+    assert "block_run" in prompt
     assert "scout" in prompt
     assert "screener" in prompt
     assert "claim-ledger" in prompt
@@ -190,6 +210,7 @@ def test_hermes_setup_next_step_is_hermes_native():
     )
     assert "multi-agent-brief hermes prompt" in text
     assert "multi-agent-brief hermes install-skill" in text
+    assert "Orchestrator main agent" in text
     assert "delegate" in text.lower()
     assert "/generate-brief" not in text
     assert "Claude Code" not in text
@@ -308,6 +329,9 @@ def test_cli_hermes_prompt_output_contains_workflow_steps(capsys, tmp_path: Path
     captured = capsys.readouterr()
     output = captured.out
     assert "delegate_task" in output
+    assert "Orchestrator main agent" in output
+    assert "configs/orchestrator_contract.yaml" in output
+    assert "retry_stage" in output
     assert "scout" in output
     assert "multi-agent-brief finalize" in output
     assert "/generate-brief" not in output
@@ -340,3 +364,6 @@ def test_hermes_skill_contains_onboarding_workflow():
     assert "multi-agent-brief init <workspace> --from-onboarding onboarding.json" in content
     assert "multi-agent-brief run --workspace <workspace>" in content
     assert "delegate_task" in content
+    assert "Orchestrator main agent" in content
+    assert "configs/orchestrator_contract.yaml" in content
+    assert "retry_stage" in content

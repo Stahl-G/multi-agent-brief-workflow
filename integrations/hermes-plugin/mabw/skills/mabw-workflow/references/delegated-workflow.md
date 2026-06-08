@@ -1,12 +1,26 @@
 # Delegated Workflow
 
-After `mabw_run_handoff` writes `agent_handoff.md`, continue in Hermes as the parent agent.
+After `mabw_run_handoff` writes `agent_handoff.md`, continue in Hermes as the Orchestrator main agent.
+
+Read these contract references before delegation:
+
+- `configs/orchestrator_contract.yaml`
+- `configs/stage_specs.yaml`
+- `configs/artifact_contracts.yaml`
+- `configs/policy_packs/default.yaml`
+
+Control loop:
+
+```text
+Read workspace context -> read contract references -> identify the next stage -> delegate a specialist or Python tool -> check the expected artifact -> decide continue / retry_stage / delegate_repair / request_human_review / block_run / finalize.
+```
 
 ## Sequence
 
 ```text
-source discovery when configured
-→ doctor
+doctor
+→ source discovery when configured
+→ input governance when available
 → scout
 → screener
 → claim-ledger
@@ -18,7 +32,7 @@ source discovery when configured
 
 ## Artifact Handoff
 
-Each step should check the expected artifact path before continuing.
+Each step should check the expected artifact path before selecting the next decision.
 
 - scout writes `output/intermediate/candidate_claims.json`
 - screener writes `output/intermediate/screened_candidates.json`

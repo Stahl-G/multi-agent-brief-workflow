@@ -9,6 +9,21 @@ description: Runs Multi-Agent Brief Workflow inside Hermes from chat-collected o
 
 Use this skill to run Multi-Agent Brief Workflow through Hermes without relying on an interactive terminal wizard.
 
+The Hermes parent agent is the Orchestrator main agent. It reads shared contract references, controls delegated stages, checks expected artifacts, and selects the next workflow decision.
+
+Contract references:
+
+- `configs/orchestrator_contract.yaml`
+- `configs/stage_specs.yaml`
+- `configs/artifact_contracts.yaml`
+- `configs/policy_packs/default.yaml`
+
+Orchestrator control loop:
+
+```text
+Read workspace context -> read contract references -> identify the next stage -> delegate a specialist or Python tool -> check the expected artifact -> decide continue / retry_stage / delegate_repair / request_human_review / block_run / finalize.
+```
+
 ## Workflow
 
 1. Collect the brief profile in chat.
@@ -16,7 +31,7 @@ Use this skill to run Multi-Agent Brief Workflow through Hermes without relying 
 3. Call `mabw_init_workspace`.
 4. Call `mabw_run_handoff`.
 5. Read `agent_handoff.md`.
-6. Continue the delegated workflow with Hermes child tasks.
+6. Continue the Orchestrator-led delegated workflow with Hermes child tasks.
 
 ## Brief Profile Fields
 
@@ -35,7 +50,7 @@ Use this skill to run Multi-Agent Brief Workflow through Hermes without relying 
 ## Delegated Workflow
 
 ```text
-scout → screener → claim-ledger → analyst → editor → auditor → finalize
+doctor → source discovery when configured → input governance when available → scout → screener → claim-ledger → analyst → editor → auditor → finalize
 ```
 
 ## References

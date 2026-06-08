@@ -6,7 +6,7 @@
 
         Located in `.opencode/agents/` with `brief-` prefix:
 
-        - `brief-orchestrator.md` — Coordinates Scout, Screener, Claim Ledger, Analyst, Editor, Auditor, Formatter, and harness-specific review agents.
+        - `brief-orchestrator.md` — Acts as the runtime main agent that controls delegated MABW stages, contract references, decisions, and artifact handoffs.
 - `brief-source-provider.md` — Configures, validates, and collects information sources from manual inputs, RSS feeds, web search, APIs, and MCP/CLI tools.
 - `brief-source-planner.md` — Reads user.md, config.yaml, and sources.yaml to generate or refine source_candidates.yaml and search_tasks. Ensures all sources are public, citable, and timestamped.
 - `brief-scout.md` — Extracts candidate reportable items from local markdown, text, JSON, and future connector sources.

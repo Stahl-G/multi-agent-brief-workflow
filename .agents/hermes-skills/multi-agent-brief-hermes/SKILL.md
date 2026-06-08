@@ -20,6 +20,21 @@ metadata:
 
 This skill is the Hermes runtime contract for MABW. It applies when Hermes is asked to set up, schedule, or run a MABW workspace.
 
+The Hermes parent agent is the Orchestrator main agent. It reads shared contract references, controls delegated stages, checks expected artifacts, and selects the next workflow decision.
+
+Contract references:
+
+- `configs/orchestrator_contract.yaml`
+- `configs/stage_specs.yaml`
+- `configs/artifact_contracts.yaml`
+- `configs/policy_packs/default.yaml`
+
+Orchestrator control loop:
+
+```text
+Read workspace context -> read contract references -> identify the next stage -> delegate a specialist or Python tool -> check the expected artifact -> decide continue / retry_stage / delegate_repair / request_human_review / block_run / finalize.
+```
+
 ## Use When
 
 Use this skill when the user asks Hermes to:

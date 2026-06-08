@@ -81,6 +81,12 @@ Non-goals:
 - v0.6.4：real failure patterns 抽象出的 public-safe evaluation cases。
 - v0.6.5：evidence and execution provenance graph。
 
+公开实施概览：
+
+- [Implementation overview index](implementation/README.md)
+- [v0.5.9 Orchestrator Contract Preparation](implementation/v0.5.9-orchestrator-prep.md)
+- [v0.6.0 Explicit Orchestrator Contract](implementation/v0.6.0-explicit-orchestrator-contract.md)
+
 Non-goals:
 
 - 不实现完整 DAG runtime。

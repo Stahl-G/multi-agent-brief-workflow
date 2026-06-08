@@ -115,6 +115,23 @@ def test_claude_agents_have_frontmatter(manifest):
         assert "model:" in content
 
 
+def test_generated_orchestrator_is_main_agent(manifest):
+    role = manifest["roles"]["orchestrator"]
+    codex = render_codex_agent("orchestrator", role, manifest)
+    claude = render_claude_agent("orchestrator", role, manifest)
+    opencode = render_opencode_agent("orchestrator", role, manifest)
+
+    for content in (codex, claude, opencode):
+        assert "Orchestrator main agent" in content
+        assert "Orchestrator control loop" in content
+        assert "contract references" in content.lower() or "configs/orchestrator_contract.yaml" in content
+        assert "retry_stage" in content
+        assert "request_human_review" in content
+        assert "block_run" in content
+
+    assert "You are the Orchestrator subagent" not in claude
+
+
 def test_claude_read_only_agents_no_edit_tools(manifest):
     profiles = manifest["tool_profiles"]
     for name, role in manifest["roles"].items():
@@ -253,6 +270,10 @@ def test_opencode_command_has_correct_agent(manifest):
     assert "agent: brief-orchestrator" in content
     assert "subtask: false" in content
     assert "$ARGUMENTS" in content
+    assert "Orchestrator main agent" in content
+    assert "configs/orchestrator_contract.yaml" in content
+    assert "Check the expected artifact before continuing" in content
+    assert "retry_stage" in content
 
 
 def test_opencode_jsonc_is_valid(manifest):

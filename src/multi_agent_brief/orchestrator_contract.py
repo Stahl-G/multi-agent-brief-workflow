@@ -1,0 +1,84 @@
+"""Shared Orchestrator contract constants for runtime entrypoints."""
+
+from __future__ import annotations
+
+from pathlib import Path
+
+
+CONTRACT_REFERENCES = {
+    "orchestrator_contract": "configs/orchestrator_contract.yaml",
+    "stage_specs": "configs/stage_specs.yaml",
+    "artifact_contracts": "configs/artifact_contracts.yaml",
+    "default_policy_pack": "configs/policy_packs/default.yaml",
+}
+
+DECISION_VOCABULARY = (
+    "continue",
+    "retry_stage",
+    "delegate_repair",
+    "request_human_review",
+    "block_run",
+    "finalize",
+)
+
+ORCHESTRATOR_LOOP = (
+    "Read workspace context -> read contract references -> identify the next stage -> "
+    "delegate a specialist or Python tool -> check the expected artifact -> decide "
+    f"{' / '.join(DECISION_VOCABULARY)}."
+)
+
+
+def contract_reference_bullets() -> str:
+    return "\n".join(f"- {path}" for path in CONTRACT_REFERENCES.values())
+
+
+def contract_references_exist(repo_workdir: str | Path) -> bool:
+    repo = Path(repo_workdir).expanduser().resolve()
+    return all((repo / rel_path).exists() for rel_path in CONTRACT_REFERENCES.values())
+
+
+def is_source_repo(repo_workdir: str | Path) -> bool:
+    repo = Path(repo_workdir).expanduser().resolve()
+    return (
+        (repo / "pyproject.toml").exists()
+        and (repo / "src" / "multi_agent_brief").exists()
+        and contract_references_exist(repo)
+    )
+
+
+def _candidate_parents(start: Path) -> list[Path]:
+    resolved = start.expanduser().resolve()
+    return [resolved, *resolved.parents]
+
+
+def resolve_repo_workdir(
+    repo_workdir: str | Path | None = None,
+    *,
+    workspace: str | Path | None = None,
+) -> Path:
+    """Resolve the source repo that owns the shared Orchestrator contracts."""
+    starts: list[Path] = []
+    if repo_workdir is not None:
+        starts.append(Path(repo_workdir))
+    else:
+        starts.append(Path.cwd())
+        if workspace is not None:
+            starts.append(Path(workspace))
+
+        package_path = Path(__file__).resolve()
+        starts.extend(package_path.parents)
+
+    seen: set[Path] = set()
+    for start in starts:
+        for candidate in _candidate_parents(start):
+            if candidate in seen:
+                continue
+            seen.add(candidate)
+            if is_source_repo(candidate):
+                return candidate
+
+    checked = ", ".join(str(path.expanduser().resolve()) for path in starts)
+    raise ValueError(
+        "Could not resolve the MABW source repo with Orchestrator contract files. "
+        f"Checked: {checked}. Pass --repo-workdir pointing to the source repository root."
+    )

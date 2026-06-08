@@ -72,3 +72,15 @@ def test_agents_md_uses_standard_entry_path():
     assert "multi-agent-brief onboard" in text
     assert "multi-agent-brief init <workspace> --from-onboarding onboarding.json" in text
     assert "multi-agent-brief run --workspace <workspace>" in text
+
+
+def test_claude_generate_brief_command_uses_orchestrator_contract():
+    text = _read(".claude/commands/generate-brief.md")
+    assert "Orchestrator main agent" in text
+    assert "configs/orchestrator_contract.yaml" in text
+    assert "configs/stage_specs.yaml" in text
+    assert "configs/artifact_contracts.yaml" in text
+    assert "retry_stage" in text
+    assert "request_human_review" in text
+    assert "block_run" in text
+    assert "Check the expected artifact" in text

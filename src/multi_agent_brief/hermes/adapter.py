@@ -6,6 +6,8 @@ from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any
 
+from multi_agent_brief.orchestrator_contract import ORCHESTRATOR_LOOP, contract_reference_bullets
+
 HERMES_SKILL_NAME = "multi-agent-brief-hermes"
 DEFAULT_DAILY_SCHEDULE = "0 7 * * *"
 DEFAULT_WEEKLY_SCHEDULE = "0 9 * * 1"
@@ -147,9 +149,12 @@ def build_hermes_cron_plan(
             context_from=[daily_job.name],
             purpose="Run the audited weekly brief workflow using Hermes delegate_task children.",
             prompt=(
-                "Run a Hermes-native delegated MABW brief workflow.\n\n"
+                "Run a Hermes-native delegated MABW brief workflow as the Orchestrator main agent.\n\n"
                 f"{prompt_context}\n\n"
                 "Use the multi-agent-brief-hermes skill.\n"
+                "Read contract references before delegation:\n"
+                f"{contract_reference_bullets()}\n\n"
+                f"Orchestrator loop: {ORCHESTRATOR_LOOP}\n"
                 "Run doctor, then use Hermes delegate_task children for:\n"
                 "scout -> screener -> claim-ledger -> analyst -> editor -> auditor.\n"
                 "After the audit artifact is ready, run finalize and report artifact paths."
@@ -166,9 +171,12 @@ def build_hermes_cron_plan(
             context_from=[daily_job.name],
             purpose="Run the audited monthly brief workflow using Hermes delegate_task children.",
             prompt=(
-                "Run a Hermes-native delegated MABW brief workflow.\n\n"
+                "Run a Hermes-native delegated MABW brief workflow as the Orchestrator main agent.\n\n"
                 f"{prompt_context}\n\n"
                 "Use the multi-agent-brief-hermes skill.\n"
+                "Read contract references before delegation:\n"
+                f"{contract_reference_bullets()}\n\n"
+                f"Orchestrator loop: {ORCHESTRATOR_LOOP}\n"
                 "Favor month-level patterns over daily noise.\n"
                 "Run doctor, then use Hermes delegate_task children for:\n"
                 "scout -> screener -> claim-ledger -> analyst -> editor -> auditor.\n"
@@ -280,7 +288,20 @@ Use this skill to run Multi-Agent Brief Workflow workspaces inside Hermes using 
 
 ## Operating Model
 
-Hermes is a native MABW runtime. The Hermes parent agent manages orchestration, artifact handoff, and gate checks. Hermes `delegate_task` children run scout, screener, claim-ledger, analyst, editor, and auditor tasks as isolated subagents. Python CLI tools handle init, doctor, sources decide, inputs classify, audit, finalize, and rendering support. Cron jobs provide durable scheduling; `delegate_task` provides child task dispatch within each run.
+Hermes is a native MABW runtime. The Hermes parent agent is the Orchestrator main agent: it reads shared contract references, manages artifact handoff, checks expected artifacts, and selects the next workflow decision. Hermes `delegate_task` children run scout, screener, claim-ledger, analyst, editor, and auditor tasks as isolated subagents. Python CLI tools handle init, doctor, sources decide, inputs classify, audit, finalize, and rendering support. Cron jobs provide durable scheduling; `delegate_task` provides child task dispatch within each run.
+
+Contract references:
+
+- `configs/orchestrator_contract.yaml`
+- `configs/stage_specs.yaml`
+- `configs/artifact_contracts.yaml`
+- `configs/policy_packs/default.yaml`
+
+Orchestrator control loop:
+
+```text
+Read workspace context -> read contract references -> identify the next stage -> delegate a specialist or Python tool -> check the expected artifact -> decide continue / retry_stage / delegate_repair / request_human_review / block_run / finalize.
+```
 
 Brief generation follows the MABW subagent workflow:
 
@@ -314,7 +335,7 @@ Workspace: <workspace>
 Version: <version>
 Doctor: passed
 
-I can continue generating the brief inside Hermes. The next step uses Hermes delegate_task children for:
+I can continue generating the brief inside Hermes. The next step uses the Hermes Orchestrator main agent with delegate_task children for:
 scout -> screener -> claim-ledger -> analyst -> editor -> auditor -> finalize.
 ```
 
@@ -349,22 +370,28 @@ scout -> screener -> claim-ledger -> analyst -> editor -> auditor -> finalize.
 
 ### Parent Orchestration
 
-The Hermes parent agent manages the full pipeline:
+The Hermes parent agent is the Orchestrator main agent for the full pipeline:
 
-1. Read workspace files:
+1. Read contract references:
+   - `configs/orchestrator_contract.yaml`
+   - `configs/stage_specs.yaml`
+   - `configs/artifact_contracts.yaml`
+   - `configs/policy_packs/default.yaml`
+
+2. Read workspace files:
    - `config.yaml`
    - `sources.yaml`
    - `user.md`
    - `input/`
    - `input/hermes_cache/` when present
 
-2. Run doctor:
+3. Run doctor:
 
 ```bash
 multi-agent-brief doctor --config <workspace>/config.yaml
 ```
 
-3. If source discovery is configured:
+4. If source discovery is configured:
 
 ```bash
 multi-agent-brief sources decide --config <workspace>/config.yaml
@@ -372,25 +399,27 @@ multi-agent-brief sources decide --config <workspace>/config.yaml
 
 Review and merge according to workspace policy.
 
-4. Classify input files:
+5. Classify input files:
 
 ```bash
 multi-agent-brief inputs classify --config <workspace>/config.yaml
 ```
 
-5. Create `output/intermediate/` if it does not exist.
+6. Create `output/intermediate/` if it does not exist.
 
-6. Delegate child tasks with complete context and explicit artifact paths. Use `delegate_task` for each step.
+7. Delegate child tasks with complete context and explicit artifact paths. Use `delegate_task` for each step.
 
-7. After each child returns, verify the expected artifact exists and is non-empty before continuing to the next child.
+8. After each child returns, verify the expected artifact exists and is non-empty before selecting the next decision.
 
-8. When all children have completed and `audited_brief.md` exists, finalize:
+9. Decide `continue`, `retry_stage`, `delegate_repair`, `request_human_review`, `block_run`, or `finalize` according to artifact readiness and audit status.
+
+10. When all children have completed and `audited_brief.md` exists, finalize:
 
 ```bash
 multi-agent-brief finalize --config <workspace>/config.yaml
 ```
 
-9. Report artifact paths and audit status.
+11. Report artifact paths and audit status.
 
 ### Delegation Sequence
 
@@ -565,7 +594,7 @@ Workspace: {workspace}
 Version: {version}
 Doctor: {doctor_status}
 
-I can continue generating the brief inside Hermes. Recommended next steps:
+I can continue generating the brief inside Hermes with the Orchestrator main agent. Recommended next steps:
 
   multi-agent-brief hermes install-skill
   multi-agent-brief hermes prompt --config {workspace}/config.yaml
@@ -583,11 +612,19 @@ def render_hermes_prompt(
     workspace = str(Path(workspace).resolve())
     repo = str(Path(repo_workdir).resolve())
     venv = str(Path(venv_path).resolve())
+    contract_refs = contract_reference_bullets()
     return f"""Use the multi-agent-brief-hermes skill to run a Hermes-native delegated brief workflow for this workspace.
 
 Repository: {repo}
 Workspace: {workspace}
 Venv activate: source {venv}
+
+You are the Hermes Orchestrator main agent. Read shared contract references, identify the next stage, delegate specialist child tasks or Python tools, check expected artifacts, and decide continue / retry_stage / delegate_repair / request_human_review / block_run / finalize.
+
+Contract references:
+{contract_refs}
+
+Orchestrator loop: {ORCHESTRATOR_LOOP}
 
 ## Preferred: Hermes Plugin
 
@@ -622,59 +659,65 @@ If the plugin is not available and this workspace does not yet have config.yaml:
 
 ## Existing workspace: delegated brief run
 
-As the Hermes parent orchestrator, execute:
+As the Hermes Orchestrator main agent, execute:
 
-1. Run doctor:
+1. Read contract references:
+   - configs/orchestrator_contract.yaml
+   - configs/stage_specs.yaml
+   - configs/artifact_contracts.yaml
+   - configs/policy_packs/default.yaml
+
+2. Run doctor:
    multi-agent-brief doctor --config {workspace}/config.yaml
 
-2. If source discovery is configured:
+3. If source discovery is configured:
    multi-agent-brief sources decide --config {workspace}/config.yaml
 
-3. If input governance is available:
+4. If input governance is available:
    multi-agent-brief inputs classify --config {workspace}/config.yaml
 
-4. Create output/intermediate/ if it does not exist.
+5. Create output/intermediate/ if it does not exist.
 
-5. Delegate scout child via delegate_task:
+6. Delegate scout child via delegate_task:
    Goal: "Extract candidate reportable items for a MABW brief"
    Write: output/intermediate/candidate_claims.json
    toolsets: ["file", "terminal", "web"]
 
-6. After candidate_claims.json exists and is non-empty, delegate screener child:
+7. After candidate_claims.json exists and is non-empty, delegate screener child:
    Goal: "Screen and rank MABW candidate claims"
    Input: output/intermediate/candidate_claims.json
    Write: output/intermediate/screened_candidates.json
    toolsets: ["file", "terminal"]
 
-7. After screened_candidates.json exists, delegate claim-ledger child:
+8. After screened_candidates.json exists, delegate claim-ledger child:
    Goal: "Build the MABW Claim Ledger"
    Input: output/intermediate/screened_candidates.json
    Write: output/intermediate/claim_ledger.json
    toolsets: ["file", "terminal"]
 
-8. After claim_ledger.json exists, delegate analyst child:
+9. After claim_ledger.json exists, delegate analyst child:
    Goal: "Draft the audited MABW brief"
    Inputs: user.md and output/intermediate/claim_ledger.json
    Write: output/intermediate/audited_brief.md
    toolsets: ["file", "terminal"]
 
-9. After audited_brief.md exists, delegate editor child:
+10. After audited_brief.md exists, delegate editor child:
    Goal: "Polish the audited MABW brief"
    Input and output: output/intermediate/audited_brief.md
    toolsets: ["file", "terminal"]
 
-10. After editor completes, delegate auditor child:
+11. After editor completes, delegate auditor child:
     Goal: "Audit the MABW brief against the Claim Ledger"
     Inputs: output/intermediate/audited_brief.md and output/intermediate/claim_ledger.json
     Write: output/intermediate/audit_report.json
     toolsets: ["file", "terminal"]
 
-11. After audit_report.json exists, run finalize:
+12. After audit_report.json exists, select the finalize decision and run:
     multi-agent-brief finalize --config {workspace}/config.yaml
 
-12. Report artifact paths and audit status.
+13. Report artifact paths and audit status.
 
-For each delegate_task call, write complete goal and context with the workspace path, input paths, and output paths fully specified. After each child returns, verify the expected artifact exists and is non-empty before continuing to the next child.
+For each delegate_task call, write complete goal and context with the workspace path, input paths, and output paths fully specified. After each child returns, verify the expected artifact exists and is non-empty before selecting continue, retry_stage, delegate_repair, request_human_review, block_run, or finalize.
 
 Expected artifacts:
 - {workspace}/output/intermediate/candidate_claims.json

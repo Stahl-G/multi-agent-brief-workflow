@@ -36,7 +36,7 @@
 
         ## Roles
 
-        - **orchestrator** (coordination): Coordinates Scout, Screener, Claim Ledger, Analyst, Editor, Auditor, Formatter, and harness-specific review agents.
+        - **orchestrator** (coordination): Acts as the runtime main agent that controls delegated MABW stages, contract references, decisions, and artifact handoffs.
 - **source-provider** (coordination): Configures, validates, and collects information sources from manual inputs, RSS feeds, web search, APIs, and MCP/CLI tools.
 - **source-planner** (coordination): Reads user.md, config.yaml, and sources.yaml to generate or refine source_candidates.yaml and search_tasks. Ensures all sources are public, citable, and timestamped.
 - **scout** (pipeline): Extracts candidate reportable items from local markdown, text, JSON, and future connector sources.

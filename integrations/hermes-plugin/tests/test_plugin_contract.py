@@ -1,11 +1,34 @@
 import json
+import re
 import sys
 from pathlib import Path
 
+import yaml
+
 ROOT = Path(__file__).resolve().parents[1]
+REPO_ROOT = ROOT.parents[1]
 sys.path.insert(0, str(ROOT))
 
 from mabw import schemas, tools  # noqa: E402
+
+
+def _normalize_stage_label(label: str) -> str:
+    normalized = label.strip().removeprefix("→").strip()
+    aliases = {
+        "source discovery when configured": "source-discovery",
+        "input governance when available": "input-governance",
+    }
+    return aliases.get(normalized, normalized)
+
+
+def _extract_reference_sequence(text: str) -> list[str]:
+    match = re.search(r"## Sequence\s+```text\n(?P<body>.*?)\n```", text, re.DOTALL)
+    assert match, "missing Delegated Workflow sequence block"
+    return [
+        _normalize_stage_label(line)
+        for line in match.group("body").splitlines()
+        if line.strip()
+    ]
 
 
 def test_schemas_have_specific_descriptions():
@@ -80,3 +103,53 @@ def test_plugin_registers_tools_command_and_skill():
     }
     assert "mabw" in ctx.commands
     assert ctx.skills and ctx.skills[0][0] == "mabw-workflow"
+
+
+def test_plugin_skill_uses_orchestrator_contract():
+    skill = ROOT / "mabw" / "skills" / "mabw-workflow" / "SKILL.md"
+    reference = ROOT / "mabw" / "skills" / "mabw-workflow" / "references" / "delegated-workflow.md"
+
+    for path in (skill, reference):
+        text = path.read_text(encoding="utf-8")
+        assert "Orchestrator main agent" in text
+        assert "configs/orchestrator_contract.yaml" in text
+        assert "configs/stage_specs.yaml" in text
+        assert "configs/artifact_contracts.yaml" in text
+        assert "retry_stage" in text
+        assert "request_human_review" in text
+        assert "block_run" in text
+
+
+def test_plugin_delegated_workflow_matches_stage_specs():
+    stage_specs = yaml.safe_load((REPO_ROOT / "configs" / "stage_specs.yaml").read_text(encoding="utf-8"))
+    expected = [stage["stage_id"] for stage in stage_specs["workflow"]["stages"]]
+    reference = ROOT / "mabw" / "skills" / "mabw-workflow" / "references" / "delegated-workflow.md"
+
+    assert _extract_reference_sequence(reference.read_text(encoding="utf-8")) == expected
+
+
+def test_run_handoff_passes_detected_repo_workdir(monkeypatch, tmp_path):
+    workspace = tmp_path / "workspace"
+    workspace.mkdir()
+    repo_root = tmp_path / "repo"
+    repo_root.mkdir()
+    captured = {}
+
+    def fake_run(cmd, cwd=None, timeout=300):
+        captured["cmd"] = cmd
+        captured["cwd"] = cwd
+        captured["timeout"] = timeout
+        return {"ok": True, "returncode": 0, "stdout": "", "stderr": "", "command": cmd}
+
+    monkeypatch.setattr(tools, "_find_repo_root", lambda: repo_root)
+    monkeypatch.setattr(tools, "_mabw_bin", lambda: "multi-agent-brief")
+    monkeypatch.setattr(tools, "_run", fake_run)
+
+    result = json.loads(tools.run_handoff({"workspace": str(workspace), "runtime": "hermes"}))
+
+    assert result["ok"] is True
+    assert result["repo_root"] == str(repo_root)
+    assert captured["cwd"] == str(repo_root)
+    assert "--repo-workdir" in captured["cmd"]
+    repo_arg = captured["cmd"].index("--repo-workdir") + 1
+    assert captured["cmd"][repo_arg] == str(repo_root)

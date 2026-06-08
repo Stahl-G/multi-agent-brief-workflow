@@ -303,20 +303,28 @@ def run_handoff(args: dict, **kwargs) -> str:
     try:
         workspace = _resolve_workspace(args["workspace"])
         runtime = args.get("runtime") or "hermes"
+        repo_root = _find_repo_root()
 
         cmd = [_mabw_bin(), "run", "--workspace", str(workspace), "--runtime", runtime]
-        result = _run(cmd)
+        if repo_root is not None:
+            cmd.extend(["--repo-workdir", str(repo_root)])
+        result = _run(cmd, cwd=str(repo_root) if repo_root is not None else None)
         handoff_md = workspace / "output" / "intermediate" / "agent_handoff.md"
         handoff_json = workspace / "output" / "intermediate" / "agent_handoff.json"
 
         result.update({
             "workspace": str(workspace),
             "runtime": runtime,
+            "repo_root": str(repo_root) if repo_root is not None else "",
             "handoff_md": str(handoff_md),
             "handoff_json": str(handoff_json),
             "handoff_md_exists": handoff_md.exists(),
             "handoff_json_exists": handoff_json.exists(),
-            "next": "Read agent_handoff.md and continue the delegated workflow in Hermes.",
+            "next": (
+                "Read agent_handoff.md and continue in Hermes as the Orchestrator main agent. "
+                "Read configs/orchestrator_contract.yaml, configs/stage_specs.yaml, "
+                "configs/artifact_contracts.yaml, and configs/policy_packs/default.yaml before delegation."
+            ),
         })
 
         if shutil.which(_mabw_bin()) is None and _mabw_bin() == "multi-agent-brief":

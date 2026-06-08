@@ -11,6 +11,7 @@ from multi_agent_brief.cli.start_commands import (
     render_handoff_cli,
     write_handoff_artifacts,
 )
+from multi_agent_brief.orchestrator_contract import resolve_repo_workdir
 
 
 def register(subparsers: argparse._SubParsersAction) -> None:
@@ -35,7 +36,7 @@ def register(subparsers: argparse._SubParsersAction) -> None:
     )
     run_parser.add_argument(
         "--repo-workdir",
-        help="Repository workdir (default: current directory).",
+        help="Repository workdir (default: auto-detect source repo).",
     )
     run_parser.add_argument(
         "--venv", help="Virtual env path (default: auto-detect)."
@@ -69,7 +70,7 @@ def register(subparsers: argparse._SubParsersAction) -> None:
     )
     start_parser.add_argument(
         "--repo-workdir",
-        help="Repository workdir (default: current directory).",
+        help="Repository workdir (default: auto-detect source repo).",
     )
     start_parser.add_argument(
         "--venv", help="Virtual env path (default: auto-detect)."
@@ -93,7 +94,7 @@ def register(subparsers: argparse._SubParsersAction) -> None:
     )
     handoff_parser.add_argument(
         "--repo-workdir",
-        help="Repository workdir (default: current directory).",
+        help="Repository workdir (default: auto-detect source repo).",
     )
     handoff_parser.add_argument(
         "--venv", help="Virtual env path (default: auto-detect)."
@@ -141,11 +142,6 @@ def _resolve_workspace(args: argparse.Namespace) -> Path | None:
 
 def _run_launcher(args: argparse.Namespace) -> int:
     """run — standard runtime handoff launcher."""
-    repo_workdir = (
-        Path(args.repo_workdir).resolve()
-        if getattr(args, "repo_workdir", None)
-        else Path.cwd().resolve()
-    )
     prefix = (
         "[start]" if getattr(args, "command", None) == "start" else "[run]"
     )
@@ -160,6 +156,15 @@ def _run_launcher(args: argparse.Namespace) -> int:
         print()
         print("For a demo only:")
         print("  multi-agent-brief init <workspace> --demo")
+        return 1
+
+    try:
+        repo_workdir = resolve_repo_workdir(
+            getattr(args, "repo_workdir", None),
+            workspace=workspace_path,
+        )
+    except ValueError as exc:
+        print(f"{prefix} {exc}")
         return 1
 
     handoff = build_handoff(
@@ -193,11 +198,14 @@ def _run_handoff(args: argparse.Namespace) -> int:
         print(f"[error] config.yaml not found: {config_path}")
         return 1
     workspace = config_path.parent
-    repo_workdir = (
-        Path(args.repo_workdir).resolve()
-        if getattr(args, "repo_workdir", None)
-        else Path.cwd().resolve()
-    )
+    try:
+        repo_workdir = resolve_repo_workdir(
+            getattr(args, "repo_workdir", None),
+            workspace=workspace,
+        )
+    except ValueError as exc:
+        print(f"[handoff] {exc}")
+        return 1
 
     handoff = build_handoff(
         workspace=workspace,

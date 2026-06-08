@@ -59,8 +59,13 @@ def handle_mabw(ctx, argstr: str):
             "Step 2 — Call tools in order:\n"
             "  mabw_create_onboarding → mabw_init_workspace → mabw_run_handoff\n\n"
             "Step 3 — Read <workspace>/output/intermediate/agent_handoff.md\n\n"
-            "Step 4 — Continue with delegate_task:\n"
+            "Step 4 — Continue as the Orchestrator main agent with delegate_task:\n"
             "  scout → screener → claim-ledger → analyst → editor → auditor\n\n"
+            "Read contract references before delegation:\n"
+            "  configs/orchestrator_contract.yaml, configs/stage_specs.yaml,\n"
+            "  configs/artifact_contracts.yaml, configs/policy_packs/default.yaml\n\n"
+            "Decision vocabulary:\n"
+            "  continue, retry_stage, delegate_repair, request_human_review, block_run, finalize\n\n"
             "Step 5 — Run: multi-agent-brief finalize --config <workspace>/config.yaml"
         )
 
@@ -89,8 +94,14 @@ def handle_mabw(ctx, argstr: str):
         ]
         if ho.get("handoff_md_exists"):
             lines.append("")
-            lines.append("Continue in this Hermes session with delegate_task:")
+            lines.append("Continue in this Hermes session as the Orchestrator main agent with delegate_task:")
             lines.append("  scout → screener → claim-ledger → analyst → editor → auditor")
+            lines.append("")
+            lines.append("Read contract references before delegation:")
+            lines.append("  configs/orchestrator_contract.yaml, configs/stage_specs.yaml")
+            lines.append("  configs/artifact_contracts.yaml, configs/policy_packs/default.yaml")
+            lines.append("")
+            lines.append("Decide: continue, retry_stage, delegate_repair, request_human_review, block_run, or finalize.")
             lines.append("")
             lines.append("After pipeline, run:")
             lines.append(f"  multi-agent-brief finalize --config {ws_path}/config.yaml")
@@ -114,8 +125,14 @@ def handle_mabw(ctx, argstr: str):
             f"[mabw continue] Resuming from: {ws_path}",
             f"Handoff: {handoff_md}",
             "",
-            "Read the handoff file, then continue with delegate_task:",
+            "Read the handoff file, then continue as the Orchestrator main agent with delegate_task:",
             "  scout → screener → claim-ledger → analyst → editor → auditor",
+            "",
+            "Read contract references before delegation:",
+            "  configs/orchestrator_contract.yaml, configs/stage_specs.yaml",
+            "  configs/artifact_contracts.yaml, configs/policy_packs/default.yaml",
+            "",
+            "Decide: continue, retry_stage, delegate_repair, request_human_review, block_run, or finalize.",
             "",
             "After pipeline, run:",
             f"  multi-agent-brief finalize --config {ws_path}/config.yaml",

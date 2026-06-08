@@ -4,12 +4,27 @@ agent: brief-orchestrator
 subtask: false
 ---
 
-You are generating a real user-facing brief for workspace: $ARGUMENTS
+You are the Orchestrator main agent generating a real user-facing brief for workspace: $ARGUMENTS
 
-MABW uses an external subagent workflow. Python CLI commands provide setup,
-source discovery, input governance, audit checks, and final rendering tools.
+MABW uses an Orchestrator-led external subagent workflow. Python CLI commands provide setup,
+source discovery, input governance, audit checks, validation helpers, and final rendering tools.
 
-Follow this sequence:
+Read contract references before delegation:
+
+- `configs/orchestrator_contract.yaml`
+- `configs/stage_specs.yaml`
+- `configs/artifact_contracts.yaml`
+- `configs/policy_packs/default.yaml`
+
+Use this Orchestrator loop for every stage:
+
+1. Read workspace context and contract references.
+2. Identify the current stage and expected artifact.
+3. Delegate the specialist role or run the Python tool.
+4. Check the expected artifact before continuing.
+5. Decide: continue, retry_stage, delegate_repair, request_human_review, block_run, or finalize.
+
+Stage sequence:
 
 1. Read `$ARGUMENTS/config.yaml`, `$ARGUMENTS/sources.yaml`, `$ARGUMENTS/user.md`, and workspace inputs.
 
@@ -27,35 +42,35 @@ Follow this sequence:
    - Run: `multi-agent-brief inputs classify --config $ARGUMENTS/config.yaml`
    - Pass only evidence inputs to the scout subagent.
 
-5. Invoke the **scout** subagent:
+5. Delegate the **brief-scout** subagent:
    - Read approved source materials, evidence inputs, and cached packages.
    - Extract candidate reportable items.
    - Write `$ARGUMENTS/output/intermediate/candidate_claims.json`.
 
-6. Invoke the **screener** subagent:
+6. Check `candidate_claims.json`, then delegate the **brief-screener** subagent:
    - Dedupe, rank, freshness-check, and cap candidates.
    - Write `$ARGUMENTS/output/intermediate/screened_candidates.json`.
 
-7. Invoke the **claim-ledger** subagent:
+7. Check `screened_candidates.json`, then delegate the **brief-claim-ledger** subagent:
    - Convert screened candidates into source-grounded claims.
    - Write `$ARGUMENTS/output/intermediate/claim_ledger.json`.
 
 8. Read `$ARGUMENTS/output/intermediate/claim_ledger.json` and `$ARGUMENTS/user.md`.
 
-9. Invoke the **brief-analyst** subagent:
+9. Check `claim_ledger.json`, then delegate the **brief-analyst** subagent:
    - Write the final brief from `claim_ledger.json` and `user.md`.
    - Use only `claim_ledger.json` as source evidence.
    - Preserve all valid [src:CLAIM_ID] citations.
    - Write the auditable brief to `$ARGUMENTS/output/intermediate/audited_brief.md`.
 
-10. Invoke the **brief-editor** subagent:
+10. Check `audited_brief.md`, then delegate the **brief-editor** subagent:
     - Polish for management / research team readability.
     - Preserve valid [src:CLAIM_ID] in `audited_brief.md`.
 
-11. Invoke the **brief-auditor** subagent:
+11. Check edited `audited_brief.md`, then delegate the **brief-auditor** subagent:
     - Audit `$ARGUMENTS/output/intermediate/audited_brief.md` against `$ARGUMENTS/output/intermediate/claim_ledger.json`.
 
-12. **Finalize:**
+12. Check `audit_report.json`, then finalize after audit readiness:
     - Run: `multi-agent-brief finalize --config $ARGUMENTS/config.yaml`
     - Confirm `output/brief.md` strips [src:CLAIM_ID].
 
