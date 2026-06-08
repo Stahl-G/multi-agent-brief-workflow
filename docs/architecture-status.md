@@ -8,6 +8,7 @@ This page separates current implementation state from roadmap goals. Use it befo
 - `multi-agent-brief run` creates runtime handoff artifacts rather than generating a full brief by itself.
 - Runtime handoff now initializes minimum runtime state and artifact registry control files.
 - Feedback issues and bounded repair plans can be structured, validated, and recorded without executing repair.
+- Deterministic material-fact, freshness, and target-relevance gates can write a quality gate report without fetching sources or rewriting briefs.
 - Python commands provide setup, source tooling, validation, audit support, and rendering.
 - Hermes, Claude Code, Codex, OpenCode, and manual fallback are treated as agent runtime surfaces.
 - Input governance separates evidence from feedback, instructions, and background context.

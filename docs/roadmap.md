@@ -56,6 +56,13 @@ The project is not trying to rebuild a full distributed multi-agent runtime befo
 - Feedback blocking is scoped to the current stage, and repair decisions still flow through the Orchestrator decision vocabulary.
 - Python does not automatically edit brief artifacts, execute repair, or judge semantic repair success.
 
+### v0.6.3
+
+- Deterministic material-fact, freshness, and target-relevance gates were added for auditable artifacts.
+- `gates check`, `gates show`, and `gates validate` provide CLI entry points for `quality_gate_report.json`.
+- Quality gate blocking is scoped to the current stage and uses explicit blocking semantics rather than treating every high-severity finding as a runtime stop.
+- Python does not live-fetch market data, recrawl sources, rewrite briefs, execute repair, or make semantic truth judgments.
+
 ## Next Milestones
 
 ### v0.5.9 — Roadmap Privacy And Architecture Status
@@ -95,9 +102,8 @@ Public scope:
 - Add provenance once the feedback loop and quality gates are testable.
 - Keep Python positioned as tools, validators, and renderers rather than the workflow runtime.
 
-Public sequencing after v0.6.2:
+Public sequencing after v0.6.3:
 
-- v0.6.3: material-fact, freshness, and target-relevance gates.
 - v0.6.4: public-safe evaluation cases from real failure patterns.
 - v0.6.5: evidence and execution provenance graph.
 

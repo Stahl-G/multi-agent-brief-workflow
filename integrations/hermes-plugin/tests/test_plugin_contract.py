@@ -130,9 +130,13 @@ def test_plugin_reference_mentions_feedback_controls():
     assert "feedback resolve" in reference_text
     assert "feedback show --json" in reference_text
     assert "do not execute repair" in reference_text
+    assert "multi-agent-brief gates check" in reference_text
+    assert "gates show --json" in reference_text
+    assert "do not live-fetch" in reference_text
     assert "feedback_issues.json" in artifact_text
     assert "repair_plan.json" in artifact_text
     assert "delta_audit_report.json" in artifact_text
+    assert "quality_gate_report.json" in artifact_text
 
 
 def test_plugin_delegated_workflow_matches_stage_specs():

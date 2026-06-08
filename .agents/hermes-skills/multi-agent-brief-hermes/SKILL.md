@@ -5,7 +5,7 @@ license: MIT
 compatibility: Requires Hermes with delegate_task support plus terminal and file access to a workspace with the multi-agent-brief CLI installed.
 metadata:
   author: multi-agent-brief-workflow
-  version: 0.6.2
+  version: 0.6.3
   tags:
     - hermes
     - cron
@@ -36,7 +36,7 @@ Runtime state files:
 - `output/intermediate/artifact_registry.json`
 - `output/intermediate/event_log.jsonl`
 
-Optional feedback state files: `output/intermediate/feedback_issues.json`, `output/intermediate/repair_plan.json`, and `output/intermediate/delta_audit_report.json`.
+Optional control files: feedback uses `output/intermediate/feedback_issues.json`, `output/intermediate/repair_plan.json`, and `output/intermediate/delta_audit_report.json`; gates check creates `output/intermediate/quality_gate_report.json`.
 
 Orchestrator control loop:
 
@@ -135,6 +135,5 @@ After a delegated run, report:
 - `output/intermediate/audited_brief.md`
 - `output/intermediate/claim_ledger.json`
 - `output/intermediate/audit_report.json`
-- `output/intermediate/feedback_issues.json` when feedback was ingested
-- `output/intermediate/repair_plan.json` when repair planning was created
+- optional feedback, repair, and quality gate control files when created
 - audit status and remaining limitations

@@ -96,6 +96,15 @@ def test_orchestrator_contract_defines_main_agent_and_decisions():
     ]
     assert "automatic_repair_execution" in contract["v062_boundaries"]["deferred"]
     assert "semantic_repair_verification" in contract["v062_boundaries"]["deferred"]
+    assert contract["v063_boundaries"]["implements"] == [
+        "deterministic_material_fact_gate",
+        "deterministic_freshness_gate",
+        "deterministic_target_relevance_gate",
+        "quality_gate_report_control_artifact",
+        "current_stage_quality_gate_blocking",
+    ]
+    assert "live_market_quote_fetching" in contract["v063_boundaries"]["deferred"]
+    assert "semantic_truth_judgment" in contract["v063_boundaries"]["deferred"]
 
     refs = contract["orchestrator"]["contract_references"]
     for rel_path in refs.values():

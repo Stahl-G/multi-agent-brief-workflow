@@ -21,6 +21,7 @@ from multi_agent_brief.orchestrator_contract import (
 )
 from multi_agent_brief.orchestrator.runtime_state import RUNTIME_STATE_FILES
 from multi_agent_brief.feedback.feedback_contract import FEEDBACK_STATE_FILES
+from multi_agent_brief.quality_gates.contract import QUALITY_GATE_STATE_FILES
 
 
 RUNTIME_AUTO = "auto"
@@ -53,6 +54,7 @@ class AgentHandoff:
     expected_artifacts: list[str] = field(default_factory=list)
     runtime_state_files: dict[str, str] = field(default_factory=lambda: dict(RUNTIME_STATE_FILES))
     feedback_state_files: dict[str, str] = field(default_factory=lambda: dict(FEEDBACK_STATE_FILES))
+    quality_gate_state_files: dict[str, str] = field(default_factory=lambda: dict(QUALITY_GATE_STATE_FILES))
     contract_references: dict[str, str] = field(default_factory=lambda: dict(CONTRACT_REFERENCES))
     notes: list[str] = field(default_factory=list)
 
@@ -311,6 +313,9 @@ def build_handoff(
     handoff.notes.append(
         "Feedback loop controls are optional: feedback_issues.json and repair_plan.json are created only by multi-agent-brief feedback ingest/plan/resolve."
     )
+    handoff.notes.append(
+        "Quality gate controls are optional: quality_gate_report.json is created only by multi-agent-brief gates check."
+    )
 
     return handoff
 
@@ -370,6 +375,13 @@ def write_handoff_artifacts(handoff: AgentHandoff, workspace: Path) -> tuple[Pat
         "",
     ])
     for label, rel_path in handoff.feedback_state_files.items():
+        md_content.append(f"- `{label}`: `{rel_path}`")
+    md_content.extend([
+        "",
+        "## Quality Gate State Files",
+        "",
+    ])
+    for label, rel_path in handoff.quality_gate_state_files.items():
         md_content.append(f"- `{label}`: `{rel_path}`")
     md_content.extend([
         "",

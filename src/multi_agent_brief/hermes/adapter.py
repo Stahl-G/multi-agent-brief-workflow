@@ -163,6 +163,8 @@ def build_hermes_cron_plan(
                 "- output/intermediate/feedback_issues.json\n"
                 "- output/intermediate/repair_plan.json\n"
                 "- output/intermediate/delta_audit_report.json\n\n"
+                "Optional quality gate state files are created only by gates commands:\n"
+                "- output/intermediate/quality_gate_report.json\n\n"
                 f"Orchestrator loop: {ORCHESTRATOR_LOOP}\n"
                 "Run doctor, then use Hermes delegate_task children for:\n"
                 "scout -> screener -> claim-ledger -> analyst -> editor -> auditor.\n"
@@ -194,6 +196,8 @@ def build_hermes_cron_plan(
                 "- output/intermediate/feedback_issues.json\n"
                 "- output/intermediate/repair_plan.json\n"
                 "- output/intermediate/delta_audit_report.json\n\n"
+                "Optional quality gate state files are created only by gates commands:\n"
+                "- output/intermediate/quality_gate_report.json\n\n"
                 f"Orchestrator loop: {ORCHESTRATOR_LOOP}\n"
                 "Favor month-level patterns over daily noise.\n"
                 "Run doctor, then use Hermes delegate_task children for:\n"
@@ -208,7 +212,7 @@ def build_hermes_cron_plan(
         "For low-cost frequent polling, convert the daily job to a wakeAgent/script gate in Hermes after the source pattern stabilizes.",
     ]
     return HermesCronPlan(
-        version="v0.6.2",
+        version="v0.6.3",
         workspace=str(workspace_path),
         project_name=summary["name"],
         cadences=resolved_cadences,
@@ -284,7 +288,7 @@ def render_hermes_cron_markdown(plan: HermesCronPlan) -> str:
 _SKILL_MD_TEMPLATE = '''---
 name: multi-agent-brief-hermes
 description: Use this skill to run Multi-Agent Brief Workflow workspaces inside Hermes using Hermes delegate_task subagents, source cache, cron scheduling, and final rendering tools.
-version: 0.6.2
+version: 0.6.3
 author: multi-agent-brief-workflow
 license: MIT
 platforms:
@@ -306,7 +310,7 @@ Use this skill to run Multi-Agent Brief Workflow workspaces inside Hermes using 
 
 ## Operating Model
 
-Hermes is a native MABW runtime. The Hermes parent agent is the Orchestrator main agent: it reads shared contract references and runtime state files, manages artifact handoff, checks expected artifacts, and selects the next workflow decision. Hermes `delegate_task` children run scout, screener, claim-ledger, analyst, editor, and auditor tasks as isolated subagents. Python CLI tools handle init, doctor, sources decide, inputs classify, state checks, feedback ingest/plan/resolve/show/validate, audit, finalize, and rendering support. Cron jobs provide durable scheduling; `delegate_task` provides child task dispatch within each run.
+Hermes is a native MABW runtime. The Hermes parent agent is the Orchestrator main agent: it reads shared contract references and runtime state files, manages artifact handoff, checks expected artifacts, and selects the next workflow decision. Hermes `delegate_task` children run scout, screener, claim-ledger, analyst, editor, and auditor tasks as isolated subagents. Python CLI tools handle init, doctor, sources decide, inputs classify, state checks, feedback ingest/plan/resolve/show/validate, gates check/show/validate, audit, finalize, and rendering support. Cron jobs provide durable scheduling; `delegate_task` provides child task dispatch within each run.
 
 Contract references:
 
@@ -327,6 +331,10 @@ Optional feedback state files:
 - `output/intermediate/feedback_issues.json`
 - `output/intermediate/repair_plan.json`
 - `output/intermediate/delta_audit_report.json`
+
+Optional quality gate state files:
+
+- `output/intermediate/quality_gate_report.json`
 
 Orchestrator control loop:
 
@@ -640,7 +648,7 @@ def render_hermes_setup_success(
     repo: str | Path,
     venv: str | Path,
     workspace: str | Path,
-    version: str = "v0.6.2",
+    version: str = "v0.6.3",
     doctor_status: str = "passed",
 ) -> str:
     return f"""Project is cloned and ready.
@@ -691,6 +699,9 @@ Optional feedback state files:
 - output/intermediate/feedback_issues.json
 - output/intermediate/repair_plan.json
 - output/intermediate/delta_audit_report.json
+
+Optional quality gate state files:
+- output/intermediate/quality_gate_report.json
 
 Orchestrator loop: {ORCHESTRATOR_LOOP}
 

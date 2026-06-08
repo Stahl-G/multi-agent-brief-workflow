@@ -27,7 +27,7 @@ v0.6.0 introduces public-safe contract references:
 - `configs/artifact_contracts.yaml`
 - `configs/policy_packs/default.yaml`
 
-These files describe shared authority, decision vocabulary, stage order, artifact expectations, and the default policy shell. v0.6.1 added minimum runtime state control files and artifact status checks. v0.6.2 adds minimum feedback issue and repair-plan controls, but it does not automatically edit brief artifacts, execute repair, or build a provenance graph.
+These files describe shared authority, decision vocabulary, stage order, artifact expectations, and the default policy shell. v0.6.1 added minimum runtime state control files and artifact status checks. v0.6.2 added minimum feedback issue and repair-plan controls. v0.6.3 adds deterministic material-fact, freshness, and target-relevance gate controls. Python still does not automatically edit brief artifacts, execute repair, live-fetch sources, make semantic truth judgments, or build a provenance graph.
 
 ## Four Contract Categories
 
@@ -49,7 +49,7 @@ The Orchestrator uses a shared decision vocabulary:
 - `block_run`
 - `finalize`
 
-In v0.6.1 these decisions can also be recorded through the runtime state event log. In v0.6.2 feedback issue and repair-plan events can also be recorded. The event log is a control trace, not a full provenance graph.
+In v0.6.1 these decisions can also be recorded through the runtime state event log. In v0.6.2 feedback issue and repair-plan events can also be recorded. In v0.6.3 quality gate check/pass/block events can also be recorded. The event log is a control trace, not a full provenance graph.
 
 ## Runtime Loop
 

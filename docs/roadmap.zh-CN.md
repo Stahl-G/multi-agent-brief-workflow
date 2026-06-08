@@ -56,6 +56,13 @@ v1.0 前不优先重建完整分布式 multi-agent runtime。Python 继续作为
 - Feedback blocking 只作用于当前 stage，repair decision 仍通过 Orchestrator decision vocabulary。
 - Python 不自动修改 brief artifacts、不执行 repair，也不判断语义修复是否已经完成。
 
+### v0.6.3
+
+- 已为 auditable artifacts 加入 deterministic material-fact、freshness 和 target-relevance gates。
+- `gates check`、`gates show` 和 `gates validate` 提供 `quality_gate_report.json` 的 CLI 入口。
+- Quality gate blocking 只作用于当前 stage，并以明确 blocking 语义为准，不把所有 high severity finding 默认当成 runtime stop。
+- Python 不会 live-fetch market data、自动 recrawl source、改稿、执行 repair 或做 semantic truth judgment。
+
 ## 下一阶段
 
 ### v0.5.9 — Roadmap Privacy And Architecture Status
@@ -95,9 +102,8 @@ Non-goals:
 - 在反馈闭环和质量门可测试后，再加入 provenance。
 - 保持 Python 作为 tools、validators、renderers，而不是 workflow runtime。
 
-v0.6.2 之后的公开顺序：
+v0.6.3 之后的公开顺序：
 
-- v0.6.3：material-fact、freshness、target-relevance gates。
 - v0.6.4：real failure patterns 抽象出的 public-safe evaluation cases。
 - v0.6.5：evidence and execution provenance graph。
 
