@@ -59,34 +59,25 @@ Splitting these roles reduces hidden reasoning shortcuts. Python tools handle de
 
 ## Architecture
 
-```mermaid
-flowchart TB
-  subgraph "User Onboarding"
-    A["Conversational Onboarding<br/>onboarding.json"] --> B["Workspace Profile<br/>config.yaml, sources.yaml, user.md"]
-  end
-
-  subgraph "Source Discovery & Collection"
-    B --> C["Source Discovery<br/>sources decide"]
-    C --> D["Source Collection<br/>Manual/RSS/Web/API"]
-  end
-
-  subgraph "Python Support Tools"
-    D --> E["Scout<br/>Signal Extraction"]
-    E --> F["Screener<br/>Filter & Dedup"]
-    F --> G["Claim Ledger<br/>Evidence Tracking"]
-    G --> H["Audit Utilities<br/>Deterministic + Quality Checks"]
-  end
-
-  subgraph "Agent Runtime (Hermes / Claude Code / Codex / OpenCode)"
-    H --> I["Analyst<br/>Draft from Claim Ledger"]
-    I --> J["Editor<br/>Polish & Clean"]
-    J --> K["Final Auditor<br/>Delivery Check"]
-  end
-
-  subgraph "Rendered Outputs"
-    K --> L["Formatter<br/>Markdown/DOCX/PDF"]
-  end
+```text
+User Onboarding
+→ Workspace Profile
+→ Source Discovery
+→ Source Collection
+→ Claim Ledger / Audit Utilities
+→ Agent Runtime Drafting and Review
+→ Rendered Outputs
 ```
+
+Runtime responsibilities stay split:
+
+| Layer | Responsibility |
+|---|---|
+| User Onboarding | `onboarding.json`, `config.yaml`, `sources.yaml`, `user.md` |
+| Source Tooling | source discovery, collection, filtering, and health checks |
+| Python Support Tools | deterministic validation, audit support, runtime state, feedback/gates controls, rendering |
+| Agent Runtime | delegated scout, screener, claim-ledger, analyst, editor, and auditor roles |
+| Rendered Outputs | reader-facing Markdown, DOCX, and configured delivery artifacts |
 
 See [docs/architecture.md](docs/architecture.md) for the plain-language architecture guide.
 

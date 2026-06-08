@@ -56,14 +56,14 @@
 
 本项目围绕这些问题设计：
 
-```mermaid
-flowchart LR
-  A["用户需求"] --> B["来源发现"]
-  B --> C["来源整理"]
-  C --> D["事实账本"]
-  D --> E["Agent 辅助写作"]
-  E --> F["审计校验"]
-  F --> G["Markdown / Word 输出"]
+```text
+用户需求
+→ 来源发现
+→ 来源整理
+→ 事实账本
+→ Agent 辅助写作
+→ 审计校验
+→ Markdown / Word 输出
 ```
 
 详细架构见 [docs/architecture.zh-CN.md](docs/architecture.zh-CN.md)。
