@@ -32,7 +32,7 @@ multi-agent-brief setup <workspace>
 | 运行 CLI 爬虫 | CLI 爬虫 | ``cli.enabled: true` + 配置 scripts` |
 | 竞争对手追踪 | 市场竞争分析 | ``modules.market_competitor.enabled: true`` |
 | 生成 Word 文档 | DOCX 输出 | ``output.formats: [markdown, docx]`` |
-| 基于来源的索赔追踪 | 索赔账本 | `默认启用` |
+| 基于来源的事实追踪 | 事实账本 | `默认启用` |
 | 确定性审计 | 审计报告 | `默认启用` |
 
 ## API 密钥

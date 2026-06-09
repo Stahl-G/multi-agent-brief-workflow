@@ -4,7 +4,7 @@
 
 ## 方向
 
-Multi-Agent Brief Workflow 的下一阶段是一个由 Orchestrator 管理、由 contracts 约束、可审计的简报工作流：
+Multi-Agent Brief Workflow 的下一阶段是一个由司乐师（Orchestrator）管理、由契约（contracts）约束、可审计的简报工作流：
 
 ```text
 subagent-first runtime
@@ -21,15 +21,15 @@ v1.0 前不优先重建完整分布式 multi-agent runtime。Python 继续作为
 
 后续阶段遵循两个设计原则：
 
-- Stage boundary 就是 contract boundary。部分 gate 只需要机器检查，部分 gate 需要人类语义确认，部分 gate 由机器 findings 加 Orchestrator 判断共同决定。
+- Stage boundary 就是契约 boundary。部分 gate 只需要机器检查，部分 gate 需要人类语义确认，部分 gate 由机器 findings 加司乐师判断共同决定。
 - Memory 是 workspace-local 且 human-governed。项目可以加入 agent-proposed memory updates 和 frozen per-run snapshots，但 v1.0 前不做完整 long-term-memory 或 RAG platform。
 
 ## 已完成基线
 
 ### v0.5.7
 
-- `multi-agent-brief run` 已改为 runtime handoff launcher，而不是 Python brief generator。
-- 标准流程转为由外部 subagents 完成来源抽取、筛选、Claim Ledger、起草、编辑、审计和格式化。
+- `multi-agent-brief run` 已改为 运行交接单 launcher，而不是 Python brief generator。
+- 标准流程转为由外部 subagents 完成来源抽取、筛选、事实账本、起草、编辑、审计和格式化。
 - Hermes 成为 primary runtime path，支持定时和 delegated brief workflow。
 - Input governance 已区分 evidence、feedback、instructions 和 context。
 
@@ -41,32 +41,32 @@ v1.0 前不优先重建完整分布式 multi-agent runtime。Python 继续作为
 
 ### v0.6.0
 
-- 已建立共享 Orchestrator authority、decision vocabulary、contract references 和 runtime role parity。
-- Runtime handoff artifacts 已将所有支持的 runtime 指向同一套 Orchestrator control model。
-- Contract references 已随 Python distribution 打包，非 editable 安装后也能运行 `run`。
-- 持久化 runtime state、artifact registry 执行、feedback repair 和 provenance graph 当时仍属于后续 v0.6 milestone。
+- 已建立共享 司乐师 authority、decision vocabulary、契约引用 和 runtime role parity。
+- 运行交接单 artifacts 已将所有支持的 runtime 指向同一套 司乐师 control model。
+- 契约引用 已随 Python distribution 打包，非 editable 安装后也能运行 `run`。
+- 持久化 runtime state、artifact registry 执行、feedback repair 和 溯源图 当时仍属于后续 v0.6 milestone。
 
 ### v0.6.1
 
-- 已为 Orchestrator handoff run 增加最小 runtime state control files。
+- 已为 司乐师 handoff run 增加最小 runtime state control files。
 - Artifact registry 现在记录最小文件状态，但不执行 workflow stages。
 - Stage-scoped blocking 区分尚未轮到的下游 artifacts 和真正阻断当前 stage 的 artifacts。
 - `state init`、`state check`、`state show`、`state decide` 提供 runtime inspection 和 decision recording 入口。
-- 自动 repair execution 和 provenance graph 仍属于后续 v0.6 milestone。
+- 自动 repair execution 和 溯源图 仍属于后续 v0.6 milestone。
 
 ### v0.6.2
 
 - 已加入 feedback issue handling 和 bounded repair planning，但 Python 不变成 repair executor。
 - `feedback ingest`、`feedback plan`、`feedback resolve`、`feedback show`、`feedback validate` 提供 human feedback 和 audit findings 的 CLI 入口。
 - Feedback 和 repair control artifacts 已被追踪，但公开 roadmap 不展开内部 repair artifact 名称。
-- Feedback blocking 只作用于当前 stage，repair decision 仍通过 Orchestrator decision vocabulary。
+- Feedback blocking 只作用于当前 stage，repair decision 仍通过 司乐师 decision vocabulary。
 - Python 不自动修改 brief artifacts、不执行 repair，也不判断语义修复是否已经完成。
 
 ### v0.6.3
 
 - 已为 auditable artifacts 加入 deterministic material-fact、freshness 和 target-relevance gates。
 - `gates check`、`gates show` 和 `gates validate` 提供 `quality_gate_report.json` 的 CLI 入口。
-- Quality gate blocking 只作用于当前 stage，并以明确 blocking 语义为准，不把所有 high severity finding 默认当成 runtime stop。
+- 质量门禁 blocking 只作用于当前 stage，并以明确 blocking 语义为准，不把所有 high severity finding 默认当成 runtime stop。
 - Python 不会 live-fetch market data、自动 recrawl source、改稿、执行 repair 或做 semantic truth judgment。
 
 ### v0.6.4
@@ -74,32 +74,32 @@ v1.0 前不优先重建完整分布式 multi-agent runtime。Python 继续作为
 - 已加入 packaged public-safe evaluation cases，用于开发和 CI 回归验证。
 - `eval-cases list`、`eval-cases validate`、`eval-cases run` 提供 gates、feedback、runtime blocker 和 Hermes static invariant cases 的 CLI 入口。
 - Evaluation cases 使用 structured allowlisted actions，不执行 shell 字符串。
-- Evaluation outputs 只属于 developer/CI results，不加入 workflow artifact contracts。
+- Evaluation outputs 只属于 developer/CI results，不加入 workflow 产物契约。
 - Python 不会在 eval cases 中给文章打分、调用 LLM judge、执行 repair、运行 subagents 或抓取来源。
 
 ### v0.6.5
 
-- 已加入可选 deterministic provenance projection，用于 workspace audit/debug review。
+- 已加入可选 deterministic 溯源投影，用于 workspace audit/debug review。
 - `provenance build`、`provenance show` 和 `provenance validate` 提供 `provenance_graph.json` 的 CLI 入口。
-- 该 graph 投影已有 runtime state、artifact registry、event log、Claim Ledger、feedback、repair 和 quality gate control files。
+- 该 graph 投影已有 runtime state、artifact registry、event log、事实账本、feedback、repair 和 质量门禁 control files。
 - Provenance edges 使用 citation/control wording，不声称 source 已经语义证明 claim。
-- Python 不会在 provenance projection 中执行 workflow stages、抓取来源、replay DAG、执行 repair、验证语义真伪，默认也不会阻断 `finalize`。
+- Python 不会在 溯源投影 中执行 workflow stages、抓取来源、replay DAG、执行 repair、验证语义真伪，默认也不会阻断 `finalize`。
 
 ### v0.6.6
 
 - 已加入 workspace-local audience taste profile，作为 runtime context surface。
 - `audience_profile.md` 位于 workspace root，可由人工编辑。
 - `run`、`start` 和 `handoff` 会创建或复用 frozen per-run `output/intermediate/audience_profile_snapshot.md`。
-- Handoff JSON/Markdown 用独立 `audience_memory_files` 暴露该 context，不混入 expected artifacts 或 control files。
-- Python 不会把 audience profile 内容当作 source evidence、artifact contract、quality gate、provenance graph expansion、自动学习能力或长期记忆系统。
+- 交接单 JSON/Markdown 用独立 `audience_memory_files` 暴露该 context，不混入 expected artifacts 或 control files。
+- Python 不会把 读者画像 内容当作 source evidence、产物契约、质量门禁、溯源图 expansion、自动学习能力或长期记忆系统。
 
 ### v0.6.7
 
-- 已加入 Orchestrator control switchboard，作为 runtime control surface。
+- 已加入 司乐师 控制台，作为 runtime control surface。
 - `run`、`start` 和 `handoff` 会创建 `output/intermediate/orchestrator_control_switchboard.json`。
-- `controls build-switchboard`、`controls show`、`controls select` 和 `controls validate` 提供 recommendations 和 Orchestrator selections 的 CLI 入口。
-- `control_selections.json` 只在 Orchestrator 显式选择后记录 enable/defer/reject。
-- Selection 不是 execution：Python 不会自动运行 gates、feedback planning、provenance projection、source discovery、repair 或 subagents。
+- `controls build-switchboard`、`controls show`、`controls select` 和 `controls validate` 提供 recommendations 和 司乐师 selections 的 CLI 入口。
+- `control_selections.json` 只在 司乐师 显式选择后记录 enable/defer/reject。
+- Selection 不是 execution：Python 不会自动运行 gates、feedback planning、溯源投影、source discovery、repair 或 subagents。
 
 ### v0.6.8
 
@@ -107,12 +107,12 @@ v1.0 前不优先重建完整分布式 multi-agent runtime。Python 继续作为
 - `source_appendix` 是当前 output format 名称；旧 `source_map` 作为兼容 alias 保留。
 - Reader-facing 来源列表默认追加到最终 Markdown/DOCX 末尾，同时保留为 `output/source_appendix.md`；它只来自 `output/intermediate/audited_brief.md` 实际引用、并可通过 `output/intermediate/claim_ledger.json` 解析的 claims。
 - Reader-facing output 不应暴露 raw claim IDs、source IDs、evidence text、本地路径或 `file://` URL。
-- Appendix 不是 source evidence、semantic proof、runtime state file、provenance graph 或 workflow gate。
+- Appendix 不是 source evidence、semantic proof、runtime state file、溯源图 或 workflow gate。
 
 ### v0.6.9
 
 - 在进入 v0.7 improvement-proposal 工作前，先稳定 install/runtime asset parity。
-- Package install 包含 Python CLI、packaged contracts、policy packs 和 packaged public-safe eval fixtures。
+- Package install 包含 Python CLI、packaged 契约、policy packs 和 packaged public-safe eval fixtures。
 - `.agents/`、`.claude/`、`.codex/`、`.opencode/` 和 `integrations/hermes-plugin/` 等 runtime source directories 明确为 source-clone-only，除非复制到 workspace。
 - `multi-agent-brief runtime install --workspace <workspace> --runtime opencode|claude|all` 可以从 source clone 安装 workspace-local OpenCode/Claude Code runtime kits。
 - v0.6.9 不新增 FrictionStore、improvement proposal commands、policy-pack authoring 或自动 workflow execution。
@@ -127,7 +127,7 @@ v1.0 前不优先重建完整分布式 multi-agent runtime。Python 继续作为
 
 - 将 roadmap 简化到版本目标和模块边界。
 - 增加当前架构状态说明，帮助 contributor 区分已实现能力和未来目标。
-- 增加迁移说明，解释从旧 Python-pipeline 叙事到 Orchestrator-first 架构的变化。
+- 增加迁移说明，解释从旧 Python-pipeline 叙事到 司乐师-first 架构的变化。
 - 增加内部规划文件的 ignore 规则。
 
 Non-goals:
@@ -137,24 +137,24 @@ Non-goals:
 - 不新增 source providers。
 - 不重写 prompt 或 agent role。
 
-### v0.6 — Orchestrator Contracts And Feedback Loop
+### v0.6 — 司乐师 契约 And Feedback Loop
 
-目标：先明确 main agent，再尽早展示“产出 -> 反馈 -> 有界修复”的闭环价值。Orchestrator 应负责协调 specialist subagents、验证 handoff artifacts、接收反馈、路由修复，并在不安全时阻断流程。
+目标：先明确 main agent，再尽早展示“产出 -> 反馈 -> 有界修复”的闭环价值。司乐师 应负责协调 specialist subagents、验证 交接产物、接收反馈、路由修复，并在不安全时阻断流程。
 
 公开范围：
 
-- 定义 Orchestrator 的高层职责。
-- 定义四类公开 contract：
+- 定义 司乐师 的高层职责。
+- 定义四类公开 契约：
   - Behavior
   - Process / Artifact
   - Fact-Grounding / Evidence
   - Quality / Audience
 - 建立最小 runtime state 和 artifact status 层。
-- 在扩展更深 provenance 前，先引入 feedback and repair loop。
+- 在扩展更深 溯源 前，先引入 feedback and repair loop。
 - 增加 material facts、source freshness 和 target relevance 相关质量门。
-- 在影响 Orchestrator 决策的地方，标明 stage gate 是 machine-only、human-in-the-loop 还是 mixed。
+- 在影响 司乐师 决策的地方，标明 stage gate 是 machine-only、human-in-the-loop 还是 mixed。
 - 从真实失败模式抽象 public-safe evaluation cases。
-- 将 provenance projection 保持为 audit/debug tooling，semantic proof、replay 和 graph-database style query systems 后移。
+- 将 溯源投影 保持为 audit/debug tooling，semantic proof、replay 和 graph-database style query systems 后移。
 - 保持 Python 作为 tools、validators、renderers，而不是 workflow runtime。
 
 v0.6.9 之后的公开顺序转向 FrictionStore、improvement proposals 和 policy packs，同时继续保持 subagent-first runtime boundary。
@@ -162,8 +162,8 @@ v0.6.9 之后的公开顺序转向 FrictionStore、improvement proposals 和 pol
 公开实施概览：
 
 - [Implementation overview index](implementation/README.md)
-- [v0.5.9 Orchestrator Contract Preparation](implementation/v0.5.9-orchestrator-prep.md)
-- [v0.6.0 Explicit Orchestrator Contract](implementation/v0.6.0-explicit-orchestrator-contract.md)
+- [v0.5.9 司乐师 Contract Preparation](implementation/v0.5.9-orchestrator-prep.md)
+- [v0.6.0 Explicit 司乐师 Contract](implementation/v0.6.0-explicit-orchestrator-契约.md)
 
 Non-goals:
 
@@ -180,7 +180,7 @@ Non-goals:
 
 - 跨 run 跟踪 recurring failure patterns。
 - 生成 improvement signals、patch plans 和 regression-plan suggestions。
-- 在 audience snapshot baseline 之后，谨慎扩展 workspace-local memory，用于 recurring feedback patterns。
+- 在 读者快照 baseline 之后，谨慎扩展 workspace-local memory，用于 recurring feedback patterns。
 - memory updates 只能是 agent-proposed、human-approved。
 - 继续使用 frozen per-run snapshots，避免同一次 run 因中途写入的新 memory 改变行为。
 - self-improvement 在人类或 maintainer 批准前只生成 proposal，不自动改代码。
@@ -198,10 +198,10 @@ Non-goals:
 
 公开范围：
 
-- 引入 mode registry，让同一套 Orchestrator 和 specialist roles 支持 full run、source-readiness check、audit-only、repair-planning-only、audience-profile update 和 final-render-only 等入口。
+- 引入 mode registry，让同一套 司乐师 和 specialist roles 支持 full run、source-readiness check、audit-only、repair-planning-only、audience-profile update 和 final-render-only 等入口。
 - 引入 audience、industry、cadence、delivery expectations 相关的 policy-pack 概念。
 - 让 Hermes、Claude Code、Codex、OpenCode 和 manual fallback 对齐到同一组 artifact expectations。
-- 保证 CLI、Hermes GUI/plugin 和其他 runtime 入口都基于同一套 Orchestrator contracts 和 state files。
+- 保证 CLI、Hermes GUI/plugin 和其他 runtime 入口都基于同一套 司乐师 契约 和 state files。
 - 保持单一公开 support matrix。
 
 Non-goals:
@@ -222,15 +222,15 @@ Non-goals:
 
 ### v1.0 — Stable Orchestrated Brief Workflow
 
-目标：冻结一个 local-first、file-state-driven、contract-governed 的稳定简报工作流基线。
+目标：冻结一个 local-first、file-state-driven、契约治理 的稳定简报工作流基线。
 
 v1.0 应包含：
 
-- 清晰的 Orchestrator-first workflow。
+- 清晰的 司乐师-first workflow。
 - 可审计 artifacts。
 - evidence-aware drafting 和 audit gates。
 - 带明确 machine、human 或 mixed gate 语义的 checkpointed stage transitions。
-- 区分 correctness contracts 和 taste preferences 的 workspace-local memory。
+- 区分 correctness 契约 和 taste preferences 的 workspace-local memory。
 - 面向常见 brief workflow 入口的 public-safe mode registry。
 - supported agent surfaces 的 runtime parity。
 - public-safe evaluation coverage。
@@ -251,4 +251,4 @@ v1.0 前不优先做：
 
 ## 规划保密边界
 
-公开 roadmap 不应包含详细 schema 草案、完整 contract 示例、私有 golden cases、商业场景设计、private prompt notes 或 failure taxonomies。这些内容应放在被 ignore 的内部规划文件中，等实现稳定且适合公开后再逐步发布。
+公开 roadmap 不应包含详细 schema 草案、完整 契约 示例、私有 golden cases、商业场景设计、private prompt notes 或 failure taxonomies。这些内容应放在被 ignore 的内部规划文件中，等实现稳定且适合公开后再逐步发布。

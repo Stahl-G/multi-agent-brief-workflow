@@ -1,13 +1,13 @@
 # 迁移说明
 
-本页说明公开架构如何从旧 Python-pipeline 叙事迁移到当前 Orchestrator-first 叙事。
+本页说明公开架构如何从旧 Python-pipeline 叙事迁移到当前 司乐师-first 叙事。
 
 | 旧叙事 | 当前叙事 |
 |---|---|
 | Python 拥有完整 brief workflow | Runtime main agent 协调 delegated subagents |
-| `prepare` 是主要生成路径 | `run` 是 runtime handoff launcher |
+| `prepare` 是主要生成路径 | `run` 是 运行交接单 launcher |
 | Python class 充当 workflow agent | 外部 runtime role 充当 subagent |
-| 只靠 prompt 控制流程 | 通过 contract-governed handoff 和 validation 控制 |
+| 只靠 prompt 控制流程 | 通过 契约-governed handoff 和 validation 控制 |
 | 质量只是后期编辑问题 | 质量进入 evaluation 和 feedback loops |
 | private feedback 混入 context | feedback 被治理，并与 evidence 分离 |
 

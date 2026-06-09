@@ -53,13 +53,13 @@ Deterministic Systems 负责 Claim、Audit、Rendering 等治理底线
 - SQLite Event Store。
 - `Event`、`AgentMessage`、`Task`、`AgentState`。
 - TaskBoard、lease、timeout、reopen。
-- 最小 Contract Net / 任务竞标机制。
+- 最小 契约 Net / 任务竞标机制。
 - `ClaimProposal` 状态机。
 - 确定性 `ClaimReducer`。
-- Scout 不再直接写 Claim Ledger，而是发布 `ClaimProposed`。
+- Scout 不再直接写 事实账本（事实账本），而是发布 `ClaimProposed`。
 - Screener 不再直接修改 ledger 内部状态，而是发布 `ClaimScored` / `ClaimRejected` / `ClaimSelected`。
 - Event replay、agent interruption recovery、并发 proposal 测试。
-- 导出与 v1 Claim Ledger 兼容的 artifact。
+- 导出与 v1 事实账本 兼容的 artifact。
 
 不应做：
 
@@ -94,13 +94,13 @@ v1.0 baseline
    只增加 agent 类、并发 worker 或 LLM 对话，不等于 MAS。必须出现持久化状态、局部视图、typed message、task ownership、coordination protocol 和 replay。
 
 3. **治理弱化风险**
-   MAS 不应削弱 Screener、Claim Ledger、Auditor、Final Clean 和 human review。自治只能发生在治理边界内。
+   MAS 不应削弱 Screener、事实账本、Auditor、Final Clean 和 human review。自治只能发生在治理边界内。
 
 4. **复杂度外溢风险**
    Redis、Kafka、多进程、多服务器、完整 RAG、模型路由和全渠道交付都应后置。
 
 5. **Artifact 兼容风险**
-   v2 必须继续导出 v1-compatible Claim Ledger、audit report、reader-facing source appendix/source-map compatibility layer 和 final output，否则无法复用现有审计与渲染生态。
+   v2 必须继续导出 v1-compatible 事实账本、audit report、reader-facing source appendix/source-map compatibility layer 和 final output，否则无法复用现有审计与渲染生态。
 
 ## 验收标准
 
@@ -111,7 +111,7 @@ v2.0 MAS Runtime 第一阶段只有在满足以下条件时才算通过：
 - Agent 能接受、拒绝、转交或创建任务。
 - Agent 通过 typed message / event 通信。
 - TaskBoard 能处理 lease、timeout 和 retry。
-- ClaimProposal 经过确定性 Reducer 才能进入正式 Claim Ledger。
+- ClaimProposal 经过确定性 Reducer 才能进入正式 事实账本。
 - Event Log 可以 replay。
 - v2 输出可与 v1 golden dataset baseline 对比。
 - Auditor / release gate 仍可阻止发布。
@@ -123,5 +123,5 @@ v2.0 MAS Runtime 第一阶段只有在满足以下条件时才算通过：
 
 - v1.0 前不启动 MAS 主路径。
 - v2.0 第一阶段是 runtime foundation。
-- v2.0 必须复用 v1 golden datasets 和 artifact contracts。
+- v2.0 必须复用 v1 golden datasets 和 artifact 契约。
 - v2.0 的目标是增加自治、通信、协调和可重放性，而不是替代确定性治理系统。

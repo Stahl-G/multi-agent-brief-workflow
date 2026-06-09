@@ -4,7 +4,7 @@
 
 ## 概述
 
-市场与竞争情报分析模块（Market & Competitor Intelligence Module）是 `multi-agent-brief-workflow` 的首个可插拔分析模块。它在 Screener/Claim Ledger 与 Analyst 之间运行，将零散的竞对信息转化为结构化分析，支持三种运行模式。
+市场与竞争情报分析模块（Market & Competitor Intelligence Module）是 `multi-agent-brief-workflow` 的首个可插拔分析模块。它在 Screener/事实账本（事实账本） 与 Analyst 之间运行，将零散的竞对信息转化为结构化分析，支持三种运行模式。
 
 ## 三种模式
 
@@ -114,6 +114,6 @@ multi-agent-brief competitors merge --config workspace/config.yaml
 ## 设计原则
 
 1. **不在 Python 层调用外部模型** — 实体标注、事件归并、矩阵生成全为确定性代码
-2. **不绕过 Claim Ledger** — AnalysisCard 的 supporting_claim_ids 全部可追溯
-3. **分析判断与来源事实分离** — Claim Ledger（事实）→ AnalysisCard（判断）→ Brief（表达）
+2. **不绕过 事实账本** — AnalysisCard 的 supporting_claim_ids 全部可追溯
+3. **分析判断与来源事实分离** — 事实账本（事实）→ AnalysisCard（判断）→ Brief（表达）
 4. **禁用时零影响** — 模块关闭时管道行为完全不变

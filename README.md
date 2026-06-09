@@ -23,6 +23,33 @@
 
 ---
 
+## 术语表（Glossary）
+
+| 中文术语 | English | 说明 |
+|---|---|---|
+| 司乐师 | Orchestrator | 运行时主智能体，负责调度、检查、决策和交付门禁 |
+| 事实账本 | Claim Ledger | 登记关键事实主张及其证据来源 |
+| 运行交接单 | Runtime Handoff | 向不同 agent runtime 交付执行上下文和契约引用 |
+| 产物契约 | Artifact Contract | 定义每个阶段应产生、消费和验证的文件 |
+| 质量门禁 | Quality Gate | 在进入下一阶段或定稿前执行的质量检查 |
+| 溯源图 | Provenance Graph | 从运行状态、产物、事实、反馈和门禁中派生的审计图 |
+| 控制台 | Control Switchboard | 记录可用控制项、建议和司乐师选择 |
+| 信息侦察员 | Scout | 从来源中提取候选可报告事项 |
+| 筛选师 | Screener | 按新颖度、来源层级、容量筛选候选声明 |
+| 分析师 | Analyst | 基于事实账本撰写带来源引用的草稿 |
+| 编辑师 | Editor | 改善结构、可读性和管理层表达 |
+| 审计师 | Auditor | 检查引用支撑、来源新鲜度、风险措辞 |
+| 定稿器 | Formatter / finalize | 生成读者版 Markdown/DOCX 输出 |
+| 行为契约 | Behavior Contract | 定义司乐师和专家角色边界 |
+| 流程/产物契约 | Process / Artifact Contract | 定义阶段就绪状态和预期产物类别 |
+| 事实支撑/证据契约 | Fact-Grounding / Evidence Contract | 保持重要陈述可追溯到有支撑的主张 |
+| 质量/读者契约 | Quality / Audience Contract | 让交付决策匹配读者上下文 |
+| 溯源投影 | Provenance Projection | 基于已有运行状态派生的审计/调试投影 |
+| 来源支撑 | Source-Grounded | 每个重要事实应能追溯到具体来源 |
+| 读者画像 | Audience Profile | 记录目标读者特征和表达偏好 |
+
+---
+
 ## 为什么做这个项目
 
 在企业战略部、券商研究所、基金投研、投资者关系、总裁办、管理层办公室等场景中，很多人都会花大量时间制作日报、周报、月报、晨会材料和领导层简报。
@@ -117,9 +144,9 @@
 
 项目在 `input/` 下预设四个子目录，并提供了 `multi-agent-brief inputs extract` / `multi-agent-brief inputs classify` 命令。PDF、DOCX、PPTX、XLSX 和图片会先通过 MinerU 抽取为相邻的 `.mineru.md`，再按目录角色分类：
 
-| 目录 | 角色 | 路由目标 | 是否进入 Claim Ledger |
+| 目录 | 角色 | 路由目标 | 是否进入事实账本 |
 |------|------|----------|----------------------|
-| `input/sources/` | 📄 证据文件 | Scout → Claim Ledger | ✅ 是 |
+| `input/sources/` | 📄 证据文件 | 信息侦察员（Scout） → 事实账本 | ✅ 是 |
 | `input/feedback/` | ✏️ 编辑反馈 | Editor | ❌ 否 |
 | `input/instructions/` | 📋 任务要求 | Analyst / Editor | ❌ 否 |
 | `input/context/` | 📎 背景参考 | Analyst | ❌ 否 |
@@ -133,13 +160,13 @@ multi-agent-brief inputs extract --config <workspace>/config.yaml
 multi-agent-brief inputs classify --config <workspace>/config.yaml
 ```
 
-这解决了核心问题：用户的修改意见、任务说明、背景材料**不会被误当作事实来源**写入简报。Scout 子智能体被约束只从证据目录提取声明，非证据文件由 orchestrator 路由给对应的子智能体作为指导。
+这解决了核心问题：用户的修改意见、任务说明、背景材料**不会被误当作事实来源**写入简报。Scout 子智能体被约束只从证据目录提取声明，非证据文件由司乐师（Orchestrator）路由给对应的子智能体作为指导。
 
-### 5. 事实账本 Claim Ledger
+### 5. 事实账本（Claim Ledger）
 
-Claim Ledger 是项目的核心设计之一。它会记录重要事实、来源、证据文本、链接、时间和编号。
+事实账本是项目的核心设计之一。它会记录重要事实、来源、证据文本、链接、时间和编号。
 
-最终简报中的重要表述应当可以追溯到 Claim Ledger，而不是由模型凭空生成。
+最终简报中的重要表述应当可以追溯到事实账本，而不是由模型凭空生成。
 
 这适合解决：
 
@@ -443,7 +470,7 @@ FeishuDeliveryConnector().deliver(
 | 6-K 展开 | 自动识别 6-K 文件并展开附录（Exhibit 99.x），提取财务报表、运营回顾等 |
 | XBRL 数据提取 | 从 SEC companyfacts API 提取收入、净利润、资产、EPS 等结构化财务数据 |
 | iXBRL 解析 | 从 HTML 文件中的 Inline XBRL 标签提取财务事实 |
-| 来源可追溯 | 每条财务数据都带 SEC 原文链接，可直接写入 Claim Ledger |
+| 来源可追溯 | 每条财务数据都带 SEC 原文链接，可直接写入事实账本 |
 
 ### 安装
 
@@ -572,14 +599,14 @@ multi-agent-brief sources decide --config ../mabw-workspace/config.yaml --merge
 * [架构设计](docs/architecture.zh-CN.md)
 * [当前架构状态](docs/architecture-status.zh-CN.md)
 * [迁移说明](docs/MIGRATION.zh-CN.md)
-* [Orchestrator Contract 模型](docs/orchestrator-contracts.zh-CN.md)
-* [Orchestrator 架构](docs/orchestrator-architecture.zh-CN.md)
+* [司乐契约模型（Orchestrator Contract）](docs/orchestrator-contracts.zh-CN.md)
+* [司乐师架构（Orchestrator Architecture）](docs/orchestrator-architecture.zh-CN.md)
 * [Runtime Asset Inventory](docs/runtime-asset-inventory.md)
 * [Runtime Recipes](docs/runtime-recipes.md)
 * [Claude Code 工作流](docs/claude-code-workflow.md)
 * [Claude Code 快速开始](docs/claude-code-quickstart.md)
 * [Agent 协作设计](docs/agent-collaboration.md)
-* [审计与质量门控](docs/harness.md)
+* [审计与质量门禁（Quality Gate）](docs/harness.md)
 * [Windows PowerShell 支持](docs/windows-powershell.md)
 * [飞书集成](docs/feishu-integration.md)
 * [路线图](docs/roadmap.zh-CN.md)
@@ -593,7 +620,7 @@ multi-agent-brief sources decide --config ../mabw-workspace/config.yaml --merge
 
 下一阶段公开方向：
 
-* v0.6：Orchestrator contracts and feedback loop，让 main agent 明确负责协调 subagents、验证 artifacts，并尽早展示“产出 -> 反馈 -> 有界修复”的闭环。
+* v0.6：司乐师契约和反馈闭环（Orchestrator contracts and feedback loop），让 main agent 明确负责协调 subagents、验证 artifacts，并尽早展示”产出 -> 反馈 -> 有界修复”的闭环。
 * v0.7：FrictionStore and improvement proposals，把 recurring failures、audit findings 和 human feedback 转成受控改进建议。
 * v0.8：Policy packs and runtime parity，支持不同简报场景，同时保持多 runtime 的一致 artifact 期望。
 * v0.9：Distribution and reference workflows，降低安装、配置和 public-safe demo 的门槛。
@@ -603,7 +630,7 @@ multi-agent-brief sources decide --config ../mabw-workspace/config.yaml --merge
 
 v2.0 不作为短期主路径。v1.0 冻结后，再探索 Shared World、Event Store、TaskBoard、AgentMessage、ClaimProposal / ClaimReducer、run replay 和最小协调协议。
 
-公开路线图见 [docs/roadmap.zh-CN.md](docs/roadmap.zh-CN.md)，v0.6 控制模型见 [docs/orchestrator-architecture.zh-CN.md](docs/orchestrator-architecture.zh-CN.md)，v2.0 技术评估见 [docs/mas-v2-evaluation.zh-CN.md](docs/mas-v2-evaluation.zh-CN.md)。v0.6.9 在共享 Orchestrator authority、runtime state、feedback/repair control plane、deterministic quality gates、packaged public-safe evaluation cases、optional provenance projection、audience snapshot、control switchboard 和 reader-facing source appendix 之上，稳定 install/runtime asset parity。Python 可以生成 control recommendations、记录 Orchestrator selections，并在 finalize 时生成读者版来源附录；但 selection 不等于 execution，source appendix 也不是语义证明，runtime kit install 也不执行 brief workflow。实际 gates、feedback、provenance、source discovery、repair 或 subagent action 仍必须由 Orchestrator 显式触发。详细实现规划、schema 草案、私有评测样例和商业场景设计不会放进公开仓库，直到对应能力稳定并适合发布。
+公开路线图见 [docs/roadmap.zh-CN.md](docs/roadmap.zh-CN.md)，v0.6 控制模型见 [docs/orchestrator-architecture.zh-CN.md](docs/orchestrator-architecture.zh-CN.md)，v2.0 技术评估见 [docs/mas-v2-evaluation.zh-CN.md](docs/mas-v2-evaluation.zh-CN.md)。v0.6.9 在共享司乐师（Orchestrator）权威、运行时状态、反馈/修复控制面、确定性质量门禁、打包的公开安全评测案例、可选溯源投影、读者快照、控制台和读者版来源附录之上，稳定 install/runtime asset parity。Python 可以生成控制建议、记录司乐师选择，并在 finalize 时生成读者版来源附录；但 selection 不等于 execution，来源附录也不是语义证明，runtime kit install 也不执行 brief workflow。实际门禁、反馈、溯源、来源发现、修复或 subagent action 仍必须由司乐师显式触发。详细实现规划、schema 草案、私有评测样例和商业场景设计不会放进公开仓库，直到对应能力稳定并适合发布。
 
 ---
 
@@ -612,7 +639,7 @@ v2.0 不作为短期主路径。v1.0 冻结后，再探索 Shared World、Event 
 这是项目的初始公开发布版本，仍处于早期阶段。当前重点是验证：
 
 * 真实 briefing 工作流是否可以被拆成可复用模块；
-* Claim Ledger 是否能降低 AI 编造和来源丢失问题；
+* 事实账本是否能降低 AI 编造和来源丢失问题；
 * Claude Code / Codex 等 agent 是否能在明确边界下稳定协作；
 * 不同行业、岗位和报告类型需要哪些模板和来源策略。
 
@@ -656,13 +683,13 @@ v2.0 不作为短期主路径。v1.0 冻结后，再探索 Shared World、Event 
 
 * **无项目方后台黑箱**：本项目本身不依赖项目维护者控制的 SaaS 后台，也不要求用户把材料上传到项目方服务器。
 
-* **可审计设计**：项目通过 Claim Ledger、source appendix、audit report 和来源引用机制，尽量让简报中的重要事实、数字、日期和判断可以回溯到具体来源。
+* **可审计设计**：项目通过事实账本、来源附录、审计报告和来源引用机制，尽量让简报中的重要事实、数字、日期和判断可以回溯到具体来源。
 
 * **安全意识**：项目鼓励用户不要把 API key、公司内部资料、真实客户信息、邮箱、内部路径或其他敏感内容提交到公开仓库、README、Issue、PR 或聊天记录中。
 
 ### 需要用户理解的边界
 
-* **可审计不等于自动正确**：Claim Ledger 和审计工具可以帮助发现缺失来源、重复事实、过期来源、敏感信息和高风险表达，但不能保证所有事实天然正确。正式分发前仍需要人工审核。
+* **可审计不等于自动正确**：事实账本和审计工具可以帮助发现缺失来源、重复事实、过期来源、敏感信息和高风险表达，但不能保证所有事实天然正确。正式分发前仍需要人工审核。
 
 * **本地优先不等于永远离线**：如果用户主动启用 Tavily、OpenAI、Anthropic、Google、MCP、新闻 API、网页搜索或其他第三方服务，相关查询内容、来源 URL 或提示词可能会发送给对应服务商。请在使用前阅读并理解第三方服务的隐私政策和数据处理规则。
 

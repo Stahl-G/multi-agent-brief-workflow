@@ -1,6 +1,6 @@
 # 架构说明
 
-这个项目是一个 subagent-first 简报工作流：Python CLI 负责工作区管理、来源治理、质量门控和最终渲染；AI agent runtime 通过 handoff artifact 协调角色子智能体执行简报生成。
+这个项目是一个 subagent-first 简报工作流：Python CLI 负责工作区管理、来源治理、质量门禁和最终渲染；AI agent runtime 通过运行交接单（Runtime Handoff）协调角色子智能体执行简报生成。
 
 ## 核心流程
 
@@ -10,14 +10,14 @@ flowchart LR
   B --> C["Scout<br/>信息侦察员"]
   C --> D["Screener<br/>筛选师"]
   D --> E["Claim Ledger<br/>事实账本"]
-  E --> F["Analyst<br/>分析员"]
-  F --> G["Editor<br/>编辑"]
-  G --> H["Auditor<br/>审计员"]
-  H --> I["Formatter / finalize<br/>格式转换器"]
+  E --> F["Analyst<br/>分析师"]
+  F --> G["Editor<br/>编辑师"]
+  G --> H["Auditor<br/>审计师"]
+  H --> I["Formatter / finalize<br/>定稿器"]
   I --> J["输出<br/>brief.md, brief.docx,<br/>claim_ledger.json, audit_report.json"]
 ```
 
-灰底步骤（来源治理、finalize）由 Python CLI 执行；白底步骤（Scout → Auditor）由 runtime 子智能体按 handoff artifact 执行。
+灰底步骤（来源治理、finalize）由 Python CLI 执行；白底步骤（Scout → Auditor）由 runtime 子智能体按运行交接单执行。
 
 ## 运行时
 
@@ -33,7 +33,7 @@ Hermes 使用 `delegate_task` 原生子代理管线：scout → screener → cla
 
 `input/` 下有四个约定子目录：
 
-| 目录 | 角色 | 是否进入 Claim Ledger |
+| 目录 | 角色 | 是否进入事实账本 |
 |---|---|---|
 | `input/sources/` | 证据文件 | ✅ |
 | `input/feedback/` | 编辑反馈 | ❌ |
@@ -44,37 +44,37 @@ Hermes 使用 `delegate_task` 原生子代理管线：scout → screener → cla
 
 ## 各角色职责
 
-### Scout 信息侦察员
+### 信息侦察员（Scout）
 
 读取证据文件、来源包、搜索输出，抽取候选可报告事项，写入 `candidate_claims.json`。不负责分析写作。
 
-### Screener 筛选师
+### 筛选师（Screener）
 
 按新颖度、来源层级、主题容量、历史重复筛选候选声明，写入 `screened_candidates.json`。
 
-### Claim Ledger 事实账本
+### 事实账本（Claim Ledger）
 
 将筛选后候选转为稳定、可追溯的 claim，写入 `claim_ledger.json`。每个 claim 有唯一 ID、证据文本、来源引用。这是整个流程的控制点：重要表述必须能追溯到 claim。
 
-### Analyst 分析员
+### 分析师（Analyst）
 
-只使用 Claim Ledger 中的 claim 写草稿，生成带 `[src:CLAIM_ID]` 引用的 `audited_brief.md`。不写投资建议，不编造事实。
+只使用事实账本中的 claim 写草稿，生成带 `[src:CLAIM_ID]` 引用的 `audited_brief.md`。不写投资建议，不编造事实。
 
-### Editor 编辑
+### 编辑师（Editor）
 
 改善结构、可读性和管理层表达。不发明新事实、不添加无支撑数字。清除 `[SRC:]` 等过程残留，保留有效 `[src:CLAIM_ID]`。
 
-### Auditor 审计员
+### 审计师（Auditor）
 
 检查引用支撑、来源新鲜度、数字准确性、投资建议措辞、敏感信息泄漏、过程残留。委托给 `CompositeAuditAgent`（`DeterministicAuditAgent` + `QualityHarnessAuditAgent` + 可选 `SemanticAuditAgent`），写入 `audit_report.json`。
 
-### Formatter / finalize
+### 定稿器（Formatter / finalize）
 
 `multi-agent-brief finalize` 从 `audited_brief.md` 生成 reader-facing 输出，剥离 `[src:CLAIM_ID]`，渲染 Markdown/DOCX。
 
-## 质量门控
+## 质量门禁（Quality Gate）
 
-| 门控 | 位置 | 简述 |
+| 门禁 | 位置 | 简述 |
 |---|---|---|
 | Doctor | `sources/doctor.py` | 来源配置健康检查 |
 | Inputs Classify | `cli/input_commands.py` | 输入文件角色分类 |
