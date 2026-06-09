@@ -58,6 +58,20 @@ def test_eval_cases_validate_and_run_packaged_cases(capsys):
     } == {case["case_id"] for case in result["results"]}
 
 
+def test_provenance_projection_fixture_contains_required_stage_artifacts():
+    with evaluation_cases_root() as packaged_root:
+        workspace = packaged_root / "cases" / "provenance_projection_minimal" / "workspace"
+        for rel_path in (
+            "output/intermediate/candidate_claims.json",
+            "output/intermediate/screened_candidates.json",
+            "output/intermediate/claim_ledger.json",
+            "output/intermediate/audited_brief.md",
+            "output/intermediate/audit_report.json",
+            "output/intermediate/quality_gate_report.json",
+        ):
+            assert (workspace / rel_path).exists(), rel_path
+
+
 def test_eval_cases_single_case_reports_expected_failed_action(capsys):
     rc = main([
         "eval-cases",
