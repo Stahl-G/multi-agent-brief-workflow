@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 import argparse
+import sys
 from pathlib import Path
 
-from multi_agent_brief.core.config import build_run_settings, load_config
+from multi_agent_brief.core.config import build_run_settings, get_output_config, load_config
 from multi_agent_brief.outputs.finalize import finalize_reader_outputs
 
 
@@ -40,21 +41,25 @@ def handle(args: argparse.Namespace) -> int:
         language=None,
         audience=None,
     )
+    output_config = get_output_config(config)
 
-    result = finalize_reader_outputs(
-        output_dir=settings["output_dir"],
-        project_name=settings["project_name"],
-        output_formats=settings.get("output_formats", ["markdown"]),
-        output_footer=settings.get("output_footer", ""),
-        output_named_outputs=bool(
-            settings.get("output_named_outputs", True)
-        ),
-        output_filename_template=settings.get("output_filename_template", ""),
-        output_filename_tokens=settings.get("output_filename_tokens", {}),
-        docx_template=(config.get("output", {}) or {}).get(
-            "docx_template", "default"
-        ),
-    )
+    try:
+        result = finalize_reader_outputs(
+            output_dir=settings["output_dir"],
+            project_name=settings["project_name"],
+            output_formats=settings.get("output_formats", ["markdown"]),
+            output_footer=settings.get("output_footer", ""),
+            output_named_outputs=bool(
+                settings.get("output_named_outputs", True)
+            ),
+            output_filename_template=settings.get("output_filename_template", ""),
+            output_filename_tokens=settings.get("output_filename_tokens", {}),
+            docx_template=output_config.get("docx_template", "default"),
+            source_appendix_config=output_config.get("source_appendix", {}),
+        )
+    except (FileNotFoundError, ValueError, RuntimeError) as exc:
+        print(f"[finalize] Error: {exc}", file=sys.stderr)
+        return 1
 
     print(f"[finalize] Reader brief: {result.reader_brief}")
     if result.named_reader_brief:
@@ -68,6 +73,10 @@ def handle(args: argparse.Namespace) -> int:
         print(
             f"[finalize] DOCX generation: {result.docx_generation}"
         )
+    if result.source_appendix:
+        print(f"[finalize] Source appendix: {result.source_appendix}")
+    elif result.source_appendix_generation not in {"not_requested", "generated"}:
+        print(f"[finalize] Source appendix: {result.source_appendix_generation}")
     print(
         "[finalize] Internal [src:CLAIM_ID] markers stripped from"
         " reader-facing artifacts."

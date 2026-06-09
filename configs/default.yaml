@@ -20,12 +20,12 @@ audit:
   fail_on_missing_source: true
   redaction_scan: true
 
-outputs:
+output:
   formats:
     - markdown
     - claim_ledger
     - audit_report
-    - source_map
+    - source_appendix
 
 connectors:
   sec:
@@ -40,4 +40,3 @@ connectors:
     enabled: false
   email:
     enabled: false
-
