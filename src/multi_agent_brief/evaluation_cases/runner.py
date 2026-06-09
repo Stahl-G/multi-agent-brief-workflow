@@ -33,6 +33,11 @@ from multi_agent_brief.orchestrator.runtime_state import (
     show_runtime_state,
 )
 from multi_agent_brief.orchestrator_contract import is_source_repo, resolve_repo_workdir
+from multi_agent_brief.provenance.builder import (
+    build_provenance_workspace,
+    show_provenance_workspace,
+    validate_provenance_workspace,
+)
 from multi_agent_brief.quality_gates.contract import quality_gate_paths
 from multi_agent_brief.quality_gates.state import (
     check_quality_gates,
@@ -353,6 +358,21 @@ def _run_action(*, action: str, args: dict[str, Any], context: dict[str, Any]) -
             workspace=_require_workspace(workspace),
             repo_workdir=repo_workdir,
         )
+    if action == "provenance.build":
+        return build_provenance_workspace(
+            workspace=_require_workspace(workspace),
+            repo_workdir=repo_workdir,
+            strict=bool(args.get("strict", False)),
+            actor="system",
+        )
+    if action == "provenance.show":
+        return show_provenance_workspace(workspace=_require_workspace(workspace))
+    if action == "provenance.validate":
+        return validate_provenance_workspace(
+            workspace=_require_workspace(workspace),
+            strict=bool(args.get("strict", False)),
+            actor="system",
+        )
     if action == "static.hermes_no_skip_finalize":
         return _check_hermes_no_skip_finalize(repo_workdir=repo_workdir)
 
@@ -394,6 +414,9 @@ def _assert_expected(
         errors.extend(_assert_findings_any(workspace=workspace, expected=expected))
         errors.extend(_assert_findings_absent(workspace=workspace, expected=expected))
         errors.extend(_assert_issues_any(workspace=workspace, expected=expected))
+        errors.extend(_assert_graph_nodes_any(workspace=workspace, expected=expected))
+        errors.extend(_assert_graph_edges_any(workspace=workspace, expected=expected))
+        errors.extend(_assert_graph_absent_text(workspace=workspace, expected=expected))
         errors.extend(_assert_workflow_state(workspace=workspace, expected=expected))
 
     errors.extend(_assert_contains_text(root=root, repo_workdir=repo_workdir, expected=expected))
@@ -478,6 +501,55 @@ def _assert_issues_any(*, workspace: Path, expected: dict[str, Any]) -> list[str
             continue
         if not any(_matches_partial(issue, condition) for issue in issues):
             errors.append(f"No feedback issue matched {condition}.")
+    return errors
+
+
+def _load_provenance_graph(workspace: Path) -> dict[str, Any]:
+    return _load_json(workspace / "output" / "intermediate" / "provenance_graph.json")
+
+
+def _assert_graph_nodes_any(*, workspace: Path, expected: dict[str, Any]) -> list[str]:
+    conditions = expected.get("graph_nodes_any") or []
+    if not conditions:
+        return []
+    graph = _load_provenance_graph(workspace)
+    nodes = [node for node in graph.get("nodes") or [] if isinstance(node, dict)]
+    errors: list[str] = []
+    for condition in conditions:
+        if not isinstance(condition, dict):
+            errors.append(f"graph_nodes_any condition must be an object: {condition!r}.")
+            continue
+        if not any(_matches_partial(node, condition) for node in nodes):
+            errors.append(f"No provenance graph node matched {condition}.")
+    return errors
+
+
+def _assert_graph_edges_any(*, workspace: Path, expected: dict[str, Any]) -> list[str]:
+    conditions = expected.get("graph_edges_any") or []
+    if not conditions:
+        return []
+    graph = _load_provenance_graph(workspace)
+    edges = [edge for edge in graph.get("edges") or [] if isinstance(edge, dict)]
+    errors: list[str] = []
+    for condition in conditions:
+        if not isinstance(condition, dict):
+            errors.append(f"graph_edges_any condition must be an object: {condition!r}.")
+            continue
+        if not any(_matches_partial(edge, condition) for edge in edges):
+            errors.append(f"No provenance graph edge matched {condition}.")
+    return errors
+
+
+def _assert_graph_absent_text(*, workspace: Path, expected: dict[str, Any]) -> list[str]:
+    values = expected.get("graph_absent_text") or []
+    if not values:
+        return []
+    graph_text = json.dumps(_load_provenance_graph(workspace), ensure_ascii=False, sort_keys=True)
+    errors: list[str] = []
+    for value in values:
+        text = str(value)
+        if text and text in graph_text:
+            errors.append(f"Provenance graph unexpectedly contains text: {text!r}.")
     return errors
 
 

@@ -35,6 +35,12 @@ This file is created only by `multi-agent-brief gates check`.
 
 - `output/intermediate/quality_gate_report.json`
 
+## Optional Provenance Projection Files
+
+This file is created only by `multi-agent-brief provenance build`.
+
+- `output/intermediate/provenance_graph.json`
+
 ## Final Outputs
 
 - `output/brief.md`

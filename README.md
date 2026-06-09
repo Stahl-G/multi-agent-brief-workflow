@@ -585,7 +585,7 @@ multi-agent-brief sources decide --config ../mabw-workspace/config.yaml --merge
 
 v2.0 不作为短期主路径。v1.0 冻结后，再探索 Shared World、Event Store、TaskBoard、AgentMessage、ClaimProposal / ClaimReducer、run replay 和最小协调协议。
 
-公开路线图见 [docs/roadmap.zh-CN.md](docs/roadmap.zh-CN.md)，v0.6 控制模型见 [docs/orchestrator-architecture.zh-CN.md](docs/orchestrator-architecture.zh-CN.md)，v2.0 技术评估见 [docs/mas-v2-evaluation.zh-CN.md](docs/mas-v2-evaluation.zh-CN.md)。v0.6.4 在共享 Orchestrator authority、runtime state、feedback/repair control plane 和 deterministic quality gates 之上，增加 packaged public-safe evaluation cases，用于开发和 CI 回归验证已知控制面失败模式。它不表示 Python 会自动评分文章、调用 LLM judge、执行 repair、live-fetch market data、recrawl sources、做 semantic truth judgment 或实现 provenance graph。详细实现规划、schema 草案、私有评测样例和商业场景设计不会放进公开仓库，直到对应能力稳定并适合发布。
+公开路线图见 [docs/roadmap.zh-CN.md](docs/roadmap.zh-CN.md)，v0.6 控制模型见 [docs/orchestrator-architecture.zh-CN.md](docs/orchestrator-architecture.zh-CN.md)，v2.0 技术评估见 [docs/mas-v2-evaluation.zh-CN.md](docs/mas-v2-evaluation.zh-CN.md)。v0.6.5 在共享 Orchestrator authority、runtime state、feedback/repair control plane、deterministic quality gates 和 packaged public-safe evaluation cases 之上，增加可选 deterministic provenance projection，用于 audit/debug review。它不表示 Python 会自动评分文章、调用 LLM judge、执行 repair、live-fetch market data、recrawl sources、做 semantic truth judgment，或把 provenance 当成“来源已经语义证明 claim”的证据。详细实现规划、schema 草案、私有评测样例和商业场景设计不会放进公开仓库，直到对应能力稳定并适合发布。
 
 ---
 
@@ -674,9 +674,9 @@ v2.0 不作为短期主路径。v1.0 冻结后，再探索 Shared World、Event 
 
 完整的版本历史和变更说明请参见 [CHANGELOG.md](CHANGELOG.md)。
 
-当前版本：**v0.6.4** — packaged public-safe evaluation cases for control-surface regression
+当前版本：**v0.6.5** — deterministic provenance projection for workspace audit/debug traces
 
-v0.6.4 增加 `multi-agent-brief eval-cases list/validate/run`，内置 5 个 public-safe workspace control cases 和 1 个 Hermes static invariant case。Eval cases 使用 structured allowlisted actions，不执行 shell 字符串；它们只验证 gates、feedback、runtime blocker 和 Hermes 主路径 invariant，不生成 workflow artifact，不自动改稿、不执行 repair、不抓取来源，也不调用 LLM judge。
+v0.6.5 增加 `multi-agent-brief provenance build/show/validate` 和可选 `output/intermediate/provenance_graph.json`。该 graph 只投影已有 runtime state、artifacts、events、decisions、claim/source citation、feedback、repair plan 和 quality gate findings；不执行 stage、不改稿、不抓取来源，也不声称完成语义真伪验证。
 
 [查看完整变更日志 →](CHANGELOG.md)
 

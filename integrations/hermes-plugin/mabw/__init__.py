@@ -70,6 +70,8 @@ def handle_mabw(ctx, argstr: str):
             "  multi-agent-brief feedback ingest/plan/resolve/show/validate structure feedback but do not run repair.\n\n"
             "Optional quality gate controls:\n"
             "  multi-agent-brief gates check/show/validate writes quality_gate_report.json but does not fetch sources or repair.\n\n"
+            "Optional provenance projection:\n"
+            "  multi-agent-brief provenance build/show/validate writes provenance_graph.json for audit/debug review only.\n\n"
             "Step 5 — Before finalize, run gates/state controls:\n"
             "  multi-agent-brief gates check --workspace <workspace>\n"
             "  multi-agent-brief state check --workspace <workspace> --strict\n"
@@ -113,6 +115,7 @@ def handle_mabw(ctx, argstr: str):
             lines.append("Decide: continue, retry_stage, delegate_repair, request_human_review, block_run, or finalize.")
             lines.append("Use feedback ingest/plan/resolve/show/validate only when audit findings or human feedback exist; these commands do not execute repair.")
             lines.append("Use gates check/show/validate before finalize; these commands do not fetch sources or repair.")
+            lines.append("Use provenance build/show/validate only when an audit/debug graph is useful; it is not semantic proof and is not required before finalize.")
             lines.append("")
             lines.append("Before finalize, run:")
             lines.append(f"  multi-agent-brief gates check --workspace {ws_path}")
@@ -121,6 +124,11 @@ def handle_mabw(ctx, argstr: str):
             lines.append("")
             lines.append("Then run finalize. finalize alone is not a quality-gate executor:")
             lines.append(f"  multi-agent-brief finalize --config {ws_path}/config.yaml")
+            lines.append("")
+            lines.append("Optional provenance projection after runtime state exists:")
+            lines.append(f"  multi-agent-brief provenance build --workspace {ws_path}")
+            lines.append(f"  multi-agent-brief provenance show --workspace {ws_path} --json")
+            lines.append(f"  multi-agent-brief provenance validate --workspace {ws_path}")
         else:
             lines.append("")
             lines.append(f"Handoff not found. Check init state of {ws_path}.")
@@ -151,6 +159,7 @@ def handle_mabw(ctx, argstr: str):
             "Decide: continue, retry_stage, delegate_repair, request_human_review, block_run, or finalize.",
             "Use feedback ingest/plan/resolve/show/validate only when audit findings or human feedback exist; these commands do not execute repair.",
             "Use gates check/show/validate before finalize; these commands do not fetch sources or repair.",
+            "Use provenance build/show/validate only when an audit/debug graph is useful; it is not semantic proof and is not required before finalize.",
             "",
             "Before finalize, run:",
             f"  multi-agent-brief gates check --workspace {ws_path}",
@@ -159,6 +168,11 @@ def handle_mabw(ctx, argstr: str):
             "",
             "Then run finalize. finalize alone is not a quality-gate executor:",
             f"  multi-agent-brief finalize --config {ws_path}/config.yaml",
+            "",
+            "Optional provenance projection after runtime state exists:",
+            f"  multi-agent-brief provenance build --workspace {ws_path}",
+            f"  multi-agent-brief provenance show --workspace {ws_path} --json",
+            f"  multi-agent-brief provenance validate --workspace {ws_path}",
         ]
         return "\n".join(lines)
 

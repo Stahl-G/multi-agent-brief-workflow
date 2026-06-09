@@ -48,3 +48,8 @@ v063_boundaries:
   live_market_quote_fetching: deferred
   semantic_truth_judgment: deferred
   automatic_source_recrawl: deferred
+v065_boundaries:
+  provenance_projection: deterministic_control_projection
+  semantic_truth_verification: deferred
+  execution_replay: deferred
+  graph_database_or_query_engine: deferred

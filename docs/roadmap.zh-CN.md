@@ -77,6 +77,14 @@ v1.0 前不优先重建完整分布式 multi-agent runtime。Python 继续作为
 - Evaluation outputs 只属于 developer/CI results，不加入 workflow artifact contracts。
 - Python 不会在 eval cases 中给文章打分、调用 LLM judge、执行 repair、运行 subagents 或抓取来源。
 
+### v0.6.5
+
+- 已加入可选 deterministic provenance projection，用于 workspace audit/debug review。
+- `provenance build`、`provenance show` 和 `provenance validate` 提供 `provenance_graph.json` 的 CLI 入口。
+- 该 graph 投影已有 runtime state、artifact registry、event log、Claim Ledger、feedback、repair 和 quality gate control files。
+- Provenance edges 使用 citation/control wording，不声称 source 已经语义证明 claim。
+- Python 不会在 provenance projection 中执行 workflow stages、抓取来源、replay DAG、执行 repair、验证语义真伪，默认也不会阻断 `finalize`。
+
 ## 下一阶段
 
 ### v0.5.9 — Roadmap Privacy And Architecture Status
@@ -114,12 +122,10 @@ Non-goals:
 - 增加 material facts、source freshness 和 target relevance 相关质量门。
 - 在影响 Orchestrator 决策的地方，标明 stage gate 是 machine-only、human-in-the-loop 还是 mixed。
 - 从真实失败模式抽象 public-safe evaluation cases。
-- 在反馈闭环和质量门可测试后，再加入 provenance。
+- 将 provenance projection 保持为 audit/debug tooling，semantic proof、replay 和 graph-database style query systems 后移。
 - 保持 Python 作为 tools、validators、renderers，而不是 workflow runtime。
 
-v0.6.4 之后的公开顺序：
-
-- v0.6.5：evidence and execution provenance graph。
+v0.6.5 之后的公开顺序转向 FrictionStore、improvement proposals、policy packs 和 runtime parity，同时继续保持 subagent-first runtime boundary。
 
 公开实施概览：
 

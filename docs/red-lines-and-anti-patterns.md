@@ -12,6 +12,7 @@ This page records public-safe rationale for v0.6 control-surface regression chec
 - Do not let planned blocking issues be bypassed by `continue`.
 - Do not require reader-facing briefs to retain internal `[src:CLAIM_ID]` markers.
 - Do not fetch live market data inside deterministic gate checks.
+- Do not present provenance projection as semantic proof that a source supports a claim.
 - Do not execute arbitrary shell strings from evaluation fixtures.
 - Do not ship private prompts, internal paths, real URLs, tokens, or commercial benchmark cases as public fixtures.
 
@@ -24,6 +25,7 @@ This page records public-safe rationale for v0.6 control-surface regression chec
 | Repair plan equals repair completion | Lets the Orchestrator skip unresolved feedback. |
 | Gate findings auto-create feedback issues | Hides the Orchestrator decision that should route repair or human review. |
 | Final brief as auditable source surface | Reader-facing output should not need internal claim markers unless a source map exists. |
+| Provenance graph as truth graph | The projection records citation/control relationships; semantic support still needs audit or human review. |
 | LLM-as-judge default eval | Turns deterministic regression checks into model-dependent scoring. |
 | Shell-string eval commands | Expands the fixture runner into an arbitrary command executor. |
 

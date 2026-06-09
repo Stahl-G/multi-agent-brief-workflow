@@ -5,7 +5,7 @@ license: MIT
 compatibility: Requires Hermes with delegate_task support plus terminal and file access to a workspace with the multi-agent-brief CLI installed.
 metadata:
   author: multi-agent-brief-workflow
-  version: 0.6.4
+  version: 0.6.5
   tags:
     - hermes
     - cron
@@ -36,7 +36,7 @@ Runtime state files:
 - `output/intermediate/artifact_registry.json`
 - `output/intermediate/event_log.jsonl`
 
-Optional control files: feedback uses `output/intermediate/feedback_issues.json`, `output/intermediate/repair_plan.json`, and `output/intermediate/delta_audit_report.json`; gates check creates `output/intermediate/quality_gate_report.json`.
+Optional control files: feedback uses `output/intermediate/feedback_issues.json`, `output/intermediate/repair_plan.json`, and `output/intermediate/delta_audit_report.json`; gates check creates `output/intermediate/quality_gate_report.json`; provenance build creates `output/intermediate/provenance_graph.json` as an audit/debug projection, not semantic proof.
 
 Orchestrator control loop:
 
@@ -111,6 +111,7 @@ doctor
 
 Before finalize, run `multi-agent-brief gates check --workspace <workspace>`, `state check --strict`, and `state decide --stage auditor --decision continue`; `finalize` is not a quality-gate executor.
 Use `multi-agent-brief feedback ingest`, `feedback plan`, `feedback resolve`, `feedback show --json`, and `feedback validate` only when audit findings or human feedback exist. These commands structure and record issues but do not execute repair.
+Use `multi-agent-brief provenance build`, `provenance show --json`, and `provenance validate` only as optional audit/debug projection commands after runtime state exists. Provenance projection does not prove semantic support, execute repair, or gate finalize by default.
 
 Read `references/delegate-task-sequence.md` before creating child tasks.
 
@@ -136,5 +137,4 @@ After a delegated run, report:
 - `output/intermediate/audited_brief.md`
 - `output/intermediate/claim_ledger.json`
 - `output/intermediate/audit_report.json`
-- optional feedback, repair, and quality gate control files when created
-- audit status and remaining limitations
+- optional feedback, repair, quality gate, and provenance projection control files when created; audit status and remaining limitations

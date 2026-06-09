@@ -222,7 +222,7 @@ Tracks every artifact's lifecycle. Artifact status values: `expected`, `missing`
 
 #### 3.3.4 `event_log.jsonl`
 
-Append-only JSON Lines file. Each event contains: `event_id`, `run_id`, `created_at`, `event_type` (one of 13 types), `actor`, `stage_id`, `artifact_id`, `decision`, `reason`, `metadata`. The event log is a control trace, not a full provenance graph (provenance deferred to v0.6.5).
+Append-only JSON Lines file. Each event contains: `event_id`, `run_id`, `created_at`, `event_type`, `actor`, `stage_id`, `artifact_id`, `decision`, `reason`, `metadata`. The event log is a control trace. In v0.6.5, `provenance_graph.json` is a separate optional projection for audit/debug review, not semantic proof or runtime replay.
 
 ### 3.4 Orchestrator Control Loop
 

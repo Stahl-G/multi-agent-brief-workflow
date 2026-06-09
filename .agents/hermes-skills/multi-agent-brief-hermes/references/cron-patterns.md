@@ -18,7 +18,7 @@ Run a Hermes-native delegated MABW brief workflow.
 Workspace: `<workspace>`  
 Repository workdir: `<repo>`
 
-Use the `multi-agent-brief-hermes` skill. Run doctor, then use Hermes `delegate_task` children for scout, screener, claim-ledger, analyst, editor, and auditor. After audit readiness, run finalize and report artifact paths.
+Use the `multi-agent-brief-hermes` skill. Run doctor, then use Hermes `delegate_task` children for scout, screener, claim-ledger, analyst, editor, and auditor. After audit readiness, run gates/state controls, then finalize and report artifact paths. Run optional provenance projection only when an audit/debug graph is useful.
 
 ## Runtime Notes
 

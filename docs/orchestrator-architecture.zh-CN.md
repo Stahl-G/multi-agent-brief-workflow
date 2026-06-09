@@ -27,7 +27,7 @@ v0.6.0 引入公开安全的 contract references：
 - `configs/artifact_contracts.yaml`
 - `configs/policy_packs/default.yaml`
 
-这些文件描述共享 authority、decision vocabulary、stage order、artifact expectations 和 default policy shell。v0.6.1 增加最小 runtime state control files 和 artifact status checks。v0.6.2 增加最小 feedback issue 和 repair-plan 控制面。v0.6.3 增加 deterministic material-fact、freshness 和 target-relevance gate controls。v0.6.4 增加 packaged public-safe evaluation cases，用于开发和 CI 回归验证。Python 仍不自动改 brief artifacts、不执行 repair、不 live-fetch sources、不做 semantic truth judgment、不用 LLM judge 给文章打分，也不实现 provenance graph。
+这些文件描述共享 authority、decision vocabulary、stage order、artifact expectations 和 default policy shell。v0.6.1 增加最小 runtime state control files 和 artifact status checks。v0.6.2 增加最小 feedback issue 和 repair-plan 控制面。v0.6.3 增加 deterministic material-fact、freshness 和 target-relevance gate controls。v0.6.4 增加 packaged public-safe evaluation cases，用于开发和 CI 回归验证。v0.6.5 增加可选 deterministic provenance projection，用于 workspace audit/debug review。Python 仍不自动改 brief artifacts、不执行 repair、不 live-fetch sources、不做 semantic truth judgment、不用 LLM judge 给文章打分，也不把 provenance 当成语义证明。
 
 ## 四类 Contract
 
@@ -49,7 +49,7 @@ Orchestrator 使用统一 decision vocabulary：
 - `block_run`
 - `finalize`
 
-在 v0.6.1 中，这些 decision 也可以通过 runtime state event log 记录。v0.6.2 也会记录 feedback issue 和 repair-plan events。v0.6.3 也会记录 quality gate check/pass/block events。这个 event log 是 control trace，不是完整 provenance graph。
+在 v0.6.1 中，这些 decision 也可以通过 runtime state event log 记录。v0.6.2 也会记录 feedback issue 和 repair-plan events。v0.6.3 也会记录 quality gate check/pass/block events。v0.6.5 也会记录 provenance build/validate 结果。event log 是 control trace；`provenance_graph.json` 是独立的派生 projection。
 
 ## Runtime Loop
 
@@ -66,26 +66,26 @@ Orchestrator 使用统一 decision vocabulary：
 
 不同 runtime 的机制可以不同，但 artifact expectations 不应分叉。
 
-## Provenance Compatibility
+## Provenance Projection
 
-v0.6.0 不构建 provenance graph。但 contract 形状要兼容后续 provenance 工作，保留：
+v0.6.5 可以基于已有 runtime state、artifact registry、event log、Claim Ledger、feedback、repair 和 quality gate files 生成 `output/intermediate/provenance_graph.json`。这个 graph 是 audit/debug projection：
 
-- artifact identity
-- producer stage or role
-- consumer stage or role
-- validation result summary
-- blocking reason
-- retry or human-review decision
-- decision category attached to a stage
+- 保留 artifact identity、producer stage or role、consumer stage or role 和 validation summaries 作为 graph metadata。
+- 只由 `multi-agent-brief provenance build` 创建。
+- 不初始化 runtime state，也不执行 workflow stages。
+- 记录 citation 和 control relationships，不做语义证明。
+- 默认不阻断 `state check`、`state decide` 或 `finalize`。
+
+v0.6.5 不实现 semantic proof、source support graph、execution replay 或 full DAG runtime。
 
 ## Deferred Work
 
 后续 v0.6 milestone 负责：
 
-- material-fact and freshness gates
 - private/commercial benchmark suites
 - LLM-as-judge prose scoring
-- evidence and execution provenance
+- semantic evidence support verification
+- execution replay 或完整 DAG runtime
 
 ## Related
 

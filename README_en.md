@@ -658,7 +658,7 @@ Public direction:
 - **v1.0: Stable Orchestrated Brief Workflow** — freeze a local-first, auditable, contract-governed baseline.
 - **v2.0: MAS Runtime Research Track** — after v1.0, explore richer runtime coordination concepts.
 
-See [docs/roadmap.md](docs/roadmap.md) for the public roadmap, [docs/architecture-status.md](docs/architecture-status.md) for current implementation status, [docs/MIGRATION.md](docs/MIGRATION.md) for migration notes, [docs/orchestrator-contracts.md](docs/orchestrator-contracts.md) for the public contract model, [docs/orchestrator-architecture.md](docs/orchestrator-architecture.md) for the v0.6 control model, [docs/mas-v2-evaluation.zh-CN.md](docs/mas-v2-evaluation.zh-CN.md) for the v2.0 technical evaluation, and [docs/repo-metadata.md](docs/repo-metadata.md) for suggested GitHub description and topics. v0.6.4 builds on shared Orchestrator authority, runtime state, the feedback/repair control plane, and deterministic quality gates with packaged public-safe evaluation cases for developer and CI regression checks. It does not mean Python scores prose, calls an LLM judge, edits briefs, executes repair, live-fetches market data, recrawls sources, makes semantic truth judgments, or builds a provenance graph. Detailed implementation plans, schema drafts, private evaluation cases, and commercial scenario design are intentionally kept out of the public repository until the corresponding capabilities are stable and ready to publish.
+See [docs/roadmap.md](docs/roadmap.md) for the public roadmap, [docs/architecture-status.md](docs/architecture-status.md) for current implementation status, [docs/MIGRATION.md](docs/MIGRATION.md) for migration notes, [docs/orchestrator-contracts.md](docs/orchestrator-contracts.md) for the public contract model, [docs/orchestrator-architecture.md](docs/orchestrator-architecture.md) for the v0.6 control model, [docs/mas-v2-evaluation.zh-CN.md](docs/mas-v2-evaluation.zh-CN.md) for the v2.0 technical evaluation, and [docs/repo-metadata.md](docs/repo-metadata.md) for suggested GitHub description and topics. v0.6.5 builds on shared Orchestrator authority, runtime state, the feedback/repair control plane, deterministic quality gates, and packaged public-safe evaluation cases with an optional deterministic provenance projection for audit/debug review. It does not mean Python scores prose, calls an LLM judge, edits briefs, executes repair, live-fetches market data, recrawls sources, makes semantic truth judgments, or treats provenance as proof that a source supports a claim. Detailed implementation plans, schema drafts, private evaluation cases, and commercial scenario design are intentionally kept out of the public repository until the corresponding capabilities are stable and ready to publish.
 
 ## Safety And Non-Investment-Advice Disclaimer
 
@@ -670,9 +670,9 @@ This project can help structure research and briefing workflows, but it does not
 
 See [CHANGELOG.md](CHANGELOG.md) for the full version history.
 
-Current version: **v0.6.4** — packaged public-safe evaluation cases for control-surface regression
+Current version: **v0.6.5** — deterministic provenance projection for workspace audit/debug traces
 
-v0.6.4 adds `multi-agent-brief eval-cases list/validate/run` with five packaged public-safe workspace control cases and one Hermes static invariant case. Eval cases use structured allowlisted actions instead of shell strings. They validate gates, feedback, runtime blockers, and Hermes path invariants without creating workflow artifacts, editing briefs, executing repair, fetching sources, or calling an LLM judge.
+v0.6.5 adds `multi-agent-brief provenance build/show/validate` and optional `output/intermediate/provenance_graph.json`. The graph projects existing runtime state, artifacts, events, decisions, claim/source citations, feedback, repair plans, and quality gate findings without executing stages, rewriting briefs, fetching sources, or asserting semantic truth.
 
 [View full changelog →](CHANGELOG.md)
 

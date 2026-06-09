@@ -14,6 +14,12 @@ v0.6 围绕四类公开 contract 组织。本页只做抽象定义。详细 sche
 
 定义重要陈述必须保持 source-grounded evidence 可追溯，unsupported 或 uncertain claims 不应被过度表述。
 
+v0.6.5 provenance projection 可以为 audit/debug review 暴露 citation 和 control relationships，但不声称完成语义真伪验证，也不替代人工 evidence review。
+
+`provenance_graph.json` 由 Python control tool 生成，不是正式 workflow stage 的产物。Artifact contracts 用 `producer_kind: control_tool` 标识这一点；`producer_stage: provenance` 是 control-tool pseudo-producer label，不是 `stage_specs.yaml` stage。
+
+Provenance graph 中 `artifact_derived_from` 有固定方向：`from` 是 derived/output artifact，`to` 是 source/input artifact。
+
 ## Quality / Audience Contract
 
 定义最终 brief 是否对目标读者有用，是否匹配任务场景，并达到交付准备状态。

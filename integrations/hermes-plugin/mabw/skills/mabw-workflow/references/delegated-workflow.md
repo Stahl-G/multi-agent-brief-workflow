@@ -57,3 +57,9 @@ If `state check` reports blocking quality gate findings, choose `delegate_repair
 If audit findings or human feedback exist, use `multi-agent-brief feedback ingest`, `feedback plan`, `feedback resolve`, `feedback show --json`, and `feedback validate` to structure issues and create a bounded repair plan. These commands do not execute repair or edit brief artifacts.
 
 When material-fact, freshness, or target-relevance gates are required, use `multi-agent-brief gates check`, `gates show --json`, and `gates validate` to create and inspect `output/intermediate/quality_gate_report.json`. Gate checks may block unsafe current-stage continue/finalize decisions, but repair ownership is still routed explicitly by the Orchestrator. Gate checks do not live-fetch sources, execute repair, or automatically create feedback issues; route failed gates into feedback explicitly when repair planning is needed.
+
+## Optional Provenance Projection
+
+After runtime state exists, use `multi-agent-brief provenance build`, `provenance show --json`, and `provenance validate` when an audit/debug view of run, stage, event, artifact, claim, source-reference, feedback, repair, and gate-finding connections is useful. This writes `output/intermediate/provenance_graph.json`.
+
+Provenance projection is derived from existing control files. It is not semantic truth verification, not workflow replay, not repair execution, and not required before `finalize`.

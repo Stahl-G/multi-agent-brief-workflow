@@ -94,6 +94,8 @@ def test_build_hermes_cron_plan_has_daily_weekly_monthly(tmp_path: Path):
     assert "multi-agent-brief gates check" in weekly.prompt
     assert "multi-agent-brief state check" in weekly.prompt
     assert "multi-agent-brief state decide" in weekly.prompt
+    assert "multi-agent-brief provenance build" in weekly.prompt
+    assert "not semantic proof" in weekly.prompt
     assert "finalize" in weekly.prompt
     assert weekly.prompt.index("multi-agent-brief gates check") < weekly.prompt.index("multi-agent-brief finalize")
     assert "/generate-brief" not in weekly.prompt
@@ -130,13 +132,16 @@ def test_hermes_skill_uses_delegate_task_runtime():
     assert "block_run" in skill
     assert "feedback ingest/plan/resolve/show/validate" in skill
     assert "gates check/show/validate" in skill
+    assert "provenance build/show/validate" in skill
     assert "feedback_issues.json" in skill
     assert "repair_plan.json" in skill
     assert "quality_gate_report.json" in skill
+    assert "provenance_graph.json" in skill
     assert "multi-agent-brief gates check --workspace <workspace>" in skill
     assert "multi-agent-brief state check --workspace <workspace> --strict" in skill
     assert "multi-agent-brief state decide --workspace <workspace> --stage auditor --decision continue" in skill
     assert "finalize` is not a quality-gate executor" in skill
+    assert "not semantic proof" in skill
     assert "scout" in skill
     assert "screener" in skill
     assert "claim-ledger" in skill
@@ -208,11 +213,15 @@ def test_hermes_prompt_keeps_user_inside_hermes():
     assert "multi-agent-brief feedback ingest" in prompt
     assert "feedback show" in prompt
     assert "quality_gate_report.json" in prompt
+    assert "provenance_graph.json" in prompt
     resolved_ws = str(Path("/tmp/test-ws").resolve())
     assert f"multi-agent-brief gates check --workspace {resolved_ws}" in prompt
     assert f"multi-agent-brief state check --workspace {resolved_ws} --strict" in prompt
     assert f"multi-agent-brief state decide --workspace {resolved_ws} --stage auditor --decision continue" in prompt
+    assert f"multi-agent-brief provenance build --workspace {resolved_ws}" in prompt
+    assert f"multi-agent-brief provenance validate --workspace {resolved_ws}" in prompt
     assert prompt.index("multi-agent-brief gates check") < prompt.index("multi-agent-brief finalize")
+    assert prompt.index("multi-agent-brief finalize") < prompt.index("multi-agent-brief provenance build")
     assert "feedback_issues.json" in prompt
     assert "scout" in prompt
     assert "screener" in prompt
@@ -361,7 +370,9 @@ def test_cli_hermes_prompt_output_contains_workflow_steps(capsys, tmp_path: Path
     assert "multi-agent-brief gates check" in output
     assert "multi-agent-brief state check" in output
     assert "multi-agent-brief state decide" in output
+    assert "multi-agent-brief provenance build" in output
     assert output.index("multi-agent-brief gates check") < output.index("multi-agent-brief finalize")
+    assert output.index("multi-agent-brief finalize") < output.index("multi-agent-brief provenance build")
     assert "multi-agent-brief finalize" in output
     assert "/generate-brief" not in output
     # Onboarding workflow path
@@ -395,6 +406,8 @@ def test_hermes_skill_contains_onboarding_workflow():
     assert "delegate_task" in content
     assert "gates check + state check/decide" in content
     assert "finalize` is not a quality-gate executor" in content
+    assert "provenance build" in content
+    assert "not semantic proof" in content
     assert "Orchestrator main agent" in content
     assert "configs/orchestrator_contract.yaml" in content
     assert "retry_stage" in content

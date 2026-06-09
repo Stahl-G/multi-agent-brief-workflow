@@ -77,6 +77,14 @@ Two design principles guide the next phases:
 - Evaluation outputs remain developer/CI results and are not added to workflow artifact contracts.
 - Python does not score prose, call an LLM judge, execute repair, run subagents, or fetch sources as part of eval cases.
 
+### v0.6.5
+
+- Optional deterministic provenance projection was added for workspace audit/debug review.
+- `provenance build`, `provenance show`, and `provenance validate` provide CLI entry points for `provenance_graph.json`.
+- The graph projects existing runtime state, artifact registry, event log, Claim Ledger, feedback, repair, and quality gate control files.
+- Provenance edges use citation/control wording and do not assert that a source semantically proves a claim.
+- Python does not execute workflow stages, fetch sources, replay a DAG, execute repair, verify semantic truth, or gate `finalize` by default as part of provenance projection.
+
 ## Next Milestones
 
 ### v0.5.9 — Roadmap Privacy And Architecture Status
@@ -114,12 +122,10 @@ Public scope:
 - Add quality gates for material facts, source freshness, and target relevance.
 - Classify stage gates as machine-only, human-in-the-loop, or mixed where that distinction affects Orchestrator decisions.
 - Introduce public-safe failure-pattern evaluation cases.
-- Add provenance once the feedback loop and quality gates are testable.
+- Keep provenance projection as audit/debug tooling while deferring semantic proof, replay, and graph-database style query systems.
 - Keep Python positioned as tools, validators, and renderers rather than the workflow runtime.
 
-Public sequencing after v0.6.4:
-
-- v0.6.5: evidence and execution provenance graph.
+Public sequencing after v0.6.5 moves toward FrictionStore, improvement proposals, policy packs, and runtime parity while preserving the subagent-first runtime boundary.
 
 Public implementation overviews:
 

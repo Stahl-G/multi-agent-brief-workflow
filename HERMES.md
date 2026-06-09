@@ -21,5 +21,6 @@ Primary Hermes path:
    `multi-agent-brief state decide --workspace <workspace> --stage auditor --decision continue --reason "Audit and quality gates passed."`
 10. Then run `multi-agent-brief finalize --config <workspace>/config.yaml`.
 11. `finalize` alone is not a quality-gate executor; do not skip gates/state decisions when quality gates are required.
-12. Report `output/brief.md`, `brief.docx`, `claim_ledger.json`, `audit_report.json`, and `quality_gate_report.json`.
-13. Never treat README, docs, examples, or repo files as evidence for the brief.
+12. Optional audit/debug trace: run `multi-agent-brief provenance build --workspace <workspace>` and `multi-agent-brief provenance validate --workspace <workspace>` after runtime state exists. This projection is not semantic proof and is not required to finalize.
+13. Report `output/brief.md`, `brief.docx`, `claim_ledger.json`, `audit_report.json`, `quality_gate_report.json`, and optional `provenance_graph.json` when created.
+14. Never treat README, docs, examples, or repo files as evidence for the brief.

@@ -23,6 +23,7 @@ orchestrator:
       - inputs_classify
       - audit
       - finalize
+      - provenance_build
   developer_ci_tools:
     - eval_cases
 contracts:
@@ -121,3 +122,16 @@ v064_boundaries:
     - llm_as_judge_prose_scoring
     - automatic_repair_execution
     - evidence_execution_graph
+v065_boundaries:
+  implements:
+    - deterministic_provenance_projection
+    - workspace_local_audit_graph
+    - provenance_graph_validation
+    - provenance_event_trace
+  deferred:
+    - semantic_truth_verification
+    - source_support_graph
+    - execution_replay
+    - workflow_dag_runtime
+    - graph_database_or_query_engine
+    - automatic_repair_execution

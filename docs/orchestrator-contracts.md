@@ -14,6 +14,12 @@ Defines whether the workflow has progressed through required stages and whether 
 
 Defines the expectation that important statements remain traceable to source-grounded evidence, and that unsupported or uncertain claims are not overstated.
 
+v0.6.5 provenance projection can expose citation and control relationships for audit/debug review, but it does not assert semantic truth or replace human evidence review.
+
+`provenance_graph.json` is produced by a Python control tool, not by a formal workflow stage. Artifact contracts mark this with `producer_kind: control_tool`; `producer_stage: provenance` is a control-tool pseudo-producer label, not a `stage_specs.yaml` stage.
+
+For provenance graph edges, `artifact_derived_from` is directional: `from` is the derived/output artifact and `to` is the source/input artifact.
+
 ## Quality / Audience Contract
 
 Defines whether the delivered brief is useful for the intended reader, matches the task context, and meets delivery-readiness expectations.

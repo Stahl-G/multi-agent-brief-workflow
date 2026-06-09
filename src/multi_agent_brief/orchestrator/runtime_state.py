@@ -24,6 +24,7 @@ from multi_agent_brief.quality_gates.contract import (
     current_stage_quality_gate_blocking_reasons,
     quality_gate_artifact_activated,
 )
+from multi_agent_brief.provenance.contract import provenance_artifact_activated
 from multi_agent_brief import __version__
 from multi_agent_brief.orchestrator_contract import (
     CONTRACT_REFERENCES,
@@ -59,6 +60,9 @@ EVENT_TYPES = {
     "quality_gate_checked",
     "quality_gate_blocked",
     "quality_gate_passed",
+    "provenance_graph_built",
+    "provenance_graph_validated",
+    "provenance_graph_invalid",
     "run_blocked",
     "run_reset",
 }
@@ -629,6 +633,9 @@ def _artifact_record(
         workspace=workspace,
         artifact_id=artifact_id,
     ) or quality_gate_artifact_activated(
+        workspace=workspace,
+        artifact_id=artifact_id,
+    ) or provenance_artifact_activated(
         workspace=workspace,
         artifact_id=artifact_id,
     )

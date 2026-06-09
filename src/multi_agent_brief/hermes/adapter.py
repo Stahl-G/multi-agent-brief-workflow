@@ -165,6 +165,8 @@ def build_hermes_cron_plan(
                 "- output/intermediate/delta_audit_report.json\n\n"
                 "Optional quality gate state files are created only by gates commands:\n"
                 "- output/intermediate/quality_gate_report.json\n\n"
+                "Optional provenance projection files are created only by provenance commands:\n"
+                "- output/intermediate/provenance_graph.json\n\n"
                 f"Orchestrator loop: {ORCHESTRATOR_LOOP}\n"
                 "Run doctor, then use Hermes delegate_task children for:\n"
                 "scout -> screener -> claim-ledger -> analyst -> editor -> auditor.\n"
@@ -173,7 +175,8 @@ def build_hermes_cron_plan(
                 f"multi-agent-brief state check --workspace {workspace_path} --strict\n"
                 f"multi-agent-brief state decide --workspace {workspace_path} --stage auditor --decision continue --reason \"Audit and quality gates passed.\"\n"
                 f"Then run multi-agent-brief finalize --config {workspace_path}/config.yaml.\n"
-                "finalize is not a quality-gate executor."
+                "finalize is not a quality-gate executor.\n"
+                "Optionally run multi-agent-brief provenance build/show/validate after runtime state exists for an audit/debug projection; it is not semantic proof."
             ),
         ))
 
@@ -203,6 +206,8 @@ def build_hermes_cron_plan(
                 "- output/intermediate/delta_audit_report.json\n\n"
                 "Optional quality gate state files are created only by gates commands:\n"
                 "- output/intermediate/quality_gate_report.json\n\n"
+                "Optional provenance projection files are created only by provenance commands:\n"
+                "- output/intermediate/provenance_graph.json\n\n"
                 f"Orchestrator loop: {ORCHESTRATOR_LOOP}\n"
                 "Favor month-level patterns over daily noise.\n"
                 "Run doctor, then use Hermes delegate_task children for:\n"
@@ -212,7 +217,8 @@ def build_hermes_cron_plan(
                 f"multi-agent-brief state check --workspace {workspace_path} --strict\n"
                 f"multi-agent-brief state decide --workspace {workspace_path} --stage auditor --decision continue --reason \"Audit and quality gates passed.\"\n"
                 f"Then run multi-agent-brief finalize --config {workspace_path}/config.yaml.\n"
-                "finalize is not a quality-gate executor."
+                "finalize is not a quality-gate executor.\n"
+                "Optionally run multi-agent-brief provenance build/show/validate after runtime state exists for an audit/debug projection; it is not semantic proof."
             ),
         ))
 
@@ -222,7 +228,7 @@ def build_hermes_cron_plan(
         "For low-cost frequent polling, convert the daily job to a wakeAgent/script gate in Hermes after the source pattern stabilizes.",
     ]
     return HermesCronPlan(
-        version="v0.6.4",
+        version="v0.6.5",
         workspace=str(workspace_path),
         project_name=summary["name"],
         cadences=resolved_cadences,
@@ -298,7 +304,7 @@ def render_hermes_cron_markdown(plan: HermesCronPlan) -> str:
 _SKILL_MD_TEMPLATE = '''---
 name: multi-agent-brief-hermes
 description: Use this skill to run Multi-Agent Brief Workflow workspaces inside Hermes using Hermes delegate_task subagents, source cache, cron scheduling, and final rendering tools.
-version: 0.6.4
+version: 0.6.5
 author: multi-agent-brief-workflow
 license: MIT
 platforms:
@@ -320,7 +326,7 @@ Use this skill to run Multi-Agent Brief Workflow workspaces inside Hermes using 
 
 ## Operating Model
 
-Hermes is a native MABW runtime. The Hermes parent agent is the Orchestrator main agent: it reads shared contract references and runtime state files, manages artifact handoff, checks expected artifacts, and selects the next workflow decision. Hermes `delegate_task` children run scout, screener, claim-ledger, analyst, editor, and auditor tasks as isolated subagents. Python CLI tools handle init, doctor, sources decide, inputs classify, state checks, feedback ingest/plan/resolve/show/validate, gates check/show/validate, audit, finalize, and rendering support. Cron jobs provide durable scheduling; `delegate_task` provides child task dispatch within each run.
+Hermes is a native MABW runtime. The Hermes parent agent is the Orchestrator main agent: it reads shared contract references and runtime state files, manages artifact handoff, checks expected artifacts, and selects the next workflow decision. Hermes `delegate_task` children run scout, screener, claim-ledger, analyst, editor, and auditor tasks as isolated subagents. Python CLI tools handle init, doctor, sources decide, inputs classify, state checks, feedback ingest/plan/resolve/show/validate, gates check/show/validate, provenance build/show/validate, audit, finalize, and rendering support. Cron jobs provide durable scheduling; `delegate_task` provides child task dispatch within each run.
 
 Contract references:
 
@@ -345,6 +351,10 @@ Optional feedback state files:
 Optional quality gate state files:
 
 - `output/intermediate/quality_gate_report.json`
+
+Optional provenance projection files:
+
+- `output/intermediate/provenance_graph.json`
 
 Orchestrator control loop:
 
@@ -507,7 +517,17 @@ If state is blocked, choose `delegate_repair`, `request_human_review`, or `block
 multi-agent-brief finalize --config <workspace>/config.yaml
 ```
 
-13. Report artifact paths, audit status, and quality gate status.
+13. Optional audit/debug provenance projection after runtime state exists:
+
+```bash
+multi-agent-brief provenance build --workspace <workspace>
+multi-agent-brief provenance show --workspace <workspace> --json
+multi-agent-brief provenance validate --workspace <workspace>
+```
+
+Provenance projection is not semantic proof and is not required before finalize.
+
+14. Report artifact paths, audit status, quality gate status, and optional provenance graph path when created.
 
 ### Delegation Sequence
 
@@ -671,7 +691,7 @@ def render_hermes_setup_success(
     repo: str | Path,
     venv: str | Path,
     workspace: str | Path,
-    version: str = "v0.6.4",
+    version: str = "v0.6.5",
     doctor_status: str = "passed",
 ) -> str:
     return f"""Project is cloned and ready.
@@ -725,6 +745,9 @@ Optional feedback state files:
 
 Optional quality gate state files:
 - output/intermediate/quality_gate_report.json
+
+Optional provenance projection files:
+- output/intermediate/provenance_graph.json
 
 Orchestrator loop: {ORCHESTRATOR_LOOP}
 
@@ -840,7 +863,13 @@ As the Hermes Orchestrator main agent, execute:
 17. Run finalize only after the gates/state decision path passes. finalize is not a quality-gate executor:
     multi-agent-brief finalize --config {workspace}/config.yaml
 
-18. Report artifact paths, audit status, and quality gate status.
+18. Optional audit/debug projection after runtime state exists:
+    multi-agent-brief provenance build --workspace {workspace}
+    multi-agent-brief provenance show --workspace {workspace} --json
+    multi-agent-brief provenance validate --workspace {workspace}
+    Provenance projection is not semantic proof and is not required to finalize.
+
+19. Report artifact paths, audit status, quality gate status, and optional provenance_graph.json when created.
 
 For each delegate_task call, write complete goal and context with the workspace path, input paths, and output paths fully specified. After each child returns, verify the expected artifact exists and is non-empty before selecting continue, retry_stage, delegate_repair, request_human_review, block_run, or finalize.
 

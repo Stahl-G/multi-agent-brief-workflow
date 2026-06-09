@@ -127,6 +127,38 @@ cases:
         current_stage: analyst
         blocked: true
 
+  - case_id: provenance_projection_minimal
+    case_type: workspace
+    synthetic: true
+    description: Provenance projection connects runtime, claims, draft refs, decisions, and gate findings.
+    initial_stage: auditor
+    commands:
+      - action: state.check
+        args: {}
+      - action: provenance.build
+        args: {}
+      - action: provenance.validate
+        args: {}
+    expected:
+      exit_code: 0
+      expected_actions:
+        - action: state.check
+          exit_code: 0
+        - action: provenance.build
+          exit_code: 0
+        - action: provenance.validate
+          exit_code: 0
+      artifacts_exist:
+        - output/intermediate/provenance_graph.json
+      graph_edges_any:
+        - type: claim_cites_source
+        - type: claim_recorded_in_artifact
+        - type: artifact_references_claim
+        - type: decision_applies_to_stage
+        - type: gate_finding_targets_stage
+      graph_absent_text:
+        - Full synthetic evidence text must stay out of provenance.
+
   - case_id: static_hermes_no_skip_finalize
     case_type: static_contract
     synthetic: true

@@ -110,7 +110,7 @@ event_log.jsonl
 - 未来 stage 的 required artifact 尚未产生，不应导致 fresh workspace 全局 blocked。
 - Artifact 通常只有在 producer stage 已完成、artifact 已激活，并且影响当前或 downstream consumer stage 时，才可能成为 blocking。
 - `event_log.jsonl` 是 runtime/control event log，不是 full provenance graph。
-- Provenance graph 属于后续专门能力，不要把 event log 冒充 provenance graph。
+- v0.6.5 的 `provenance_graph.json` 是从已有 control files 派生的 optional audit/debug projection；不要把 event log 或 provenance projection 冒充 semantic proof。
 
 ### 6. Stage 与 Decision
 

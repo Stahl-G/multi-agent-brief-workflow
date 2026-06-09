@@ -1,4 +1,4 @@
-"""Tests for v0.6.4 public-safe evaluation cases."""
+"""Tests for public-safe evaluation cases."""
 
 from __future__ import annotations
 
@@ -38,14 +38,14 @@ def test_eval_cases_validate_and_run_packaged_cases(capsys):
     assert rc == 0
     validation = json.loads(capsys.readouterr().out)
     assert validation["ok"] is True
-    assert validation["case_count"] == 6
+    assert validation["case_count"] == 7
 
     rc = main(["eval-cases", "run", "--repo-workdir", str(ROOT), "--json"])
 
     assert rc == 0
     result = json.loads(capsys.readouterr().out)
     assert result["ok"] is True
-    assert result["passed_count"] == 6
+    assert result["passed_count"] == 7
     assert result["failed_count"] == 0
     assert {
         "unsupported_material_fact",
@@ -53,6 +53,7 @@ def test_eval_cases_validate_and_run_packaged_cases(capsys):
         "reader_facing_target_relevance",
         "feedback_triage_required",
         "planned_blocking_issue_cannot_continue",
+        "provenance_projection_minimal",
         "static_hermes_no_skip_finalize",
     } == {case["case_id"] for case in result["results"]}
 

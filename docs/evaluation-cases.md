@@ -1,12 +1,13 @@
 # Public-Safe Evaluation Cases
 
-v0.6.4 introduces packaged public-safe evaluation cases for developer and CI regression checks.
+v0.6.4 introduced packaged public-safe evaluation cases for developer and CI regression checks. v0.6.5 extends the packaged suite with provenance projection coverage.
 
 These cases validate control-surface behavior across:
 
 - deterministic quality gates
 - feedback issue triage and repair planning controls
 - runtime state blockers
+- provenance projection controls
 - Hermes guidance invariants
 
 They are not benchmark scores and are not workflow artifacts.

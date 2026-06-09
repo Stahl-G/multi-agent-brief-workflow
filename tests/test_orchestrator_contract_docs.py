@@ -113,6 +113,14 @@ def test_orchestrator_contract_defines_main_agent_and_decisions():
     ]
     assert "llm_as_judge_prose_scoring" in contract["v064_boundaries"]["deferred"]
     assert "private_commercial_benchmark_suites" in contract["v064_boundaries"]["deferred"]
+    assert contract["v065_boundaries"]["implements"] == [
+        "deterministic_provenance_projection",
+        "workspace_local_audit_graph",
+        "provenance_graph_validation",
+        "provenance_event_trace",
+    ]
+    assert "semantic_truth_verification" in contract["v065_boundaries"]["deferred"]
+    assert "workflow_dag_runtime" in contract["v065_boundaries"]["deferred"]
 
     refs = contract["orchestrator"]["contract_references"]
     for rel_path in refs.values():
@@ -143,7 +151,12 @@ def test_artifact_contracts_match_stage_specs():
             )
 
     for artifact in artifacts:
-        assert artifact["producer_stage"] in stage_ids
+        if artifact["artifact_id"] == "provenance_graph":
+            assert artifact["producer_stage"] == "provenance"
+            assert artifact["producer_kind"] == "control_tool"
+            assert artifact["required"] is False
+        else:
+            assert artifact["producer_stage"] in stage_ids
         for consumer_stage in artifact["consumer_stages"]:
             assert consumer_stage in stage_ids
         assert set(artifact["allowed_decisions"]) <= EXPECTED_DECISIONS
@@ -164,6 +177,9 @@ def test_artifact_contracts_preserve_future_provenance_fields():
     }
 
     assert required_fields <= set(contract["provenance_ready_fields"])
+    assert contract["producer_kind_values"] == ["workflow_stage", "control_tool"]
+    assert "artifact_derived_from" in contract["edge_direction_notes"]
+    assert "derived/output artifact" in contract["edge_direction_notes"]["artifact_derived_from"]
     for artifact in _load_yaml(ARTIFACT_CONTRACTS)["artifacts"]:
         assert required_fields <= set(artifact), artifact["artifact_id"]
 

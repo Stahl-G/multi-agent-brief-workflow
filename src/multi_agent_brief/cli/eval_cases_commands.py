@@ -32,7 +32,7 @@ def register(subparsers: argparse._SubParsersAction) -> None:
 
     run_parser = actions.add_parser("run", help="Run evaluation cases.")
     run_parser.add_argument("--cases-dir", help="Custom evaluation cases directory.")
-    run_parser.add_argument("--case-id", help="Run one case id.")
+    run_parser.add_argument("--case-id", "--case", dest="case_id", help="Run one case id.")
     run_parser.add_argument("--repo-workdir", help="Repository or packaged contract base.")
     run_parser.add_argument(
         "--keep-workspaces",

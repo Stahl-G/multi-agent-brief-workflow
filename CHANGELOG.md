@@ -5,6 +5,25 @@ All notable changes to the multi-agent-brief-workflow project will be documented
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.5] — 2026-06-09
+
+### Added
+
+- **Provenance projection CLI**: added `multi-agent-brief provenance build`, `provenance show --json`, and `provenance validate` for deterministic workspace-local audit/debug graphs.
+- **Provenance control artifact**: added optional `output/intermediate/provenance_graph.json` as a projection of existing runtime state, artifact registry, event log, Claim Ledger, feedback, repair, and quality gate control files.
+- **Provenance eval case**: added a packaged public-safe eval case that validates provenance graph creation without leaking raw evidence text.
+- **Runtime and handoff references**: handoff JSON/Markdown, Hermes prompts, and Hermes plugin references now expose optional provenance state separately from required workflow artifacts.
+
+### Changed
+
+- **Artifact activation**: `provenance_graph.json` stays `expected/not_checked` until `provenance build` creates it, so fresh workspaces are not blocked by missing provenance.
+- **Runtime events**: event logs can record provenance build/validate outcomes without turning the event log into the graph source of truth.
+- **Reference semantics**: provenance edges use citation wording such as `claim_cites_source`; the graph does not assert semantic truth or that a source proves a claim.
+
+### Boundaries
+
+- Provenance projection is optional audit/debug tooling. It does not execute workflow stages, replay a DAG, fetch sources, edit briefs, execute repair, verify semantic truth, or gate `finalize` by default.
+
 ## [0.6.4] — 2026-06-08
 
 ### Added

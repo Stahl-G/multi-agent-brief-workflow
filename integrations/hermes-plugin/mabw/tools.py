@@ -325,6 +325,9 @@ def run_handoff(args: dict, **kwargs) -> str:
         quality_gate_state_files = {
             "quality_gate_report": workspace / "output" / "intermediate" / "quality_gate_report.json",
         }
+        provenance_state_files = {
+            "provenance_graph": workspace / "output" / "intermediate" / "provenance_graph.json",
+        }
 
         result.update({
             "workspace": str(workspace),
@@ -340,12 +343,14 @@ def run_handoff(args: dict, **kwargs) -> str:
             "feedback_state_files_exist": {key: path.exists() for key, path in feedback_state_files.items()},
             "quality_gate_state_files": {key: str(path) for key, path in quality_gate_state_files.items()},
             "quality_gate_state_files_exist": {key: path.exists() for key, path in quality_gate_state_files.items()},
+            "provenance_state_files": {key: str(path) for key, path in provenance_state_files.items()},
+            "provenance_state_files_exist": {key: path.exists() for key, path in provenance_state_files.items()},
             "next": (
                 "Read agent_handoff.md and continue in Hermes as the Orchestrator main agent. "
                 "Read configs/orchestrator_contract.yaml, configs/stage_specs.yaml, "
                 "configs/artifact_contracts.yaml, configs/policy_packs/default.yaml, "
                 "workflow_state.json, artifact_registry.json, optional feedback state references, "
-                "and optional quality gate state references before delegation."
+                "optional quality gate state references, and optional provenance projection references before delegation."
             ),
         })
 

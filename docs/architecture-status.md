@@ -10,6 +10,7 @@ This page separates current implementation state from roadmap goals. Use it befo
 - Feedback issues and bounded repair plans can be structured, validated, and recorded without executing repair.
 - Deterministic material-fact, freshness, and target-relevance gates can write a quality gate report without fetching sources or rewriting briefs.
 - Packaged public-safe evaluation cases can validate known gates, feedback, runtime blocker, and Hermes path regressions for development and CI.
+- Optional deterministic provenance projection can write a workspace-local audit/debug graph from existing control files.
 - Python commands provide setup, source tooling, validation, audit support, and rendering.
 - Hermes, Claude Code, Codex, OpenCode, and manual fallback are treated as agent runtime surfaces.
 - Input governance separates evidence from feedback, instructions, and background context.
@@ -20,7 +21,7 @@ This page separates current implementation state from roadmap goals. Use it befo
 The roadmap mentions concepts that are not necessarily implemented yet. Treat these as goals unless the code, tests, and support matrix show otherwise:
 
 - Orchestrator contracts
-- evidence and execution provenance
+- semantic evidence support verification
 - quality evaluation and feedback loops
 - private or commercial benchmark suites
 - policy packs

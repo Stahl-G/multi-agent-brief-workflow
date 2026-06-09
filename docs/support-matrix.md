@@ -19,11 +19,13 @@ Each capability has one of the following statuses:
 | Runtime state control files (`runtime_manifest.json`, `workflow_state.json`, `artifact_registry.json`, `event_log.jsonl`) | Supported |
 | Feedback control files (`feedback_issues.json`, `repair_plan.json`, conditional `delta_audit_report.json`) | Supported |
 | Quality gate control file (`quality_gate_report.json`) | Supported |
+| Provenance projection control file (`provenance_graph.json`) | Supported |
 | Finalize (Markdown + DOCX) | Supported |
 | `multi-agent-brief run --workspace <path>` | Supported |
 | `multi-agent-brief state init/check/show/decide` | Supported |
 | `multi-agent-brief feedback ingest/plan/resolve/show/validate` | Supported |
 | `multi-agent-brief gates check/show/validate` | Supported |
+| `multi-agent-brief provenance build/show/validate` | Supported |
 | `multi-agent-brief eval-cases list/validate/run` | Supported |
 | `multi-agent-brief init --from-onboarding` | Supported |
 | `multi-agent-brief onboard` | Supported |
@@ -37,6 +39,8 @@ Feedback commands structure issues and repair plans for the Orchestrator. They d
 Quality gate commands write deterministic gate reports and can block unsafe current-stage continue/finalize decisions. They do not fetch sources, rewrite briefs, execute repair, or create feedback issues automatically.
 
 Evaluation cases are developer/CI regression checks for control-surface behavior. They do not create workflow artifacts, run subagents, fetch sources, score prose, call an LLM judge, or execute repair.
+
+Provenance commands write a deterministic workspace-local audit/debug graph from existing control files. They do not fetch sources, execute workflow stages, replay the runtime, execute repair, verify semantic truth, or block `finalize` by default.
 
 ## Runtimes
 
@@ -90,6 +94,7 @@ Evaluation cases are developer/CI regression checks for control-surface behavior
 | Tool | Status |
 |---|---|
 | Packaged public-safe evaluation cases (`eval-cases`) | Supported |
+| Workspace provenance projection (`provenance`) | Supported |
 | Private/commercial benchmark cases | Not shipped |
 | LLM-as-judge prose scoring | Not shipped |
 

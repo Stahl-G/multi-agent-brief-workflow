@@ -17,6 +17,11 @@ artifact_contract:
     - blocking_reason
     - allowed_decisions
     - retry_or_human_review_decision
+  producer_kind_values:
+    - workflow_stage
+    - control_tool
+  edge_direction_notes:
+    artifact_derived_from: "from is the derived/output artifact; to is the source/input artifact."
 artifacts:
   - artifact_id: source_candidates
     path: source_candidates.yaml
@@ -205,6 +210,23 @@ artifacts:
     allowed_decisions:
       - continue
       - delegate_repair
+      - request_human_review
+      - block_run
+    retry_or_human_review_decision: request_human_review
+  - artifact_id: provenance_graph
+    path: output/intermediate/provenance_graph.json
+    format: json
+    required: false
+    producer_kind: control_tool
+    producer_stage: provenance
+    producer_role: python_tool
+    consumer_stages:
+      - auditor
+      - finalize
+    validation_result: conditional_provenance_only
+    blocking_reason: ""
+    allowed_decisions:
+      - continue
       - request_human_review
       - block_run
     retry_or_human_review_decision: request_human_review

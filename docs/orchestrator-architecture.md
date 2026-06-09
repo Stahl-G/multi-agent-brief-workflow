@@ -27,7 +27,7 @@ v0.6.0 introduces public-safe contract references:
 - `configs/artifact_contracts.yaml`
 - `configs/policy_packs/default.yaml`
 
-These files describe shared authority, decision vocabulary, stage order, artifact expectations, and the default policy shell. v0.6.1 added minimum runtime state control files and artifact status checks. v0.6.2 added minimum feedback issue and repair-plan controls. v0.6.3 added deterministic material-fact, freshness, and target-relevance gate controls. v0.6.4 adds packaged public-safe evaluation cases for developer/CI regression checks. Python still does not automatically edit brief artifacts, execute repair, live-fetch sources, make semantic truth judgments, score prose with an LLM judge, or build a provenance graph.
+These files describe shared authority, decision vocabulary, stage order, artifact expectations, and the default policy shell. v0.6.1 added minimum runtime state control files and artifact status checks. v0.6.2 added minimum feedback issue and repair-plan controls. v0.6.3 added deterministic material-fact, freshness, and target-relevance gate controls. v0.6.4 added packaged public-safe evaluation cases for developer/CI regression checks. v0.6.5 adds optional deterministic provenance projection for workspace audit/debug review. Python still does not automatically edit brief artifacts, execute repair, live-fetch sources, make semantic truth judgments, score prose with an LLM judge, or treat provenance as semantic proof.
 
 ## Four Contract Categories
 
@@ -49,7 +49,7 @@ The Orchestrator uses a shared decision vocabulary:
 - `block_run`
 - `finalize`
 
-In v0.6.1 these decisions can also be recorded through the runtime state event log. In v0.6.2 feedback issue and repair-plan events can also be recorded. In v0.6.3 quality gate check/pass/block events can also be recorded. The event log is a control trace, not a full provenance graph.
+In v0.6.1 these decisions can also be recorded through the runtime state event log. In v0.6.2 feedback issue and repair-plan events can also be recorded. In v0.6.3 quality gate check/pass/block events can also be recorded. In v0.6.5 provenance build/validate outcomes can also be recorded. The event log is a control trace; `provenance_graph.json` is a separate derived projection.
 
 ## Runtime Loop
 
@@ -66,26 +66,24 @@ Each runtime should communicate the same loop:
 
 Runtime mechanics may differ, but artifact expectations should stay aligned.
 
-## Provenance Compatibility
+## Provenance Projection
 
-v0.6.0 does not build a provenance graph. It does keep the contract shape compatible with later provenance work by preserving:
+v0.6.5 can build `output/intermediate/provenance_graph.json` from existing runtime state, artifact registry, event log, Claim Ledger, feedback, repair, and quality gate files. This graph is an audit/debug projection:
 
-- artifact identity
-- producer stage or role
-- consumer stage or role
-- validation result summary
-- blocking reason
-- retry or human-review decision
-- decision category attached to a stage
+- It preserves artifact identity, producer stage or role, consumer stage or role, and validation summaries as graph metadata.
+- It is created only by `multi-agent-brief provenance build`.
+- It does not initialize runtime state or execute workflow stages.
+- It records citation and control relationships, not semantic proof.
+- It does not block `state check`, `state decide`, or `finalize` by default.
 
 ## Deferred Work
 
 Later v0.6 milestones own:
 
-- material-fact and freshness gates
 - private/commercial benchmark suites
 - LLM-as-judge prose scoring
-- evidence and execution provenance
+- semantic evidence support verification
+- execution replay or a full DAG runtime
 
 ## Related
 

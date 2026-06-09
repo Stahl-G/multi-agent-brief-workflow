@@ -55,6 +55,15 @@ doctor → source discovery when configured → input governance when available 
 
 Before `finalize`, run `multi-agent-brief gates check`, `state check --strict`, and `state decide --stage auditor --decision continue`. `finalize` only renders reader-facing outputs; it is not a quality-gate executor.
 
+Optional audit/debug projection after runtime state exists:
+
+```text
+multi-agent-brief provenance build --workspace <workspace>
+multi-agent-brief provenance validate --workspace <workspace>
+```
+
+Provenance projection is not semantic proof and is not required to finalize.
+
 ## References
 
 Read these when needed:

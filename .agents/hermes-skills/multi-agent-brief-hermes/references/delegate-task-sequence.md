@@ -25,7 +25,9 @@ Read workspace context -> read contract references -> identify the next stage ->
 6. Delegate child tasks in sequence.
 7. Verify each expected artifact exists and is non-empty before selecting the next decision.
 8. Decide `continue`, `retry_stage`, `delegate_repair`, `request_human_review`, `block_run`, or `finalize`.
-9. Run `multi-agent-brief finalize --config <workspace>/config.yaml` after audit readiness.
+9. Run quality gates and `state check/decide` before finalize.
+10. Run `multi-agent-brief finalize --config <workspace>/config.yaml` after audit readiness and gate readiness.
+11. Optionally run `multi-agent-brief provenance build/show/validate` for audit/debug projection after runtime state exists.
 
 ## Child Task Templates
 
@@ -85,3 +87,25 @@ Inputs: `output/intermediate/audited_brief.md`, `output/intermediate/claim_ledge
 Write: `output/intermediate/audit_report.json`
 
 Check source support, orphan citations, unsupported numbers, missing dates, stale framing, process residue, advice language, and delivery readiness.
+
+## Before Finalize Gate Path
+
+After `audit_report.json` exists:
+
+```bash
+multi-agent-brief gates check --workspace <workspace>
+multi-agent-brief state check --workspace <workspace> --strict
+multi-agent-brief state decide --workspace <workspace> --stage auditor --decision continue --reason "Audit and quality gates passed."
+```
+
+If state is blocked, choose `delegate_repair`, `request_human_review`, or `block_run`; do not finalize. `finalize` is not a quality-gate executor.
+
+Optional provenance projection after runtime state exists:
+
+```bash
+multi-agent-brief provenance build --workspace <workspace>
+multi-agent-brief provenance show --workspace <workspace> --json
+multi-agent-brief provenance validate --workspace <workspace>
+```
+
+Provenance projection is not semantic proof and is not required before finalize.

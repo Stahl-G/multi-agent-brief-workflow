@@ -70,11 +70,26 @@ Stage sequence:
 11. Check edited `audited_brief.md`, then delegate the **brief-auditor** subagent:
     - Audit `$ARGUMENTS/output/intermediate/audited_brief.md` against `$ARGUMENTS/output/intermediate/claim_ledger.json`.
 
-12. Check `audit_report.json`, then finalize after audit readiness:
+12. Check `audit_report.json`, then run quality gates and refresh runtime state before finalize:
+    - Run: `multi-agent-brief gates check --workspace $ARGUMENTS`
+    - Run: `multi-agent-brief state check --workspace $ARGUMENTS --strict`
+    - If state is not blocked, run: `multi-agent-brief state decide --workspace $ARGUMENTS --stage auditor --decision continue --reason "Audit and quality gates passed."`
+    - If state is blocked, choose delegate_repair, request_human_review, or block_run; do not finalize.
+
+13. Finalize only after the gates/state decision path passes:
     - Run: `multi-agent-brief finalize --config $ARGUMENTS/config.yaml`
     - Confirm `output/brief.md` strips [src:CLAIM_ID].
+    - Remember: finalize is not a quality-gate executor.
 
-13. **Final response:**
+14. Optional audit/debug provenance projection after runtime state exists:
+    - Run: `multi-agent-brief provenance build --workspace $ARGUMENTS`
+    - Run: `multi-agent-brief provenance show --workspace $ARGUMENTS --json`
+    - Run: `multi-agent-brief provenance validate --workspace $ARGUMENTS`
+    - Treat provenance as citation/control projection, not semantic proof.
+
+15. **Final response:**
     - Report artifact paths.
     - Report audit status.
+    - Report quality gate status.
+    - Report optional provenance graph path when created.
     - Report success when audit status supports delivery.
