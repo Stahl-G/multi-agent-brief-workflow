@@ -79,7 +79,7 @@ jobs:
           test -s docs/roadmap.zh-CN.md
           grep -q "Orchestrator Contracts And Feedback Loop" docs/roadmap.md
           grep -q "Planning Privacy" docs/roadmap.md
-          grep -q "Orchestrator Contracts And Feedback Loop" docs/roadmap.zh-CN.md
+          grep -q "司乐师 契约 And Feedback Loop" docs/roadmap.zh-CN.md
           grep -q "规划保密边界" docs/roadmap.zh-CN.md
           python3 - <<'PY'
           from pathlib import Path
