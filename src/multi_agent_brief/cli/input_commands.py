@@ -168,9 +168,12 @@ def _handle_classify(args: argparse.Namespace) -> int:
         print(resolved["error"], flush=True)
         return 1
     input_path = resolved["input_path"]
-    output_path = Path(args.output) if args.output else resolved["output_dir"] / "input_classification.json"
-    if args.output:
-        output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path = (
+        Path(args.output)
+        if args.output
+        else resolved["output_dir"] / "input_classification.json"
+    )
+    output_path.parent.mkdir(parents=True, exist_ok=True)
 
     classified = _classify_input_dir(input_path)
 
@@ -246,7 +249,6 @@ def _resolve_workspace_paths(config: str | Path) -> dict[str, Any]:
     output_dir = Path(raw_output_path)
     if not output_dir.is_absolute():
         output_dir = workspace / output_dir
-    output_dir.mkdir(parents=True, exist_ok=True)
 
     return {
         "workspace": workspace,

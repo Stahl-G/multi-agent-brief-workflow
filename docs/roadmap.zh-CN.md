@@ -105,7 +105,7 @@ v1.0 前不优先重建完整分布式 multi-agent runtime。Python 继续作为
 
 - 已在 finalize 阶段加入 reader-facing source appendix 生成。
 - `source_appendix` 是当前 output format 名称；旧 `source_map` 作为兼容 alias 保留。
-- Reader-facing 来源列表默认追加到最终 Markdown/DOCX 末尾，同时保留为 `output/source_appendix.md`；它只来自 `output/intermediate/audited_brief.md` 实际引用、并可通过 `output/intermediate/claim_ledger.json` 解析的 claims。
+- Reader-facing 来源列表默认写入独立的 `output/source_appendix.md`；显式配置 `source_appendix.mode: append` 时才追加到最终 Markdown/DOCX 末尾。它只来自 `output/intermediate/audited_brief.md` 实际引用、并可通过 `output/intermediate/claim_ledger.json` 解析的 claims。
 - Reader-facing output 不应暴露 raw claim IDs、source IDs、evidence text、本地路径或 `file://` URL。
 - Appendix 不是 source evidence、semantic proof、runtime state file、溯源图 或 workflow gate。
 
@@ -163,7 +163,7 @@ v0.6.9 之后的公开顺序转向 FrictionStore、improvement proposals 和 pol
 
 - [Implementation overview index](implementation/README.md)
 - [v0.5.9 司乐师 Contract Preparation](implementation/v0.5.9-orchestrator-prep.md)
-- [v0.6.0 Explicit 司乐师 Contract](implementation/v0.6.0-explicit-orchestrator-契约.md)
+- [v0.6.0 Explicit 司乐师 Contract](implementation/v0.6.0-explicit-orchestrator-contract.md)
 
 Non-goals:
 

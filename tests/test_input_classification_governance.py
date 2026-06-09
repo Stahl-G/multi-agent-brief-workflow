@@ -270,6 +270,36 @@ def test_inputs_classify_custom_output_creates_parent(tmp_path: Path):
     assert "real.md" in [e["name"] for e in j["evidence"]]
 
 
+def test_inputs_classify_custom_output_does_not_create_default_output_dir(tmp_path: Path):
+    ws = tmp_path / "ws"
+    ws.mkdir()
+    (ws / "config.yaml").write_text(
+        "project:\n  name: Test\n  language: zh-CN\n"
+        "input:\n  path: input\n"
+        "output:\n  path: configured_output\n",
+        encoding="utf-8",
+    )
+    (ws / "input" / "sources").mkdir(parents=True)
+    (ws / "input" / "sources" / "real.md").write_text("# real", encoding="utf-8")
+
+    custom_output = ws / "custom" / "classification.json"
+    result = main(
+        [
+            "inputs",
+            "classify",
+            "--config",
+            str(ws / "config.yaml"),
+            "--output",
+            str(custom_output),
+            "--quiet",
+        ]
+    )
+
+    assert result == 0
+    assert custom_output.exists()
+    assert not (ws / "configured_output").exists()
+
+
 # ────────────────────────────────────────────────────────────────────
 # Test 5: ManualProvider blocks non-evidence paths
 # ────────────────────────────────────────────────────────────────────

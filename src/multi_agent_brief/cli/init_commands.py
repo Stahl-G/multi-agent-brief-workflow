@@ -322,6 +322,26 @@ def _apply_cli_overrides(profile, args: argparse.Namespace) -> None:
         profile.excluded_news_domains = excluded_domains
 
 
+def _profile_option_errors(profile) -> list[str]:
+    """Return errors for option combinations that cannot produce runnable config."""
+    errors: list[str] = []
+    if (
+        getattr(profile, "initial_news_backfill_enabled", False)
+        and getattr(profile, "source_profile", "") != "llm_decide"
+    ):
+        errors.append(
+            "--initial-news-backfill requires --source-profile llm_decide "
+            "because it runs through sources decide and source_discovery."
+        )
+    return errors
+
+
+def _print_profile_option_errors(errors: list[str]) -> None:
+    print("[error] Incompatible init options.")
+    for error in errors:
+        print(f"        {error}")
+
+
 def _init_workspace(args: argparse.Namespace) -> int:
     """Create a brief workspace from onboarding or CLI args."""
     from multi_agent_brief.cli.init_wizard import (
@@ -457,6 +477,11 @@ def _init_workspace(args: argparse.Namespace) -> int:
                 " --from-onboarding onboarding.json"
             )
             return 1
+
+    option_errors = _profile_option_errors(profile)
+    if option_errors:
+        _print_profile_option_errors(option_errors)
+        return 1
 
     create_workspace(target, profile, force=args.force)
     print(f"Created brief workspace: {target}")

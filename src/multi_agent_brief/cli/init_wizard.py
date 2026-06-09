@@ -638,12 +638,13 @@ def prompt_for_profile(*, input_func: Callable[[str], str] | None = None) -> Ini
         profile.search_backend = ""
         profile.tavily_enabled = False
 
-    if profile.web_search_enabled:
+    if profile.web_search_enabled and profile.source_profile == "llm_decide":
         profile.initial_news_backfill_enabled = ask_yes_no(
             input_func,
             prompts["initial_news_backfill"],
             default=False,
         )
+    if profile.web_search_enabled:
         profile.preferred_news_domains = parse_list_arg(
             ask_text(input_func, prompts["preferred_news_domains"], "")
         )

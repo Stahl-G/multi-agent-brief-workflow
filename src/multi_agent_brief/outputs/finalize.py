@@ -16,7 +16,7 @@ from multi_agent_brief.outputs.source_appendix import (
 
 _SRC_MARKER_RE = re.compile(r"\[src:[^\]]*\]")
 _INTERNAL_READER_SECTION_RE = re.compile(
-    r"(?:claim\s+ledger|声明账本).*(?:coverage|覆盖|覆盖情况)",
+    r"(?:claim\s+ledger|声明账本).{0,80}(?:coverage|覆盖情况|覆盖)",
     re.IGNORECASE,
 )
 
@@ -260,9 +260,9 @@ def _source_appendix_request(
     else:
         requested_by = "none"
         explicit = False
-    mode = str(source_appendix_config.get("mode") or "append").strip().lower()
+    mode = str(source_appendix_config.get("mode") or "separate").strip().lower()
     if mode not in {"separate", "append"}:
-        mode = "append"
+        mode = "separate"
     return {
         "requested_by": requested_by,
         "explicit": explicit,

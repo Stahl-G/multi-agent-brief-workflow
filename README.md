@@ -569,7 +569,7 @@ multi-agent-brief sources decide --config ../mabw-workspace/config.yaml --merge
 - Synthetic module price checks showed a 3.5% week-over-week decline in selected spot-market channels. [src:MARKETDA_867A7D67D0]
 ```
 
-给人阅读的 `brief.md` 会去掉内部引用标记；回溯关系保留在 `intermediate/audited_brief.md` 和 `claim_ledger.json`。如果配置了 `source_appendix`，finalize 会生成不含内部 ID 和 evidence text 的读者版来源列表，默认追加到 `brief.md` / `brief.docx` 末尾，同时保留 `output/source_appendix.md`。
+给人阅读的 `brief.md` 会去掉内部引用标记；回溯关系保留在 `intermediate/audited_brief.md` 和 `claim_ledger.json`。如果配置了 `source_appendix`，finalize 会生成不含内部 ID 和 evidence text 的读者版来源列表；默认写入独立的 `output/source_appendix.md`，如配置 `source_appendix.mode: append` 才会追加到 `brief.md` / `brief.docx` 末尾。
 
 对应事实会写入 `claim_ledger.json`：
 

@@ -167,14 +167,14 @@ def test_finalize_generates_reader_facing_source_appendix_for_explicit_request(t
     assert report["source_appendix_source_count"] == 1
     assert report["source_appendix_cited_claim_count"] == 2
     assert report["source_appendix_resolved_claim_count"] == 1
-    assert report["source_appendix_mode"] == "append"
+    assert report["source_appendix_mode"] == "separate"
     assert "ExampleCo Opens Demo Facility" in appendix
     assert "Unused Source" not in appendix
     assert "SYN_CLAIM" not in appendix
     assert "SYN_SRC" not in appendix
     assert "Full synthetic evidence" not in appendix
-    assert "Source Appendix" in reader
-    assert "https://example.com/exampleco-demo" in reader
+    assert "Source Appendix" not in reader
+    assert "https://example.com/exampleco-demo" not in reader
     assert "SYN_CLAIM" not in reader
 
 

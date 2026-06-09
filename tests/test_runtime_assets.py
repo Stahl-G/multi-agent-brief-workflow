@@ -6,7 +6,7 @@ from pathlib import Path
 
 from multi_agent_brief.cli.main import main
 from multi_agent_brief.cli.start_commands import CONTRACT_REFERENCES
-from multi_agent_brief.runtime_assets import INSTALL_MARKER
+from multi_agent_brief.runtime_assets import INSTALL_MARKER, JSONC_INSTALL_MARKER
 
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -25,7 +25,17 @@ def _workspace(tmp_path: Path) -> Path:
 
 
 def _all_text_files(root: Path) -> list[Path]:
-    return [path for path in root.rglob("*") if path.is_file() and path.suffix in {".md", ".jsonc"}]
+    return [
+        path
+        for path in root.rglob("*")
+        if path.is_file() and path.suffix in {".md", ".jsonc"}
+    ]
+
+
+def _assert_frontmatter_first(path: Path) -> None:
+    text = path.read_text(encoding="utf-8")
+    assert text.startswith("---\n")
+    assert INSTALL_MARKER in text
 
 
 def test_runtime_install_opencode_workspace_kit_is_local(tmp_path: Path, capsys) -> None:
@@ -46,10 +56,20 @@ def test_runtime_install_opencode_workspace_kit_is_local(tmp_path: Path, capsys)
     assert "Installed workspace runtime kit for opencode" in capsys.readouterr().out
     assert (ws / "AGENTS.md").exists()
     assert (ws / ".opencode" / "commands" / "generate-brief.md").exists()
+    assert (ws / ".opencode" / "commands" / "capability.md").exists()
     assert (ws / ".opencode" / "agents" / "brief-orchestrator.md").exists()
     assert (ws / ".opencode" / "skills" / "multi-agent-brief-workflow" / "SKILL.md").exists()
     assert (ws / ".opencode" / "skills" / "multi-agent-brief-workflow" / "references" / "runtime-workflow.md").exists()
     assert (ws / "opencode.jsonc").exists()
+    assert (ws / "opencode.jsonc").read_text(encoding="utf-8").startswith(
+        JSONC_INSTALL_MARKER
+    )
+    _assert_frontmatter_first(ws / ".opencode" / "commands" / "generate-brief.md")
+    _assert_frontmatter_first(ws / ".opencode" / "commands" / "capability.md")
+    _assert_frontmatter_first(ws / ".opencode" / "agents" / "brief-orchestrator.md")
+    _assert_frontmatter_first(
+        ws / ".opencode" / "skills" / "multi-agent-brief-workflow" / "SKILL.md"
+    )
     assert (ws / "audience_profile.md").read_text(encoding="utf-8") == "Do not overwrite me.\n"
     assert (ws / "config.yaml").read_text(encoding="utf-8") == "project:\n  name: Runtime Kit\n"
 
@@ -77,9 +97,19 @@ def test_runtime_install_claude_workspace_kit_is_local(tmp_path: Path, capsys) -
     assert "Installed workspace runtime kit for claude" in capsys.readouterr().out
     assert (ws / "CLAUDE.md").exists()
     assert (ws / ".claude" / "commands" / "generate-brief.md").exists()
+    assert (ws / ".claude" / "commands" / "capability.md").exists()
+    assert (ws / ".claude" / "commands" / "init-brief.md").exists()
+    assert (ws / ".claude" / "commands" / "propose-competitors.md").exists()
     assert (ws / ".claude" / "agents" / "orchestrator.md").exists()
     assert (ws / ".claude" / "skills" / "multi-agent-brief-workflow" / "SKILL.md").exists()
     assert (ws / ".claude" / "skills" / "multi-agent-brief-workflow" / "references" / "artifact-boundary.md").exists()
+    _assert_frontmatter_first(ws / ".claude" / "commands" / "generate-brief.md")
+    _assert_frontmatter_first(ws / ".claude" / "commands" / "capability.md")
+    _assert_frontmatter_first(ws / ".claude" / "commands" / "propose-competitors.md")
+    _assert_frontmatter_first(ws / ".claude" / "agents" / "orchestrator.md")
+    _assert_frontmatter_first(
+        ws / ".claude" / "skills" / "multi-agent-brief-workflow" / "SKILL.md"
+    )
 
     combined = "\n".join(path.read_text(encoding="utf-8") for path in _all_text_files(ws))
     assert ROOT.as_posix() not in combined

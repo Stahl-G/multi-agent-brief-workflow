@@ -83,7 +83,7 @@ lets a runtime operate from the workspace without reading the MABW source repo.
 
 ## Reader-Facing Source Appendix
 
-v0.6.8 lets `multi-agent-brief finalize` write a reader-facing source appendix when `source_appendix` is configured, or when older configs request the legacy `source_map` output format. Current `source_appendix` requests append the source list to final reader Markdown/DOCX by default while also writing `output/source_appendix.md`.
+v0.6.8 lets `multi-agent-brief finalize` write a reader-facing source appendix when `source_appendix` is configured, or when older configs request the legacy `source_map` output format. Current `source_appendix` requests write `output/source_appendix.md` by default; explicit `source_appendix.mode: append` appends the source list to final reader Markdown/DOCX.
 
 - The appendix is generated only from claims actually cited in `output/intermediate/audited_brief.md`.
 - Reader-facing output must not expose raw `claim_id`, `source_id`, evidence text, local paths, or `file://` URLs.

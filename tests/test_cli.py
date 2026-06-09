@@ -95,6 +95,32 @@ def test_cli_init_can_configure_initial_news_backfill(tmp_path):
     assert domain_config["excluded_domains"] == ["spam.example.com"]
 
 
+def test_cli_init_rejects_initial_news_backfill_without_llm_decide(tmp_path, capsys):
+    workspace = tmp_path / "ws"
+
+    rc = main(
+        complete_init_args(
+            workspace,
+            language="en-US",
+            industry="manufacturing",
+            extra=[
+                "--web-search-mode",
+                "external_api",
+                "--search-backend",
+                "tavily",
+                "--initial-news-backfill",
+            ],
+        )
+    )
+
+    assert rc == 1
+    assert (
+        "--initial-news-backfill requires --source-profile llm_decide"
+        in capsys.readouterr().out
+    )
+    assert not (workspace / "sources.yaml").exists()
+
+
 def test_cli_audit_existing_brief(tmp_path):
     brief = tmp_path / "brief.md"
     ledger = tmp_path / "claim_ledger.json"
