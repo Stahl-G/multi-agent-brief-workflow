@@ -98,6 +98,59 @@ Not allowed:
 - Do not claim compact workflow is quality-equivalent to full specialist
   delegation.
 
+## Fast Rerun Recipe
+
+Use when a workspace already has a frozen fact layer and the operator wants to
+rerun the writing/audit side, usually to test approved Improvement Memory
+guidance or reader-facing changes.
+
+Create handoff:
+
+```bash
+multi-agent-brief run --workspace <workspace> --recipe fast-rerun
+```
+
+This recipe is handoff guidance only. It does not make Python execute stages,
+skip stages, or generate the brief.
+
+Required frozen artifacts:
+
+```text
+output/intermediate/candidate_claims.json
+output/intermediate/screened_candidates.json
+output/intermediate/claim_ledger.json
+```
+
+Runtime Orchestrator behavior:
+
+```text
+run handoff
+→ state check --strict
+→ record pre-analyst state decisions for already-valid frozen artifacts
+→ analyst
+→ editor
+→ auditor
+→ gates/state review
+→ finalize
+```
+
+Allowed:
+
+- Reuse the existing source/candidate/screened/claim-ledger artifacts when they
+  are present and valid.
+- Start model-backed content work at Analyst.
+- Use this recipe for private instrumentation and manifestation reruns.
+
+Not allowed:
+
+- Do not silently fall back to a full run if a frozen required artifact is
+  missing or invalid.
+- Do not regenerate Scout, Screener, or Claim Ledger outputs unless the operator
+  intentionally abandons the fast rerun.
+- Do not use this as proof of output-quality improvement.
+- Do not expose `improvement/memory.md`; use only the frozen per-run snapshot
+  when present.
+
 ## Existing Draft Review
 
 Existing-draft review is not a standalone v0.7.0 mode. Treat it as a compact

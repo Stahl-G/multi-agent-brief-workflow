@@ -70,6 +70,7 @@ def _assert_orchestrator_contract_handoff(data: dict[str, object]) -> None:
         for key in ("next_steps", "prompt", "notes")
     )
     assert data["contract_references"] == CONTRACT_REFERENCES
+    assert data["recipe"] in {"full", "fast-rerun"}
     assert data["runtime_state_files"] == RUNTIME_STATE_FILES
     assert data["audience_memory_files"] == AUDIENCE_MEMORY_FILES
     assert isinstance(data.get("improvement_memory_files"), dict)
@@ -163,6 +164,7 @@ def test_start_help_shows_runtime_options(capsys):
     output = captured.out
     assert "launcher" in output.lower() or "handoff" in output.lower()
     assert "--runtime" in output
+    assert "--recipe" in output
     assert "hermes" in output
     assert "claude" in output
     assert "--workspace" in output
@@ -331,6 +333,51 @@ def test_start_claude_output_contains_generate_brief(tmp_path, capsys):
     assert rc == 0
     captured = capsys.readouterr()
     assert "/generate-brief" in captured.out
+
+
+def test_run_fast_rerun_recipe_adds_guidance_without_generating_brief(tmp_path):
+    ws = _write_workspace(tmp_path)
+    intermediate = ws / "output" / "intermediate"
+    intermediate.mkdir(parents=True)
+    (intermediate / "candidate_claims.json").write_text("[]\n", encoding="utf-8")
+    (intermediate / "screened_candidates.json").write_text("[]\n", encoding="utf-8")
+    (intermediate / "claim_ledger.json").write_text("[]\n", encoding="utf-8")
+
+    rc = main([
+        "run",
+        "--workspace", str(ws),
+        "--runtime", "claude",
+        "--recipe", "fast-rerun",
+        "--skip-doctor",
+        "--venv", str(tmp_path / ".venv" / "bin" / "activate"),
+    ])
+
+    assert rc == 0
+    data = json.loads((ws / "output" / "intermediate" / "agent_handoff.json").read_text(encoding="utf-8"))
+    text = data["prompt"] + "\n" + "\n".join(data["notes"])
+    assert data["recipe"] == "fast-rerun"
+    assert "Runtime recipe: fast-rerun" in text
+    assert "Start model-backed content work at Analyst" in text
+    assert "Do not rerun source discovery, Scout, Screener, or Claim Ledger" in text
+    assert "state decide" in text
+    assert not (ws / "output" / "brief.md").exists()
+
+
+def test_fast_rerun_recipe_warns_when_frozen_artifacts_missing(tmp_path):
+    ws = _write_workspace(tmp_path)
+
+    handoff = build_handoff(
+        workspace=ws,
+        repo_workdir=ROOT,
+        runtime="claude",
+        recipe="fast-rerun",
+        run_doctor=False,
+    )
+
+    text = handoff.prompt + "\n" + "\n".join(handoff.notes)
+    assert handoff.recipe == "fast-rerun"
+    assert "Missing required frozen artifacts at handoff creation" in text
+    assert "claim_ledger.json" in text
 
 
 def test_start_manual_handoff_contains_artifact_contract(tmp_path):

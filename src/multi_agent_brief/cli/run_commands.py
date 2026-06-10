@@ -7,6 +7,7 @@ from pathlib import Path
 
 from multi_agent_brief.cli.start_commands import (
     VALID_RUNTIMES,
+    VALID_RUNTIME_RECIPES,
     AgentHandoff,
     build_handoff,
     render_handoff_cli,
@@ -52,6 +53,12 @@ def register(subparsers: argparse._SubParsersAction) -> None:
         help="Target runtime for handoff (default: auto, resolves to hermes).",
     )
     run_parser.add_argument(
+        "--recipe",
+        default="full",
+        choices=list(VALID_RUNTIME_RECIPES),
+        help="Runtime handoff recipe: full or fast-rerun (guidance only, not a Python pipeline).",
+    )
+    run_parser.add_argument(
         "--repo-workdir",
         help="Repository workdir (default: auto-detect source repo).",
     )
@@ -86,6 +93,12 @@ def register(subparsers: argparse._SubParsersAction) -> None:
         help="Target runtime for handoff (default: auto, resolves to hermes).",
     )
     start_parser.add_argument(
+        "--recipe",
+        default="full",
+        choices=list(VALID_RUNTIME_RECIPES),
+        help="Runtime handoff recipe: full or fast-rerun (guidance only, not a Python pipeline).",
+    )
+    start_parser.add_argument(
         "--repo-workdir",
         help="Repository workdir (default: auto-detect source repo).",
     )
@@ -108,6 +121,12 @@ def register(subparsers: argparse._SubParsersAction) -> None:
         default="auto",
         choices=list(VALID_RUNTIMES),
         help="Target runtime for handoff (default: auto, resolves to hermes).",
+    )
+    handoff_parser.add_argument(
+        "--recipe",
+        default="full",
+        choices=list(VALID_RUNTIME_RECIPES),
+        help="Runtime handoff recipe: full or fast-rerun (guidance only, not a Python pipeline).",
     )
     handoff_parser.add_argument(
         "--repo-workdir",
@@ -188,6 +207,7 @@ def _run_launcher(args: argparse.Namespace) -> int:
         workspace=workspace_path,
         repo_workdir=repo_workdir,
         runtime=args.runtime,
+        recipe=getattr(args, "recipe", "full"),
         venv=getattr(args, "venv", None),
         run_doctor=not getattr(args, "skip_doctor", False),
     )
@@ -236,6 +256,7 @@ def _run_handoff(args: argparse.Namespace) -> int:
         workspace=workspace,
         repo_workdir=repo_workdir,
         runtime=args.runtime,
+        recipe=getattr(args, "recipe", "full"),
         venv=getattr(args, "venv", None),
         run_doctor=not getattr(args, "skip_doctor", False),
     )

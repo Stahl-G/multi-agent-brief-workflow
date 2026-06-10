@@ -35,6 +35,9 @@ RUNTIME_CODEX = "codex"
 RUNTIME_MANUAL = "manual"
 VALID_RUNTIMES = (RUNTIME_AUTO, RUNTIME_HERMES, RUNTIME_CLAUDE, RUNTIME_OPENCODE, RUNTIME_CODEX, RUNTIME_MANUAL)
 RUNTIME_RESOLVED = {RUNTIME_AUTO: RUNTIME_HERMES}  # auto resolves to hermes in v0.5.5
+RUNTIME_RECIPE_FULL = "full"
+RUNTIME_RECIPE_FAST_RERUN = "fast-rerun"
+VALID_RUNTIME_RECIPES = (RUNTIME_RECIPE_FULL, RUNTIME_RECIPE_FAST_RERUN)
 EXPECTED_WORKFLOW_ARTIFACTS = [
     "output/intermediate/candidate_claims.json",
     "output/intermediate/screened_candidates.json",
@@ -72,6 +75,7 @@ FINALIZE_GATE_NOTE = (
 @dataclass
 class AgentHandoff:
     runtime: str
+    recipe: str
     workspace: str
     repo_workdir: str
     venv_activate: str
@@ -134,6 +138,7 @@ def _hermes_handoff(workspace: Path, repo: Path, venv: str) -> AgentHandoff:
     )
     return AgentHandoff(
         runtime=RUNTIME_HERMES,
+        recipe=RUNTIME_RECIPE_FULL,
         workspace=str(workspace.resolve()),
         repo_workdir=str(repo.resolve()),
         venv_activate=venv,
@@ -164,6 +169,7 @@ def _claude_handoff(workspace: Path, repo: Path, venv: str) -> AgentHandoff:
     ws_path = str(workspace.resolve())
     return AgentHandoff(
         runtime=RUNTIME_CLAUDE,
+        recipe=RUNTIME_RECIPE_FULL,
         workspace=ws_path,
         repo_workdir=str(repo.resolve()),
         venv_activate=venv,
@@ -208,6 +214,7 @@ def _opencode_handoff(workspace: Path, repo: Path, venv: str) -> AgentHandoff:
     ws_path = str(workspace.resolve())
     return AgentHandoff(
         runtime=RUNTIME_OPENCODE,
+        recipe=RUNTIME_RECIPE_FULL,
         workspace=ws_path,
         repo_workdir=str(repo.resolve()),
         venv_activate=venv,
@@ -251,6 +258,7 @@ def _codex_handoff(workspace: Path, repo: Path, venv: str) -> AgentHandoff:
     ws_path = str(workspace.resolve())
     return AgentHandoff(
         runtime=RUNTIME_CODEX,
+        recipe=RUNTIME_RECIPE_FULL,
         workspace=ws_path,
         repo_workdir=str(repo.resolve()),
         venv_activate=venv,
@@ -294,6 +302,7 @@ def _manual_handoff(workspace: Path, repo: Path, venv: str) -> AgentHandoff:
     ws_path = str(workspace.resolve())
     return AgentHandoff(
         runtime=RUNTIME_MANUAL,
+        recipe=RUNTIME_RECIPE_FULL,
         workspace=ws_path,
         repo_workdir=str(repo.resolve()),
         venv_activate=venv,
@@ -369,6 +378,7 @@ def build_handoff(
     workspace: str | Path,
     repo_workdir: str | Path,
     runtime: str,
+    recipe: str = RUNTIME_RECIPE_FULL,
     venv: str | None = None,
     run_doctor: bool = True,
 ) -> AgentHandoff:
@@ -381,9 +391,14 @@ def build_handoff(
 
     if resolved not in _HANDOFF_BUILDERS:
         raise ValueError(f"Unknown runtime '{runtime}'. Valid: {', '.join(VALID_RUNTIMES)}")
+    if recipe not in VALID_RUNTIME_RECIPES:
+        raise ValueError(f"Unknown runtime recipe '{recipe}'. Valid: {', '.join(VALID_RUNTIME_RECIPES)}")
 
     builder = _HANDOFF_BUILDERS[resolved]
     handoff = builder(ws, repo, venv_activate)
+    handoff.recipe = recipe
+    if recipe == RUNTIME_RECIPE_FAST_RERUN:
+        _apply_fast_rerun_recipe(handoff, ws)
 
     if run_doctor:
         rc, status = _run_doctor(ws)
@@ -410,10 +425,41 @@ def build_handoff(
     return handoff
 
 
+def _apply_fast_rerun_recipe(handoff: AgentHandoff, workspace: Path) -> None:
+    required = [
+        "output/intermediate/candidate_claims.json",
+        "output/intermediate/screened_candidates.json",
+        "output/intermediate/claim_ledger.json",
+    ]
+    optional_reuse = [
+        "source_candidates.yaml",
+        "output/input_classification.json",
+    ]
+    missing = [rel for rel in required if not (workspace / rel).exists()]
+    guidance = [
+        "Runtime recipe: fast-rerun.",
+        "Use this only for controlled reruns where source and fact-layer artifacts are intentionally frozen.",
+        "Do not rerun source discovery, Scout, Screener, or Claim Ledger when their existing artifacts are present and valid.",
+        "First run `multi-agent-brief state check --workspace <workspace> --strict` to refresh artifact status.",
+        "Then record the pre-analyst stage decisions with `multi-agent-brief state decide` in order: doctor, source-discovery, input-governance, scout, screener, claim-ledger.",
+        "If any required frozen artifact is missing or invalid, stop; do not silently fall back to a full run.",
+        "Start model-backed content work at Analyst, then continue Editor, Auditor, required gates/state review, and Finalize.",
+        "This recipe is for instrumentation and manifestation testing; it is not quality-equivalent to the full subagent workflow.",
+        f"Frozen required artifacts: {', '.join(required)}.",
+        f"Reusable context artifacts when present: {', '.join(optional_reuse)}.",
+    ]
+    if missing:
+        guidance.append(f"Missing required frozen artifacts at handoff creation: {', '.join(missing)}. Stop until they are restored.")
+    text = "\n".join(guidance)
+    handoff.prompt = f"{handoff.prompt}\n\n{text}"
+    handoff.notes.append(text)
+
+
 def render_handoff_cli(handoff: AgentHandoff) -> str:
     lines = [
         "=" * 60,
         f"  Runtime: {handoff.runtime}",
+        f"  Recipe: {handoff.recipe}",
         f"  Workspace: {handoff.workspace}",
         f"  Doctor: {handoff.doctor_status}",
         "=" * 60,
@@ -438,6 +484,7 @@ def write_handoff_artifacts(handoff: AgentHandoff, workspace: Path) -> tuple[Pat
         "# Agent Handoff",
         "",
         f"- Runtime: {handoff.runtime}",
+        f"- Recipe: {handoff.recipe}",
         f"- Workspace: {handoff.workspace}",
         f"- Repository: {handoff.repo_workdir}",
         f"- Venv activate: {handoff.venv_activate}",
