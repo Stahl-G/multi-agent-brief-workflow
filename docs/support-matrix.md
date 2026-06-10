@@ -12,6 +12,10 @@ Each capability has one of the following statuses:
 | **Deprecated** | Still present but scheduled for removal. Use the replacement. |
 | **Not shipped** | Not included in this distribution surface. |
 
+For control-surface capabilities, **Supported** means deterministic commands,
+contracts, and regression tests are present. It does not imply output-quality
+validation unless that is stated separately.
+
 ## Core Pipeline
 
 | Capability | Status |

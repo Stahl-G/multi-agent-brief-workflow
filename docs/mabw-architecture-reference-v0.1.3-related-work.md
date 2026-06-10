@@ -1,8 +1,8 @@
 # MABW Architecture Reference v0.1.3 — Related Work (Standalone Chapter)
 
-**Snapshot**: v0.6.9 | **Branch**: `main` | **Commit**: `ca4b952` | **Date**: 2026-06-10
+**Snapshot**: v0.7.0 reference note | **Date**: 2026-06-10
 
-> This chapter integrates five new papers (June 6–10, 2026) and revises the LIFE-HARNESS comparison per Mythos architectural review. It replaces the Related Work section in the v0.1.2 report and will be merged into the main reference document.
+> This chapter integrates five recent papers and revises the related-work positioning for the v0.7 architecture reference. It is a standalone public-safe note, not a claim that all discussed roadmap items are implemented.
 
 ---
 
@@ -24,7 +24,7 @@ LIFE-HARNESS evolves a structured runtime harness from training trajectories and
 
 **Convergence and divergence.** LIFE-HARNESS and MABW arrived at the same thesis—adapt the interface, not the model—from different directions: LIFE-HARNESS from controlled laboratory experiments on deterministic agent benchmarks; MABW from the operational needs of enterprise briefing. Their four-layer harness (Environment Contracts, Procedural Skills, Action Realization, Trajectory Regulation) is organized by **lifecycle interception points** (when in the agent loop the intervention applies), while MABW's four contracts are organized by **governance domain** (what kind of quality boundary the contract enforces). These are complementary decompositions of the same problem space, not structurally equivalent mappings.
 
-**Trajectory Regulation: a missing layer in MABW.** LIFE-HARNESS's ablation study shows Trajectory Regulation is load-bearing—removing it causes an 86.5% performance drop in ALFWorld and 36.2% in Telecom. MABW's event log records every decision but does not yet enforce trajectory-level constraints. This is more urgent than the "v0.8 design item" framing suggests: an operator waiting an hour for a 15th repair-loop iteration while the control plane never alarms is a real failure scenario. v0.7 addresses this with zero-code doc-level constraints added to handoff usage rules: a recommended repair round limit (exceeding N rounds should trigger `request_human_review`), and a scope-narrowing rule (a repair that rewrites more than N sections should narrow scope or request human review). These are constraints a compliant Orchestrator respects. Code-level enforcement (retry counters, decision narrowing) remains v0.8.
+**Trajectory Regulation: a missing layer in MABW.** LIFE-HARNESS's ablation study shows Trajectory Regulation is load-bearing—removing it causes an 86.5% performance drop in ALFWorld and 36.2% in Telecom. MABW's event log records every decision but does not yet enforce trajectory-level constraints such as retry budgets, loop detection, or automatic scope narrowing. v0.7 can document recommended handoff behavior for human review and scoped repair, but code-level enforcement remains deferred to v0.8.
 
 **Experimental protocol for v0.8.** LIFE-HARNESS's evaluation methodology—frozen-after-evolution assessment, leave-one-surface-out ablation, cross-model transfer, and prompt-only evolving baseline—is the template for MABW's v0.8 baseline comparison protocol.
 
@@ -129,7 +129,7 @@ MABW's controlled self-improvement loop is distinguished from Self-Refine and Re
 
 ### 7. Memory and Preference Systems
 
-MABW's audience profile runtime surface draws from the Hermes agent's USER.md pattern—a plain-text, human-editable, agent-readable preference file frozen into a per-run snapshot. Unlike Hermes's agent-managed memory, MABW's profile is human-edited; the Orchestrator reads and summarizes it, but does not autonomously modify it.
+MABW's audience profile runtime surface follows a public, plain-text pattern for human-editable preferences that are frozen into a per-run snapshot. Unlike autonomous memory systems, MABW's profile is human-edited; the Orchestrator reads and summarizes it, but does not autonomously modify it.
 
 ---
 
@@ -164,7 +164,7 @@ MABW's audience profile runtime surface draws from the Hermes agent's USER.md pa
 
 2. **DRA metrics (§2)**: Define MABW-own metrics for 080 protocol: guidance manifestation rate and guidance regression rate. Do not cite DRA's 35–40% incorporation rate—mechanisms differ (persistent frozen context vs. one-shot revision).
 
-3. **`origin_runtime` field**: Add optional `origin_runtime` to `source_evidence` frozen copy in Improvement Ledger entries, captured from manifest at propose time. v0.7 only does transparent labeling, no scoping/filtering. Do this before v0.7.0 ships—schema is not yet frozen.
+3. **`origin_runtime` field**: v0.7 records optional `origin_runtime` metadata in Improvement Ledger evidence for transparent labeling only. It does not scope, filter, or route guidance by runtime.
 
 4. **Coverage gate claim (§4)**: Reword from "complete coverage" to "no silent loss after screening." Add screener-recall limitation to docs. Cite Precision paper's prompt ablation as evidence that coverage cannot be solved by better prompts—it's a gate problem, not a guidance problem.
 
