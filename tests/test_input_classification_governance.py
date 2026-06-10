@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -10,6 +11,15 @@ import pytest
 from multi_agent_brief.cli.main import main
 
 CLI = sys.executable, "-m", "multi_agent_brief.cli.main"
+ROOT = Path(__file__).resolve().parent.parent
+SRC = ROOT / "src"
+
+
+def _cli_env() -> dict[str, str]:
+    env = os.environ.copy()
+    existing = env.get("PYTHONPATH")
+    env["PYTHONPATH"] = str(SRC) + (os.pathsep + existing if existing else "")
+    return env
 
 
 def _write_workspace(tmp: Path, name: str = "test-ws") -> Path:
@@ -48,7 +58,7 @@ def test_inputs_classify_respects_config_input_path(tmp_path: Path):
 
     result = subprocess.run(
         [*CLI, "inputs", "classify", "--config", str(ws / "config.yaml")],
-        capture_output=True, text=True, cwd=str(ws),
+        capture_output=True, text=True, cwd=str(ws), env=_cli_env(),
     )
     assert result.returncode == 0, f"stderr: {result.stderr}"
 
@@ -78,7 +88,7 @@ def test_inputs_classify_detects_old_output_artifact_in_root(tmp_path: Path):
 
     result = subprocess.run(
         [*CLI, "inputs", "classify", "--config", str(ws / "config.yaml")],
-        capture_output=True, text=True, cwd=str(ws),
+        capture_output=True, text=True, cwd=str(ws), env=_cli_env(),
     )
     assert result.returncode == 0, f"stderr: {result.stderr}"
 
@@ -106,12 +116,14 @@ def test_inputs_classify_records_skipped_files(tmp_path: Path):
     (input_dir / "random").mkdir(parents=True, exist_ok=True)
 
     (input_dir / "feedback" / "annotated_output.docx").write_text("...", encoding="utf-8")
+    (input_dir / "feedback" / "screenshot.jpg").write_bytes(b"synthetic jpg")
     (input_dir / "sources" / "report.pdf").write_text("...", encoding="utf-8")
+    (input_dir / "sources" / "archive.xyz").write_text("...", encoding="utf-8")
     (input_dir / "random" / "foo.md").write_text("some content", encoding="utf-8")
 
     result = subprocess.run(
         [*CLI, "inputs", "classify", "--config", str(ws / "config.yaml")],
-        capture_output=True, text=True, cwd=str(ws),
+        capture_output=True, text=True, cwd=str(ws), env=_cli_env(),
     )
     assert result.returncode == 0, f"stderr: {result.stderr}"
 
@@ -124,11 +136,15 @@ def test_inputs_classify_records_skipped_files(tmp_path: Path):
     assert skipped_names["annotated_output.docx"]["reason"] == "needs_document_extraction"
     assert skipped_names["annotated_output.docx"]["suggested_role"] == "feedback"
     assert skipped_names["annotated_output.docx"]["extract_with"] == "multi-agent-brief inputs extract"
+    assert skipped_names["screenshot.jpg"]["reason"] == "needs_document_extraction"
+    assert skipped_names["screenshot.jpg"]["suggested_role"] == "feedback"
 
     # .pdf in sources subdir
     assert "report.pdf" in skipped_names
     assert skipped_names["report.pdf"]["reason"] == "needs_document_extraction"
     assert skipped_names["report.pdf"]["suggested_role"] == "evidence"
+    assert skipped_names["archive.xyz"]["reason"] == "unsupported_extension"
+    assert skipped_names["archive.xyz"]["suggested_role"] == "evidence"
 
     # file in unknown dir
     assert "foo.md" in skipped_names
@@ -262,7 +278,7 @@ def test_inputs_classify_custom_output_creates_parent(tmp_path: Path):
     result = subprocess.run(
         [*CLI, "inputs", "classify", "--config", str(ws / "config.yaml"),
          "--output", str(deep_output)],
-        capture_output=True, text=True, cwd=str(ws),
+        capture_output=True, text=True, cwd=str(ws), env=_cli_env(),
     )
     assert result.returncode == 0, f"stderr: {result.stderr}"
     assert deep_output.exists()
@@ -362,7 +378,7 @@ def test_finalize_reader_outputs_strip_src_markers(tmp_path: Path):
 
     result = subprocess.run(
         [*CLI, "finalize", "--config", str(ws / "config.yaml")],
-        capture_output=True, text=True, cwd=str(ws),
+        capture_output=True, text=True, cwd=str(ws), env=_cli_env(),
     )
     assert result.returncode == 0, f"finalize failed: {result.stderr}"
 
