@@ -114,6 +114,13 @@ def _assert_orchestrator_contract_handoff(data: dict[str, object]) -> None:
     assert "repair_plan.json" in text
     assert "quality_gate_report.json" in text
     assert "provenance_graph.json" in text
+    assert "multi-agent-brief state decide --workspace <workspace>" in text
+    assert "next_allowed_decisions" in text
+    assert "multi-agent-brief gates check --workspace <workspace>" in text
+    assert "multi-agent-brief state check --workspace <workspace> --strict" in text
+    assert "Audit and quality gates passed" in text
+    assert "do not finalize" in text
+    assert "Quality gate controls are optional" not in text
     assert "retry_stage" in text
     assert "request_human_review" in text
     assert "block_run" in text

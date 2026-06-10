@@ -46,6 +46,11 @@ Approval is not immediate current-run effect. An approved ledger entry becomes r
 the run snapshot was frozen. If live `improvement/memory.md` changes later after
 ledger updates, that does not invalidate the existing run snapshot.
 
+`ledger_sha256: null` means no Improvement Ledger file existed when the run
+snapshot was prepared. A non-null `memory_sha256` with no snapshot is valid: it
+records the deterministic zero-entry projection used for audit/debug, not active
+runtime guidance.
+
 Handoff exposes only `output/intermediate/improvement_memory_snapshot.md`. Runtime agents should not read live `improvement/memory.md` as guidance.
 
 ## Capacity And Auditability

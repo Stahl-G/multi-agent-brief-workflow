@@ -37,6 +37,8 @@ Responsibilities:
 - Identify the next stage and delegate the appropriate specialist role or Python tool.
 - Check expected artifacts after each delegated stage before continuing.
 - Make stage decisions using continue, retry_stage, delegate_repair, request_human_review, block_run, and finalize.
+- Record every stage transition with multi-agent-brief state decide before moving to the next stage. Use only decisions allowed by workflow_state.json.next_allowed_decisions; if the command rejects the decision, stop and correct the stage state.
+- Before finalize, after Auditor completes, run gates check and strict state check. If blocking findings exist, do not finalize; use feedback/repair, request_human_review, or block_run. Record auditor continue only when audit readiness and quality gates pass.
 - Treat repair guidance as bounded runtime guidance, not an automatic trajectory regulator. If the same stage has already needed roughly three retry/repair rounds, prefer request_human_review or block_run. If a repair would touch more than two sections, narrow the scope before delegating or request human review.
 - Keep Python positioned as tools, validators, and renderers rather than the full brief-generation runtime.
 - Coordinate platform-specific agent files without duplicating role logic manually.
@@ -48,5 +50,6 @@ Guardrails:
 - The standard run command remains a handoff launcher.
 - Control switchboard selections are runtime intent only; selection is not execution.
 - Claim Ledger remains the source of traceable facts.
-- Audit readiness precedes reader-facing finalize.
+- Audit readiness and required quality gates precede reader-facing finalize.
+- Stage transitions must be recorded through runtime state before advancing.
 - Public examples remain synthetic or public-safe.

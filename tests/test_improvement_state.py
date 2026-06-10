@@ -134,6 +134,24 @@ def test_propose_human_creates_ledger_without_runtime_event(tmp_path):
     assert read_ledger_text(improvement_ledger_path(ws).read_text(encoding="utf-8")).current_entries["AG-0001"]["status"] == "proposed"
 
 
+def test_propose_human_records_origin_runtime_when_runtime_state_exists(tmp_path):
+    ws = _workspace(tmp_path)
+    initialize_runtime_state(workspace=ws, repo_workdir=ROOT, runtime="deepseek-v4-flash")
+
+    state = propose_improvement(
+        workspace=ws,
+        guidance="Lead with the decision-relevant number when evidence supports it.",
+        category="audience_mismatch",
+        scope="brief",
+        source_summary="Operator-created audience guidance proposal.",
+    )
+
+    evidence = state["entry"]["source_evidence"][0]
+    assert evidence["source_type"] == "human_feedback"
+    assert evidence["origin"] == {"origin_runtime": "deepseek-v4-flash"}
+    assert state["event_recorded"] is True
+
+
 def test_propose_requires_source_summary_for_human_evidence(tmp_path):
     ws = _workspace(tmp_path)
 

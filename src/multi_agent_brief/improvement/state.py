@@ -205,12 +205,16 @@ def propose_improvement(
             source_type="human_feedback",
             issue_category=category,
         )
-        source_evidence = [{
+        evidence: dict[str, Any] = {
             "source_type": "human_feedback",
             "summary": source_summary,
             "run_id": None,
             "issue_id": None,
-        }]
+        }
+        origin = _human_feedback_origin(ws)
+        if origin:
+            evidence["origin"] = origin
+        source_evidence = [evidence]
     else:
         raise ImprovementLedgerError(
             "--source-summary is required unless --from-issue is used.",
@@ -615,6 +619,22 @@ def _issue_origin(issue: dict[str, Any]) -> dict[str, str]:
                 text = Path(text).name
             origin[key] = text
     return origin
+
+
+def _human_feedback_origin(workspace: Path) -> dict[str, str]:
+    manifest_path = runtime_state_paths(workspace)["runtime_manifest"]
+    if not manifest_path.exists():
+        return {}
+    try:
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return {}
+    if not isinstance(manifest, dict):
+        return {}
+    runtime = manifest.get("runtime")
+    if isinstance(runtime, str) and runtime.strip():
+        return {"origin_runtime": runtime.strip()}
+    return {}
 
 
 def _materialization_diagnostics(current_entries: dict[str, dict[str, Any]]) -> list[dict[str, Any]]:

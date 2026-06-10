@@ -49,6 +49,24 @@ REPAIR_GUIDANCE_NOTE = (
     "rounds, prefer request_human_review or block_run; if a repair would touch "
     "more than two sections, narrow the scope before delegating or request human review."
 )
+DECISION_RECORDING_NOTE = (
+    "Record every stage transition before moving on: run "
+    "`multi-agent-brief state decide --workspace <workspace> --stage <stage_id> "
+    "--decision <decision> --reason \"<reason>\"` using a value from "
+    "`workflow_state.json.next_allowed_decisions`. If the decision is rejected, "
+    "stop and correct the stage state instead of continuing."
+)
+FINALIZE_GATE_NOTE = (
+    "Before finalize, after the auditor stage completes, run "
+    "`multi-agent-brief gates check --workspace <workspace>` and "
+    "`multi-agent-brief state check --workspace <workspace> --strict`; this "
+    "creates or refreshes `output/intermediate/quality_gate_report.json`. If "
+    "there are blocking findings, do not finalize. Use feedback/repair, "
+    "request_human_review, or block_run. Only record auditor continue with "
+    "`multi-agent-brief state decide --workspace <workspace> --stage auditor "
+    "--decision continue --reason \"Audit and quality gates passed.\"` when "
+    "audit readiness and quality gates pass."
+)
 
 
 @dataclass
@@ -132,6 +150,8 @@ def _hermes_handoff(workspace: Path, repo: Path, venv: str) -> AgentHandoff:
             "Read output/intermediate/runtime_manifest.json, workflow_state.json, artifact_registry.json, and event_log.jsonl before selecting the next stage.",
             "Read output/intermediate/audience_profile_snapshot.md at run start for reader taste context; do not treat audience_profile.md as source evidence.",
             "Read output/intermediate/orchestrator_control_switchboard.json; record enable/defer/reject selections before explicitly executing any selected control.",
+            DECISION_RECORDING_NOTE,
+            FINALIZE_GATE_NOTE,
             REPAIR_GUIDANCE_NOTE,
             f"Orchestrator loop: {ORCHESTRATOR_LOOP}",
             "Each delegate_task child needs complete goal, context, input paths, and output paths.",
@@ -169,6 +189,8 @@ def _claude_handoff(workspace: Path, repo: Path, venv: str) -> AgentHandoff:
             "Read the Orchestrator control switchboard:\n"
             "- output/intermediate/orchestrator_control_switchboard.json\n"
             "Record control selections with multi-agent-brief controls select. Selection is not execution; explicitly run the selected CLI/subagent/human action after selection and approval.\n\n"
+            f"{DECISION_RECORDING_NOTE}\n\n"
+            f"{FINALIZE_GATE_NOTE}\n\n"
             f"{REPAIR_GUIDANCE_NOTE}\n\n"
             f"Repository: {repo.resolve()}\n"
             f"Workspace: {ws_path}\n"
@@ -214,6 +236,8 @@ def _opencode_handoff(workspace: Path, repo: Path, venv: str) -> AgentHandoff:
             "Read the Orchestrator control switchboard:\n"
             "- output/intermediate/orchestrator_control_switchboard.json\n"
             "Record control selections with multi-agent-brief controls select. Selection is not execution; explicitly run the selected CLI/subagent/human action after selection and approval.\n\n"
+            f"{DECISION_RECORDING_NOTE}\n\n"
+            f"{FINALIZE_GATE_NOTE}\n\n"
             f"{REPAIR_GUIDANCE_NOTE}"
         ),
         expected_artifacts=list(EXPECTED_WORKFLOW_ARTIFACTS),
@@ -255,6 +279,8 @@ def _codex_handoff(workspace: Path, repo: Path, venv: str) -> AgentHandoff:
             "Read the Orchestrator control switchboard:\n"
             "- output/intermediate/orchestrator_control_switchboard.json\n"
             "Record control selections with multi-agent-brief controls select. Selection is not execution; explicitly run the selected CLI/subagent/human action after selection and approval.\n\n"
+            f"{DECISION_RECORDING_NOTE}\n\n"
+            f"{FINALIZE_GATE_NOTE}\n\n"
             f"{REPAIR_GUIDANCE_NOTE}"
         ),
         expected_artifacts=list(EXPECTED_WORKFLOW_ARTIFACTS),
@@ -296,6 +322,8 @@ def _manual_handoff(workspace: Path, repo: Path, venv: str) -> AgentHandoff:
             "Read the Orchestrator control switchboard:\n"
             "- output/intermediate/orchestrator_control_switchboard.json\n"
             "Record control selections with multi-agent-brief controls select. Selection is not execution; explicitly run the selected CLI/subagent/human action after selection and approval.\n\n"
+            f"{DECISION_RECORDING_NOTE}\n\n"
+            f"{FINALIZE_GATE_NOTE}\n\n"
             f"{REPAIR_GUIDANCE_NOTE}\n\n"
             "Run each step in order, verifying each artifact before continuing:\n\n"
             f"1. multi-agent-brief doctor --config {ws_path}/config.yaml\n"
@@ -308,7 +336,10 @@ def _manual_handoff(workspace: Path, repo: Path, venv: str) -> AgentHandoff:
             "8. Use the 'analyst' subagent to write output/intermediate/audited_brief.md\n"
             "9. Use the 'editor' subagent to polish output/intermediate/audited_brief.md\n"
             "10. Use the 'auditor' subagent to write output/intermediate/audit_report.json\n"
-            f"11. multi-agent-brief finalize --config {ws_path}/config.yaml"
+            f"11. multi-agent-brief gates check --workspace {ws_path}\n"
+            f"12. multi-agent-brief state check --workspace {ws_path} --strict\n"
+            f"13. multi-agent-brief state decide --workspace {ws_path} --stage auditor --decision continue --reason \"Audit and quality gates passed.\"\n"
+            f"14. multi-agent-brief finalize --config {ws_path}/config.yaml"
         ),
         expected_artifacts=list(EXPECTED_WORKFLOW_ARTIFACTS),
         notes=[
@@ -317,7 +348,9 @@ def _manual_handoff(workspace: Path, repo: Path, venv: str) -> AgentHandoff:
             "Use inputs extract to convert PDF/DOCX/image inputs into .mineru.md before Scout reads evidence files.",
             "Directory role still controls claim eligibility: only extracted files under input/sources are evidence.",
             REPAIR_GUIDANCE_NOTE,
-            "The 'auditor' step must run before finalize.",
+            DECISION_RECORDING_NOTE,
+            FINALIZE_GATE_NOTE,
+            "The 'auditor' step and required gates check must run before finalize.",
         ],
     )
 
@@ -362,7 +395,7 @@ def build_handoff(
         "Feedback loop controls are optional: feedback_issues.json and repair_plan.json are created only by multi-agent-brief feedback ingest/plan/resolve."
     )
     handoff.notes.append(
-        "Quality gate controls are optional: quality_gate_report.json is created only by multi-agent-brief gates check."
+        "output/intermediate/quality_gate_report.json is created only by multi-agent-brief gates check; before finalize, gates check is required and blocking findings must route to feedback/repair or human review instead of finalize."
     )
     handoff.notes.append(
         "Provenance projection is optional: provenance_graph.json is created only by multi-agent-brief provenance build and is an audit/debug view, not semantic proof."

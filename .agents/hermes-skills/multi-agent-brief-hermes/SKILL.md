@@ -40,7 +40,7 @@ Audience memory files: `audience_profile.md` and `output/intermediate/audience_p
 
 Control switchboard files: `output/intermediate/orchestrator_control_switchboard.json` lists available/recommended controls, and `output/intermediate/control_selections.json` records Orchestrator enable/defer/reject choices. Selection is not execution.
 
-Optional control files: feedback uses `output/intermediate/feedback_issues.json`, `output/intermediate/repair_plan.json`, and `output/intermediate/delta_audit_report.json`; gates check creates `output/intermediate/quality_gate_report.json`; provenance build creates `output/intermediate/provenance_graph.json` as an audit/debug projection, not semantic proof.
+Control files are produced by explicit commands: feedback uses `output/intermediate/feedback_issues.json`, `output/intermediate/repair_plan.json`, and `output/intermediate/delta_audit_report.json`; gates check creates `output/intermediate/quality_gate_report.json`; provenance build creates `output/intermediate/provenance_graph.json` as an audit/debug projection, not semantic proof. Before finalize, gates check is required; missing `quality_gate_report.json` means gates have not been checked, not that they passed.
 
 Orchestrator control loop:
 
@@ -113,7 +113,7 @@ doctor
 → gates check + state check/decide → finalize
 ```
 
-Before finalize, run `multi-agent-brief gates check --workspace <workspace>`, `state check --strict`, and `state decide --stage auditor --decision continue`; `finalize` is not a quality-gate executor.
+Before finalize, run `multi-agent-brief gates check --workspace <workspace>`, `multi-agent-brief state check --workspace <workspace> --strict`, and `multi-agent-brief state decide --workspace <workspace> --stage auditor --decision continue --reason "Audit and quality gates passed."`; `finalize` is not a quality-gate executor. Blocking gate findings must route to feedback/repair, `request_human_review`, or `block_run`; do not finalize through a blocking gate.
 At run start, read `output/intermediate/audience_profile_snapshot.md` for taste context and pass a concise summary to delegated roles. Do not treat `audience_profile.md` as evidence.
 Read `output/intermediate/orchestrator_control_switchboard.json`, then use `multi-agent-brief controls select` to record selected controls before explicitly running their CLI/subagent/human action. Selection is not execution.
 Use `multi-agent-brief feedback ingest`, `feedback plan`, `feedback resolve`, `feedback show --json`, and `feedback validate` only when audit findings or human feedback exist. These commands structure and record issues but do not execute repair.

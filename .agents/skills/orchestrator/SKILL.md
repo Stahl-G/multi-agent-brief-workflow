@@ -53,6 +53,8 @@ Use for runtime handoff, Orchestrator contract changes, generated adapter config
 - Coordinate source-planner, scout, screener, claim-ledger, analyst, editor, auditor, and formatter as delegated specialists.
 - Check expected artifacts after each delegated stage.
 - Make stage decisions with continue, retry_stage, delegate_repair, request_human_review, block_run, and finalize.
+- Record every stage transition with `multi-agent-brief state decide --workspace <workspace> --stage <stage_id> --decision <decision> --reason "<reason>"` before moving to the next stage. Use only decisions allowed by `workflow_state.json.next_allowed_decisions`; if the command rejects the decision, stop and correct the stage state.
+- Before finalize, after Auditor completes, run `multi-agent-brief gates check --workspace <workspace>` and `multi-agent-brief state check --workspace <workspace> --strict`. If blocking findings exist, do not finalize; use feedback/repair, `request_human_review`, or `block_run`. Record `state decide --stage auditor --decision continue` only when audit readiness and quality gates pass.
 - Treat repair guidance as bounded runtime guidance, not an automatic trajectory regulator:
   if the same stage has already needed roughly three retry/repair rounds, prefer
   `request_human_review` or `block_run`; if a repair would touch more than two
@@ -64,4 +66,4 @@ Use for runtime handoff, Orchestrator contract changes, generated adapter config
 
 ## Handoff
 
-Return the next stage, delegated role, expected artifact, decision, reason summary, and validation command or tool check.
+Return the next stage, delegated role, expected artifact, recorded decision, reason summary, and validation command or tool check.
