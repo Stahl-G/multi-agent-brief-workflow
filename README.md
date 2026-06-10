@@ -15,10 +15,10 @@
 
 ## 当前状态（诚实版）
 
-当前版本：**v0.6.9**
+当前版本：**v0.7.0**
 
-* **能跑的**：subagent-first 工作流（Hermes / Claude Code / Codex / OpenCode），运行时状态文件，事实账本，确定性质量门禁，反馈与修复计划，溯源投影，受众画像快照，Markdown / Word 输出。1000+ 确定性测试在 CI 中通过，不依赖任何 LLM 调用。
-* **正在做的**（v0.7）：受控的改进账本——把人工反馈转成"agent 提案、人类批准、按运行冻结"的工作区记忆。
+* **能跑的**：subagent-first 工作流（Hermes / Claude Code / Codex / OpenCode），运行时状态文件，事实账本，确定性质量门禁，反馈与修复计划，溯源投影，受众画像快照，受控的改进账本 / 改进记忆，Markdown / Word 输出。1000+ 确定性测试在 CI 中通过，不依赖任何 LLM 调用。
+* **v0.7.0 新增**：人工撰写、人工批准的读者偏好可以写入 `improvement/ledger.jsonl`，在下一次 `run` / `start` / `handoff` 时冻结为 `output/intermediate/improvement_memory_snapshot.md`，并通过 handoff 暴露给运行时。
 * **还不是的**：不是自治 agent，不会自动修改简报内容，不会自动学习，没有长期记忆系统。详见 [当前架构状态](docs/architecture-status.zh-CN.md) 和 [路线图](docs/roadmap.zh-CN.md)。
 
 设计原则一句话：**系统提案，人类决定。** 全部红线见 [docs/red-lines-and-anti-patterns.md](docs/red-lines-and-anti-patterns.md)。
@@ -30,6 +30,12 @@
 更深一层的问题是：**这类工作无法系统性地变好。** 新人犯的错被口头纠正然后被遗忘，下一个新人重犯；"这段感觉不对"的反馈在会后蒸发；一个过期数字混进简报，没人能追溯它是在哪一步漏掉的。
 
 写代码的世界靠测试、Git 历史、CI 和 code review 形成了改进闭环，所以 coding agent 进步飞快。本项目把同一套基础设施——可审计、可追溯、结构化反馈、人类把关——搬进真实的简报工作流。让人把时间花在判断、提问和决策支持上，而不是重复搬运和排版。
+
+### 为什么叫「司乐师」？
+
+英文 orchestrator 来自管弦乐编配与协调的语境，在软件工程中常译为“编排器”。MABW 选择译作「司乐师」：它不直接替各个角色写作，而是调度信息侦察员、筛选师、分析师、编辑师和审计师，让不同声部按契约合奏。
+
+「司乐」也借用了中国礼乐传统中掌管乐政、乐教的意象。这里不是对古代官职的严格复原，而是一个项目术语：负责维持节奏、边界、秩序和交付。
 
 ## 它解决什么问题
 
@@ -121,9 +127,35 @@ multi-agent-brief run --workspace ../mabw-workspace --runtime claude
 
 * 导入本地资料与输入分类：见 [docs/onboarding.md](docs/onboarding.md)
 * Web 搜索后端（Tavily 等）：见 [docs/search-backends.md](docs/search-backends.md)
+* 源发现候选合并（包括 `llm_decide` source profile）：`multi-agent-brief sources decide --config <workspace>/config.yaml --merge`
 * 飞书集成（采集 + 推送）：见 [docs/feishu-integration.md](docs/feishu-integration.md)
 * SEC Filing 解析：见 [docs/opencli-source-provider.md](docs/opencli-source-provider.md)
 * Windows PowerShell：见 [docs/windows-powershell.md](docs/windows-powershell.md)
+
+常用命令片段：
+
+```bash
+multi-agent-brief init --from-onboarding onboarding.json
+multi-agent-brief sources decide --config <workspace>/config.yaml
+```
+
+## 记录一个已批准的读者偏好
+
+v0.7.0 增加了受控的 Improvement Ledger / Improvement Memory。它用于保存人工撰写、人工批准的读者偏好，例如"证据支持时，先给出决策相关数字"。它不是自动学习系统，也不会自动改稿。
+
+```bash
+multi-agent-brief improve propose --workspace <workspace> \
+  --guidance "Lead with the decision-relevant number when evidence supports it." \
+  --category audience_mismatch \
+  --scope brief \
+  --source-summary "Operator-created audience guidance proposal."
+
+multi-agent-brief improve approve --workspace <workspace> --entry-id AG-0001 --by <operator>
+multi-agent-brief improve rebuild --workspace <workspace>
+multi-agent-brief run --workspace <workspace> --skip-doctor
+```
+
+`approve` 不会改变已经创建的当前 run snapshot；下一次 `run` / `start` / `handoff` 才会冻结新的 snapshot。运行时只读取 `output/intermediate/improvement_memory_snapshot.md`，不把 `improvement/memory.md` 当作实时输入。详细说明见 [docs/modules/improvement.md](docs/modules/improvement.md)。
 
 ## 寻找合作 🤝
 
@@ -148,8 +180,8 @@ multi-agent-brief run --workspace ../mabw-workspace --runtime claude
 
 ## 路线图（摘要）
 
-* **v0.7**：改进账本（Improvement Ledger）——把人工确认的反馈提炼为受控的读者偏好建议；人类批准后按运行冻结，不做自动学习或 FrictionStore 自动检测。
-* **v0.8**：评估实验与策略包——对照单模型基线的系统性实验；mode registry 与第二个 policy pack。
+* **v0.7**：改进账本（Improvement Ledger）——把人工撰写、人工批准的读者偏好按运行冻结为 Improvement Memory snapshot；不做自动学习、FrictionStore 自动检测或输出质量承诺。
+* **v0.8**：评估实验与策略包——定义 guidance manifestation / regression 评估协议，对照单模型基线，并推进 mode registry 与第二个 policy pack。
 * **v0.9**：分发与参考工作流——零 API key 快速上手、参考运行、文档整顿。
 * **v1.0**：稳定基线——schema 冻结、CLI 表面冻结、安全威胁模型、明确支持边界。
 
@@ -162,6 +194,7 @@ multi-agent-brief run --workspace ../mabw-workspace --runtime claude
 [司乐契约模型](docs/orchestrator-contracts.zh-CN.md) ·
 [质量门禁](docs/harness.md) ·
 [评估用例](docs/evaluation-cases.md) ·
+[改进账本](docs/modules/improvement.md) ·
 [支持矩阵](docs/support-matrix.md) ·
 [安全](docs/security.md) ·
 [迁移说明](docs/MIGRATION.zh-CN.md)

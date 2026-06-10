@@ -1,6 +1,6 @@
 # Public-Safe Evaluation Cases
 
-v0.6.4 introduced packaged public-safe evaluation cases for developer and CI regression checks. v0.6.5 extends the packaged suite with provenance projection coverage.
+v0.6.4 introduced packaged public-safe evaluation cases for developer and CI regression checks. v0.6.5 extended the packaged suite with provenance projection coverage. v0.7.0 adds Improvement Memory control cases.
 
 These cases validate control-surface behavior across:
 
@@ -8,9 +8,21 @@ These cases validate control-surface behavior across:
 - feedback issue triage and repair planning controls
 - runtime state blockers
 - provenance projection controls
+- Improvement Ledger / Memory materialization controls
 - Hermes guidance invariants
 
 They are not benchmark scores and are not workflow artifacts.
+
+## Evaluation Claim Boundary
+
+Evaluation cases prove deterministic control behavior, not model output quality. A passing case can show that an approved Improvement Memory entry was materialized into a frozen snapshot and referenced by handoff; it does not prove that a runtime model followed the guidance well.
+
+For v0.8 planning, guidance evaluation should distinguish two future measurements:
+
+- **Guidance manifestation rate**: when relevant approved guidance is materialized, whether the output or run trace shows observable evidence that the guidance affected the brief.
+- **Guidance regression rate**: whether materialized guidance causes overfitting, factual weakening, omission, formatting harm, or conflict with evidence and contracts.
+
+These metrics require real runtime traces and baseline comparisons. They are not asserted by the v0.7 public-safe eval suite.
 
 ## Commands
 
@@ -30,6 +42,7 @@ Evaluation cases:
 - dispatch structured allowlisted actions
 - prepare temporary runtime state from explicit `initial_stage`
 - compare only stable partial assertions and optional `expected_actions`
+- validate structured runtime manifest fields such as `runtime_manifest.json.improvement`
 - do not infer workflow stage from files
 - do not execute workflow stages
 - do not run subagents
