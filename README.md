@@ -1,5 +1,7 @@
 # Multi-Agent-Brief-Workflow
 
+**MABW：Process Accountability for the Briefing Loop**
+
 <p align="center">
   <a href="README_en.md">English</a> |
   <a href="README.md">简体中文</a>
@@ -89,7 +91,7 @@ N 公司宣布其示例州工厂一期产线于本周投产，规划年产能 2G
 }
 ```
 
-也就是说：成稿里的每个关键数字，都能在事实账本里找到登记的来源和日期；过期来源、无出处数字会在审计门禁被拦下，而不是混进终稿。审计轨迹（谁在哪一步做了什么决定）完整保存在 `event_log.jsonl`。
+也就是说，按契约运行时，成稿里的关键数字应能在事实账本里找到登记的来源和日期；过期来源、无出处数字应被审计和质量门禁暴露出来，而不是无记录地混进终稿。审计轨迹（谁在哪一步做了什么决定）保存在 `event_log.jsonl`。
 
 ## 快速开始
 
@@ -105,7 +107,7 @@ multi-agent-brief hermes install-plugin
 hermes plugins enable mabw
 ```
 
-然后在 Hermes 中输入 `/mabw new`，按引导填写简报需求。Hermes 会创建受契约约束的运行交接，并由主 agent 按阶段委派 scout → screener → claim-ledger → analyst → editor → auditor；阶段推进仍以产物校验和司乐师决策为准。生成 `audited_brief.md` 后运行交付门禁：
+然后在 Hermes 中输入 `/mabw new`，按引导填写简报需求。Hermes 会创建受契约约束的运行交接，并由主 agent 按阶段委派 scout → screener → claim-ledger → analyst → editor → auditor；handoff 中包含状态、门禁和协议要求，阶段推进仍以产物校验和司乐师决策为准。生成 `audited_brief.md` 后运行交付渲染：
 
 ```bash
 multi-agent-brief finalize --config <workspace>/config.yaml
@@ -155,7 +157,7 @@ multi-agent-brief improve rebuild --workspace <workspace>
 multi-agent-brief run --workspace <workspace> --skip-doctor
 ```
 
-`approve` 不会改变已经创建的当前 run snapshot；下一次 `run` / `start` / `handoff` 才会冻结新的 snapshot。运行时只读取 `output/intermediate/improvement_memory_snapshot.md`，不把 `improvement/memory.md` 当作实时输入。详细说明见 [docs/modules/improvement.md](docs/modules/improvement.md)。
+`approve` 不会改变已经创建的当前 run snapshot；下一次 `run` / `start` / `handoff` 才会把已批准偏好冻结为 runtime 可读 snapshot。MABW 可以证明该 snapshot 是否被生成、记录并交给 runtime；最终文本是否体现这些偏好仍需要单独评估。运行时只读取 `output/intermediate/improvement_memory_snapshot.md`，不把 `improvement/memory.md` 当作实时输入。详细说明见 [docs/modules/improvement.md](docs/modules/improvement.md)。
 
 ## 寻找合作 🤝
 
