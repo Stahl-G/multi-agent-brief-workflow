@@ -623,7 +623,13 @@ def test_duplicate_and_forked_supersession_warnings(tmp_path):
         source_summary="Operator-created guidance.",
         supersedes="AG-0001",
     )
-    assert any(item["code"] == "supersedes_target_already_superseded" for item in fork["warnings"])
+    fork_warning = next(
+        item
+        for item in fork["warnings"]
+        if item["code"] == "supersedes_target_already_superseded"
+    )
+    assert fork_warning["approval_blocker"] is True
+    assert "cannot be approved until the existing superseder is reverted" in fork_warning["message"]
 
 
 def test_approve_rejects_parallel_supersession_fork(tmp_path):

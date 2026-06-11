@@ -797,9 +797,11 @@ def _validate_supersedes_target(
             "code": "supersedes_target_already_superseded",
             "entry_id": supersedes_id,
             "superseded_by": list(existing_superseders),
+            "approval_blocker": True,
             "message": (
                 f"Supersedes target {supersedes_id} is already superseded by "
-                f"{', '.join(existing_superseders)}."
+                f"{', '.join(existing_superseders)}; this proposal cannot be approved "
+                "until the existing superseder is reverted."
             ),
         })
     return warnings
