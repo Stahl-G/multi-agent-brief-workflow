@@ -2,7 +2,7 @@
 
 This repository is the MABW source repo, not a brief workspace.
 
-Primary Hermes path:
+Hermes-specific runtime path:
 
 1. Run `bash scripts/setup.sh` if `.venv/` is missing.
 2. Install the Hermes plugin:

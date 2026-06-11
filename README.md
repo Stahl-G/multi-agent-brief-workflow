@@ -95,7 +95,7 @@ N 公司宣布其示例州工厂一期产线于本周投产，规划年产能 2G
 
 ## 快速开始
 
-### Hermes（主路径）
+### Claude Code（五动词主路径）
 
 ```bash
 git clone https://github.com/Stahl-G/multi-agent-brief-workflow.git
@@ -103,24 +103,38 @@ cd multi-agent-brief-workflow
 bash scripts/setup.sh
 source .venv/bin/activate
 
-multi-agent-brief hermes install-plugin
-hermes plugins enable mabw
+multi-agent-brief claude install --repo-workdir .
 ```
 
-然后在 Hermes 中输入 `/mabw new`，按引导填写简报需求。Hermes 会创建受契约约束的运行交接，并由主 agent 按阶段委派 scout → screener → claim-ledger → analyst → editor → auditor；handoff 中包含状态、门禁和协议要求，阶段推进仍以产物校验和司乐师决策为准。生成 `audited_brief.md` 后运行交付渲染：
+然后在 Claude Code CLI 或 Claude Desktop Code tab 中使用五个 writer 动词：
 
-```bash
-multi-agent-brief finalize --config <workspace>/config.yaml
+```text
+/mabw new
+/mabw run <workspace>
+/mabw status <workspace>
+/mabw feedback <workspace> [text-or-file]
+/mabw deliver <workspace>
 ```
 
-详细流程见 [HERMES.md](HERMES.md)。
+`/mabw` 是 writer-facing 入口；完整 delegated subagent workflow 仍由 `/generate-brief <workspace>` 执行。`status` 调用只读的 `multi-agent-brief status`，`feedback` 只记录和分诊，`deliver` 必须经过 gates、reader-final gate 和 `state finalize-complete`。
 
-### Claude Code / Codex / OpenCode
+详细流程见 [docs/claude-code-quickstart.md](docs/claude-code-quickstart.md)。
+
+### 其他 runtime
 
 ```bash
 multi-agent-brief onboard
 multi-agent-brief init ../mabw-workspace --from-onboarding onboarding.json
 multi-agent-brief run --workspace ../mabw-workspace --runtime claude
+```
+
+Hermes、OpenCode、Codex 和 manual fallback 保留各自现有入口。五动词产品入口先在 Claude Code 首发，避免伪造跨 runtime parity。
+
+Hermes 插件仍可用于 `delegate_task` 原生路径：
+
+```bash
+multi-agent-brief hermes install-plugin
+hermes plugins enable mabw
 ```
 
 运行时安装细节、workspace-local kit、常见问题见 [docs/claude-code-quickstart.md](docs/claude-code-quickstart.md) 和 [docs/runtime-recipes.md](docs/runtime-recipes.md)。

@@ -88,7 +88,7 @@ The point is simple: every important number in the delivered brief should have a
 
 ## Quick Start
 
-### Hermes (Primary Path)
+### Claude Code (Five-Verb Primary Path)
 
 ```bash
 git clone https://github.com/Stahl-G/multi-agent-brief-workflow.git
@@ -96,24 +96,44 @@ cd multi-agent-brief-workflow
 bash scripts/setup.sh
 source .venv/bin/activate
 
-multi-agent-brief hermes install-plugin
-hermes plugins enable mabw
+multi-agent-brief claude install --repo-workdir .
 ```
 
-Then type `/mabw new` in Hermes and follow the onboarding flow. Hermes creates a contract-governed runtime handoff, and the main agent delegates stages such as scout → screener → claim-ledger → analyst → editor → auditor. Stage progress still depends on artifact validation and Orchestrator decisions. After `audited_brief.md` is produced, run the delivery gate:
+Then use the five writer verbs inside Claude Code CLI or the Claude Desktop Code
+tab:
 
-```bash
-multi-agent-brief finalize --config <workspace>/config.yaml
+```text
+/mabw new
+/mabw run <workspace>
+/mabw status <workspace>
+/mabw feedback <workspace> [text-or-file]
+/mabw deliver <workspace>
 ```
 
-See [HERMES.md](HERMES.md) for the full protocol.
+`/mabw` is the writer-facing entrypoint. The full delegated subagent workflow
+still runs through `/generate-brief <workspace>`. `status` calls the read-only
+`multi-agent-brief status` helper, `feedback` records and triages without acting downstream, and `deliver` must go
+through gates, the reader-final gate, and `state finalize-complete`.
 
-### Claude Code / Codex / OpenCode
+See [docs/claude-code-quickstart.md](docs/claude-code-quickstart.md) for the full Claude Code path.
+
+### Other Runtimes
 
 ```bash
 multi-agent-brief onboard
 multi-agent-brief init ../mabw-workspace --from-onboarding onboarding.json
 multi-agent-brief run --workspace ../mabw-workspace --runtime claude
+```
+
+Hermes, OpenCode, Codex, and manual fallback keep their existing entrypoints.
+The five-verb product entrypoint first ships on Claude Code only, to avoid a
+false cross-runtime parity contract.
+
+The Hermes plugin remains available for the native `delegate_task` path:
+
+```bash
+multi-agent-brief hermes install-plugin
+hermes plugins enable mabw
 ```
 
 Runtime installation details, workspace-local runtime kits, and common issues are covered in [docs/claude-code-quickstart.md](docs/claude-code-quickstart.md) and [docs/runtime-recipes.md](docs/runtime-recipes.md).
