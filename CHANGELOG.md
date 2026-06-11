@@ -5,6 +5,27 @@ All notable changes to the multi-agent-brief-workflow project will be documented
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- **Reader-final output gate**: `finalize` now records `finalize_report.json.reader_clean` and rejects reader-facing Markdown/DOCX/source appendix outputs that leak internal source markers, raw claim/source IDs, local paths, debug residue, process wording, or blank citation/source-index rows.
+- **Runtime completion transactions**: added `multi-agent-brief state stage-complete` and `state finalize-complete` for deterministic success-path bookkeeping. These commands validate and record completion claims; they do not execute stages, invoke agents, call `finalize`, or repair content.
+- **Claude Code five-verb writer entrypoint**: added `/mabw` for Claude Code with `new`, `run`, `status`, `feedback`, and `deliver`, plus `multi-agent-brief claude install` support for the Claude writer path.
+- **Improvement Ledger supersession hygiene**: added top-level immutable `supersedes_id`, deterministic duplicate proposal warnings, approved supersession fork rejection, non-materializable superseder warnings, and revert-time warnings when old guidance re-exposes.
+
+### Changed
+
+- **Success path uses transactions**: generated handoff/runtime guidance now routes successful stage progress through `state stage-complete` and terminal delivery through `state finalize-complete`; `state decide` remains for retry, repair, human review, and block decisions.
+- **Delivery path hardened**: `/mabw deliver` and runtime handoff guidance require gates, strict state checks, final rendering, reader-final cleanliness, and `finalize-complete` before terminal completion is recorded.
+- **Improvement materialization remains computed**: superseded guidance is a read-time/materialization computation, not a stored ledger status. Reverting a superseder can re-expose the previous approved entry by design.
+
+### Boundaries
+
+- v0.7.2 does not add autonomous learning, automatic repair, automatic approval, output-quality scoring, role-topology compression, manifestation metrics, retrieval memory, or runtime-specific guidance filtering.
+- v0.7.2 does not include `operator_reported_model`; model/run observation metadata is deferred to v0.7.3 / v0.8 scorecard design.
+- v0.7.2 does not include `improvement/intake.jsonl` or `improvement/candidates.jsonl`; intake/candidate parking-lot work is deferred to v0.7.3+.
+
 ## [0.7.0] — 2026-06-10
 
 ### Added

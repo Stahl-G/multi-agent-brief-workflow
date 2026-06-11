@@ -29,7 +29,7 @@ MABW 的控制面可以按不同粒度统计：
 | 状态 | 含义 |
 |---|---|
 | 已实现 | 当前代码中已有该 surface，并有确定性 CLI / 测试覆盖。 |
-| 计划 v0.7.2 | 已接受的设计，但尚未发布。 |
+| 延后至 v0.7.3+ | 已接受的方向，但不属于 v0.7.2 release。 |
 | 计划 v0.8 | 已接受的方向，延后到度量 / 推断 / 角色拓扑阶段。 |
 | 投影 | 从其他 source surface 派生，不是真理源。 |
 
@@ -47,7 +47,7 @@ MABW 的控制面可以按不同粒度统计：
 | `orchestrator_control_switchboard.json` | 给 Orchestrator 的确定性控制建议。 | Python | 已实现 | 从当前 workspace state/config 重建。 |
 | `control_selections.json` | Orchestrator 对推荐控制的 enable/defer/reject 选择记录。 | Python CLI，由 Orchestrator/human 显式选择触发 | 已实现 | selection 是记录，不是执行。 |
 | `agent_handoff.md` / `agent_handoff.json` | 当前 run 的 runtime-facing contract surface。 | Python | 已实现；v0.7.1 硬化中 | handoff 时重建；只应暴露 frozen runtime context。 |
-| `stage complete` / `finalize complete` transactions | stage/finalize transition 的原子完成记录。 | Orchestrator 调用的 Python CLI | 计划 v0.7.2 | 必须原子化验证 artifacts、更新 registry/state、追加 events。 |
+| `stage complete` / `finalize complete` transactions | stage/finalize transition 的确定性完成记录。 | Orchestrator 调用的 Python CLI | 已实现 | 验证 artifacts、更新 registry/state、追加 transaction events；不执行 stage。 |
 
 ## Run 级证据与正确性
 

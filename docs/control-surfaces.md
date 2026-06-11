@@ -29,7 +29,7 @@ This document uses the file/surface level because it matches the core governance
 | Status | Meaning |
 |---|---|
 | Implemented | The surface exists in current code and is covered by deterministic CLI/tests. |
-| Planned v0.7.2 | Accepted design, not yet shipped. |
+| Deferred v0.7.3+ | Accepted direction, not part of the v0.7.2 release. |
 | Planned v0.8 | Accepted direction, deferred to the measurement / inference / role-topology phase. |
 | Projection | Derived from source surfaces. It is not the source of truth. |
 
@@ -41,7 +41,7 @@ This ledger is also a release-freeze aid. The approximate distribution is:
 |---|---:|---|
 | v0.6.x | ~17 | Runtime state, artifact tracking, evidence, gates, feedback/repair, audience snapshots, provenance, and support/status docs. |
 | v0.7.0 | ~5 | Improvement Ledger, deterministic memory projection, frozen improvement snapshots, manifest improvement metadata, and packaged improvement eval cases. |
-| Planned v0.7.2 | ~4 | Intake records, candidate parking lot, stage/finalize completion transactions, and a small schema cleanup batch. |
+| v0.7.2 | ~4 | Reader-final gate, stage/finalize completion transactions, Claude five-verb entrypoint, and Improvement Ledger supersession hygiene. |
 | Planned v0.8 | ~4 | Reference samples, manifestation/regression reporting, coverage-side gates, and trajectory-regulation implementation work. |
 
 The exact count may change as related files are merged or split. The useful
@@ -62,7 +62,7 @@ These surfaces describe the state of a specific run. They live under `output/int
 | `orchestrator_control_switchboard.json` | Deterministic control recommendations for the Orchestrator. | Python | Implemented | Rebuilt from current workspace state and config. |
 | `control_selections.json` | Orchestrator enable/defer/reject selections for recommended controls. | Python CLI from explicit Orchestrator/human selection | Implemented | Selection is a record, not execution. |
 | `agent_handoff.md` / `agent_handoff.json` | Runtime-facing contract surface for the current run. | Python | Implemented; v0.7.1 hardening | Regenerated at handoff; should expose only frozen runtime context. |
-| `stage complete` / `finalize complete` transactions | Atomic completion records for stage/finalize transitions. | Python CLI invoked by Orchestrator | Planned v0.7.2 | Must validate artifacts, update registry/state, and append events atomically. |
+| `stage complete` / `finalize complete` transactions | Deterministic completion records for stage/finalize transitions. | Python CLI invoked by Orchestrator | Implemented | Validates artifacts, updates registry/state, and appends transaction events; does not execute stages. |
 
 ## Run-Scoped Evidence And Correctness
 

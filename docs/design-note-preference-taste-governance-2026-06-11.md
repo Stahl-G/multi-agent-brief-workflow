@@ -1,7 +1,7 @@
 # Design Note: Preference & Taste Governance System
 
 **Date**: 2026-06-11
-**Status**: Design specification — v0.7.2 foundations, v0.8 engine
+**Status**: Design specification — v0.7.2 control foundation, v0.7.3+ intake/candidates, v0.8 engine
 **Inputs**: PROSE paper analysis (Apple/Colorado, ICML 2025), 10-point agent ruling, PR2.5 intake design
 **Relationship**: Complements `docs/mabw-architecture-reference-v0.1.3-related-work.md` §7; v0.2 paper §"Preference Inference vs. Preference Governance"
 
@@ -36,9 +36,9 @@ No single component is simultaneously smart, authoritative, and untraceable.
 
 ```
 Natural feedback / accepted samples
-  → Intake Log (improvement/intake.jsonl)
+  → Intake Log (improvement/intake.jsonl, deferred)
   → Agent-side compiler (PROSE-inspired inference, v0.8)
-  → Candidate Parking Lot (improvement/candidates.jsonl)
+  → Candidate Parking Lot (improvement/candidates.jsonl, deferred)
   → Deterministic validation (Python)
   → Human adoption (improve approve / adopt)
   → Improvement Ledger (improvement/ledger.jsonl)
@@ -102,7 +102,7 @@ Natural feedback / accepted samples
 
 **Does**: store human-adopted audience guidance with full audit trail.  
 **Does not**: store fact corrections, gate rules, contract parameters, or repair plans.  
-**Provenance field** (added v0.7.2): `human_authored` or `machine_proposed`. Machine-proposed entries require: full per-entry display (no batch approval), human confirmation gesture per entry, and the option to edit—which flips provenance to `human_authored`. Machine-proposed entries materialize no earlier than v0.8.
+**Deferred provenance field**: a future ledger provenance field may distinguish `human_authored` and `machine_proposed` entries, but it is not implemented in v0.7.2. Machine-proposed entries require future design: full per-entry display (no batch approval), human confirmation gesture per entry, and the option to edit. Machine-proposed entries materialize no earlier than v0.8.
 
 ### 3.4 Reference Samples
 
@@ -173,14 +173,19 @@ contracts / policy / source-supported facts
 
 - Transaction layer (`stage complete` / `stage block` / `finalize complete`): P0
 - Product path: P1
-- Ledger `provenance` field (`human_authored` / `machine_proposed`)
-- Route includes `already_enforced`
+- Improvement Ledger supersession hygiene:
+  - top-level immutable `supersedes_id`
+  - duplicate warning on propose
+  - approved supersession fork rejection
+  - revert warning when an old entry re-exposes
 - Documentation: non-evidence samples boundary; no Python LLM calls
 
 Deferred from v0.7.2:
 
 - `improvement/intake.jsonl` skeleton
 - `improvement/candidates.jsonl` schema + validator
+- Ledger provenance field (`human_authored` / `machine_proposed`)
+- Route includes `already_enforced`
 
 ### v0.7.3 — Candidate CLI
 
