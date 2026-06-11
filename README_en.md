@@ -7,7 +7,7 @@
 
 A source-grounded, auditable, agent-collaborative briefing workflow for business, research, market, policy, company-tracking, and management-reporting briefs.
 
-> Let code organize the workflow. Let models handle judgment and expression. Keep every important conclusion traceable.
+> MABW can observe and suggest, but only what you approve is remembered, and every approved memory stays in an inspectable ledger you can undo.
 
 `Multi-Agent-Brief-Workflow` (MABW) is not an "AI writes a weekly report" prompt. It breaks real briefing work into contract-governed steps: understand the task, discover sources, organize inputs, build a Claim Ledger, assist drafting, audit the result, and render delivery files. Each step has explicit expected artifacts, producer boundaries, transition rules, and inspectable records.
 
@@ -22,6 +22,19 @@ Current version: **v0.7.0**
 - **Not yet**: not an autonomous agent, does not automatically edit brief content, does not automatically learn, and does not provide a long-term memory system. See [architecture status](docs/architecture-status.md) and [roadmap](docs/roadmap.md).
 
 One-line design principle: **the system proposes; humans decide.** For the hard boundaries, see [docs/red-lines-and-anti-patterns.md](docs/red-lines-and-anti-patterns.md).
+
+## The Four Things It Tracks Each Week
+
+The writer-facing model is not "how many control surfaces exist." Each run is meant to keep four practical things visible:
+
+| Question | What it records | Where you see it |
+|---|---|---|
+| What stage this run is in | Current stage, missing artifacts, blockers, and the next safe action | `/mabw status`, `workflow_state.json`, `agent_handoff.md` |
+| Where each number came from | Claim Ledger records, source dates, audit results, and gate findings | `claim_ledger.json`, `quality_gate_report.json`, `source_appendix.md` |
+| What reader preferences were approved | Human-approved reader guidance only; unapproved suggestions do not take effect | `improvement/ledger.jsonl`, `improvement_memory_snapshot.md` |
+| What checks are guarding delivery | Completion transactions, reader-final gate, source appendix, and delivery checks | `finalize_report.json`, `reader_clean`, `state finalize-complete` |
+
+In plain terms: AI can draft; the system records ledgers; only the operator can make preferences affect later runs. See [docs/what-mabw-keeps-track-of.md](docs/what-mabw-keeps-track-of.md) for the user-facing explanation.
 
 ## Why This Exists
 

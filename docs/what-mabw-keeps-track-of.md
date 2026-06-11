@@ -23,19 +23,19 @@ In shorter form:
 
 This does not mean MABW never observes your work. It means observation is not authority. The system may suggest a preference, a format rule, or a fact check, but only approved guidance can affect a future run.
 
+In plain terms:
+
+> AI can draft; the system records ledgers; only the operator can make preferences affect later runs.
+
 ## 1. Where The Brief Stands
 
-MABW keeps track of the run itself:
+What it records:
 
 - which stage is current;
 - which stages are complete, pending, or blocked;
 - which artifacts are expected;
 - which decisions were recorded;
 - what the Orchestrator is allowed to do next.
-
-This protects you from a common agent failure mode: a brief may look finished while the workflow evidence is incomplete.
-
-When the system is healthy, the brief is not "done" because an agent says it is done. It is done because the run state, artifacts, decisions, and checks agree.
 
 Where to look:
 
@@ -45,19 +45,17 @@ Where to look:
 - `output/intermediate/runtime_manifest.json`
 - `output/intermediate/agent_handoff.md`
 
-User-facing translation:
+How it protects you when things go wrong:
 
-> MABW can tell you where the run is, what is missing, and why it can or cannot move forward.
+> A brief is not "done" because an agent says it is done. MABW can tell you where the run is, what is missing, and why it can or cannot move forward.
 
 ## 2. Where Each Number Came From
 
-MABW keeps factual claims separate from writing style.
+What it records:
 
-For claims, numbers, dates, company facts, policies, prices, capacity, customers, and project status, the important question is:
-
-> Where did this come from?
-
-MABW records sources and claim support so a reviewer can trace from a final sentence back to the source material and audit surface.
+- sources and support for claims, numbers, dates, company facts, policies, prices, capacity, customers, and project status;
+- audit and quality-gate findings tied to those claims;
+- reader-facing source appendix entries for delivered sources.
 
 Where to look:
 
@@ -67,17 +65,13 @@ Where to look:
 - `output/source_appendix.md`
 - `output/intermediate/provenance_graph.json`
 
-User-facing translation:
+How it protects you when things go wrong:
 
-> Pick a number in the final brief and ask "where did this come from?" The workflow should point back to the claim, source, date, and checks.
-
-This is the simplest enterprise demo of MABW: open a finished brief, point at one number, and trace it.
+> Pick a number in the final brief and ask "where did this come from?" The workflow should point back to the claim, source, date, and checks instead of relying on memory or model confidence.
 
 ## 3. What The System Has Learned With Approval
 
-MABW can preserve reader preferences, but it does not silently learn taste.
-
-Examples of reader guidance:
+What it records:
 
 - lead with business impact before background;
 - avoid making decisions on behalf of management;
@@ -86,13 +80,6 @@ Examples of reader guidance:
 
 These are not facts. They are preferences about how the brief should be written for a reader.
 
-Approved preference guidance is stored in the Improvement Ledger, projected into memory, and frozen into the next run's snapshot. That means:
-
-- unapproved suggestions do not affect future runs;
-- approved guidance affects only later runs, not the current one retroactively;
-- reverted guidance disappears from later snapshots;
-- the run manifest records which approved guidance was materialized.
-
 Where to look:
 
 - `improvement/ledger.jsonl`
@@ -100,23 +87,17 @@ Where to look:
 - `output/intermediate/improvement_memory_snapshot.md`
 - `output/intermediate/runtime_manifest.json`
 
-User-facing translation:
+How it protects you when things go wrong:
 
-> If you want MABW to remember a writing preference, it must be approved first. You can later inspect or undo that approved memory.
+> If you want MABW to remember a writing preference, it must be approved first. Unapproved suggestions do not affect future runs, approved guidance only affects later runs, and reverted guidance disappears from later snapshots.
 
 ## 4. What Is Guarding Delivery
 
-MABW also keeps track of guardrails: contracts, gates, policies, and delivery checks.
+What it records:
 
-These are not the same as reader preferences. They are delivery standards.
-
-Examples:
-
-- required artifacts must exist before a stage can be considered complete;
-- missing or stale source support can block continuation;
-- source appendix generation is a delivery surface;
-- repair plans structure feedback without automatically rewriting the brief;
-- final output should not hide local paths or internal claim IDs from readers.
+- contracts, gates, policies, and delivery checks;
+- required artifacts that must exist before a stage can be considered complete;
+- final reader-clean checks such as local paths, internal claim IDs, and blank source rows.
 
 Where to look:
 
@@ -127,9 +108,9 @@ Where to look:
 - `output/intermediate/quality_gate_report.json`
 - `output/intermediate/repair_plan.json`
 
-User-facing translation:
+How it protects you when things go wrong:
 
-> Some requirements are not preferences. They are delivery checks that protect you before the brief is finalized.
+> Some requirements are not preferences. They are delivery checks that protect you before the brief is finalized, and they should block delivery rather than become soft memory.
 
 ## When Feedback Is Routed Somewhere Else
 

@@ -64,6 +64,46 @@ The delegated workflow follows this sequence:
 source discovery -> doctor -> scout -> screener -> claim-ledger -> analyst -> editor -> auditor -> finalize
 ```
 
+## What `/mabw status` Means
+
+`/mabw status <workspace>` is a read-only dashboard. It should help a writer
+understand four things without exposing a schema inventory:
+
+| Question | What status should tell you |
+|---|---|
+| What stage this run is in | Current stage, missing artifacts, blockers, and the next safe action. |
+| Where each number came from | Whether Claim Ledger, audit, gate, and source appendix surfaces are present or stale. |
+| What reader preferences were approved | Whether Improvement Memory was materialized for this run, and which snapshot is frozen. |
+| What checks are guarding delivery | Gate status, reader-final cleanliness, feedback/repair blockers, and finalize readiness. |
+
+Hard rule: `status` is read-only. It does not run `state check`, refresh the
+artifact registry, initialize runtime state, refresh the switchboard, append
+events, or write a status file. If records may be stale, it reports that and
+names the explicit command the operator can run.
+
+## How `/mabw feedback` Is Routed
+
+`/mabw feedback <workspace> [text-or-file]` records feedback first. Recording
+feedback is allowed immediately; acting on it is not automatic.
+
+Downstream actions still require explicit confirmation:
+
+- run-local repair: create or update feedback issues / repair plan, then repair explicitly;
+- cross-run preference: create an Improvement Ledger proposal, then approve explicitly;
+- resolved issue: mark it resolved only after the operator confirms the repair or review result.
+
+Fact and source problems are not long-term preferences. A stale number, missing
+source, unsupported claim, or broken citation should stay in the feedback/repair
+or gate path. Fixed format requirements should be promoted to a template or
+delivery standard, not softened into memory.
+
+Use this wording when the requested behavior is already enforced:
+
+> This is already enforced: before each delivery, MABW checks the reader-final
+> output for internal IDs, source residue, local paths, and delivery gate
+> failures. If the check fails, delivery is not marked complete. You can see the
+> result in `output/intermediate/finalize_report.json`.
+
 ## 3. Source Discovery
 
 When the workspace uses `llm_decide`, resolve sources before Scout:

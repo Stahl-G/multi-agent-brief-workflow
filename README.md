@@ -9,7 +9,7 @@
 
 一个基于来源、可审计、可由 AI agent 协作执行的简报工作流，用于生成商业、研究、市场、政策、公司跟踪和管理层汇报材料。
 
-> 让代码负责整理流程，让模型负责判断表达，让每一个重要结论都可以追溯来源。
+> 它会观察、会提议，但只有你点头的，才会被记住，而且记在一本你随时能翻、能撤销的账上。
 
 `Multi-Agent-Brief-Workflow` (MABW)不是一个"AI 写周报"的 Prompt。它把真实工作中的 briefing 流程拆成受契约约束的步骤：理解需求 → 发现来源 → 整理材料 → 建立事实账本 → 辅助写作 → 审计校验 → 输出文档。每一步产出什么文件、由谁产出、何时可以进入下一步，都有明确定义并留有完整记录。
 
@@ -24,6 +24,19 @@
 * **还不是的**：不是自治 agent，不会自动修改简报内容，不会自动学习，没有长期记忆系统。详见 [当前架构状态](docs/architecture-status.zh-CN.md) 和 [路线图](docs/roadmap.zh-CN.md)。
 
 设计原则一句话：**系统提案，人类决定。** 全部红线见 [docs/red-lines-and-anti-patterns.md](docs/red-lines-and-anti-patterns.md)。
+
+## 每周它替你记住四件事
+
+MABW 的用户心智模型不是“有多少个控制面”，而是每次简报运行时它替你守住四件事：
+
+| 问题 | 它记录什么 | 你在哪里看 |
+|---|---|---|
+| 本期写到哪了 | 当前 stage、缺失产物、阻塞原因和下一步安全动作 | `/mabw status`、`workflow_state.json`、`agent_handoff.md` |
+| 每个数字哪来的 | Claim Ledger、来源日期、审计和质量门禁结果 | `claim_ledger.json`、`quality_gate_report.json`、`source_appendix.md` |
+| 它学到了什么 | 只有人工批准的读者偏好；未批准建议不会生效 | `improvement/ledger.jsonl`、`improvement_memory_snapshot.md` |
+| 什么在替你把关 | 阶段完成事务、reader-final gate、来源附录和交付检查 | `finalize_report.json`、`reader_clean`、`state finalize-complete` |
+
+一句话：AI 可以写草稿；系统记录账本；只有你能让偏好影响后续运行。面向业务用户的解释见 [docs/what-mabw-keeps-track-of.zh-CN.md](docs/what-mabw-keeps-track-of.zh-CN.md)。
 
 ## 为什么做这个项目
 

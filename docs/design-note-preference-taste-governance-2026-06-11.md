@@ -15,6 +15,38 @@ MABW may use LLMs to help users discover, decompose, interpret, and candidate pr
 
 ---
 
+## Product Language Ruling
+
+This section is a design ruling for v0.7.3+ candidate/intake UX. It is **not**
+implemented behavior in v0.7.2.
+
+Candidate suggestions should be visible by default. The product should not hide
+machine or system suggestions in an invisible queue, because hidden preference
+inference makes later behavior look like silent learning.
+
+Future candidate views should group suggestions into four user-facing buckets:
+
+| User-facing bucket | Meaning |
+|---|---|
+| Writing preferences awaiting your confirmation | Possible audience/taste guidance that could become Improvement Ledger entries after human approval. |
+| Suggested fixed-format rules | Checkable format or delivery patterns that should become templates, packs, or delivery standards rather than soft memory. |
+| Facts or sources that need review | Correctness, freshness, attribution, or coverage issues that belong in feedback/repair/gates, not Improvement Memory. |
+| Already enforced by the system | Requests that are already covered by deterministic checks, with the mechanism and evidence location shown to the operator. |
+
+Candidates must be clearable and dismissible. A parking lot full of old
+suggestions is worse than no parking lot.
+
+Machine-proposed candidates must not be bulk-confirmed. The operator did not
+say those words, so each candidate needs a separate review gesture before it can
+enter an adoption path.
+
+When a user explicitly gives feedback and the system decomposes it into several
+items, the UI may show the split items with checkboxes and allow one submit
+action after the operator has reviewed the individual items. This is still a
+human confirmation path, not automatic learning.
+
+---
+
 ## 1. The Parent Pattern
 
 Every component in the Preference & Taste System obeys one invariant:
