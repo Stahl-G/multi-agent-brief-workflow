@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - **Audit binding consistency check**: `finalize` now rejects stale audit reports that still mention claim IDs absent from the current Claim Ledger, record blocking audit findings, or carry stale ledger/brief binding metadata.
+- **Public failure study**: added a public-safe organoid-industry failure study showing how a readable brief can still overstate source support, and why v0.8 focuses on source-to-claim semantic support calibration.
 
 ### Changed
 

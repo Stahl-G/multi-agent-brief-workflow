@@ -65,7 +65,7 @@ Each stage is handled by a specialist role: Scout, Screener, Claim Ledger, Analy
 
 ## What Output Looks Like
 
-The final delivery bundle contains only `output/delivery/brief.md` and `output/delivery/<named>.docx`. When source appendix output is configured, the source list is appended to those delivery files; standalone `output/source_appendix.md`, Claim Ledger, audit report, and audited brief remain audit/control records, not extra reader handoff files. The example below is **synthetic** and only demonstrates structure. A public-safe integration summary is available in [docs/reference-runs/v0.7.2-public-solar-integration.zh-CN.md](docs/reference-runs/v0.7.2-public-solar-integration.zh-CN.md); it is an integration reference, not proof of output-quality improvement or strict causal effect.
+The final delivery bundle contains only `output/delivery/brief.md` and `output/delivery/<named>.docx`. When source appendix output is configured, the source list is appended to those delivery files; standalone `output/source_appendix.md`, Claim Ledger, audit report, and audited brief remain audit/control records, not extra reader handoff files. The example below is **synthetic** and only demonstrates structure. A public-safe integration summary is available in [docs/reference-runs/v0.7.2-public-solar-integration.zh-CN.md](docs/reference-runs/v0.7.2-public-solar-integration.zh-CN.md); it is an integration reference, not proof of output-quality improvement or strict causal effect. See also the [v0.7.3 organoid-industry failure study](docs/reference-runs/v0.7.3-organoid-failure-study.zh-CN.md), a real external research case that exposed the current source-to-claim semantic support boundary.
 
 `output/delivery/brief.md` excerpt:
 

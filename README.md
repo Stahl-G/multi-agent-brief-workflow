@@ -74,7 +74,7 @@ AI 生成报告的常见问题不是"写得不够快"，而是：
 
 ## 看一眼产出长什么样
 
-最终交付包只放 `output/delivery/brief.md` 和 `output/delivery/<命名>.docx`。配置来源附录时，来源列表会追加在这两份交付稿底部；独立的 `output/source_appendix.md`、Claim Ledger、audit report 和 audited brief 继续保留为审计追溯文件，不作为额外交付文件。下面是一个**合成示例**（虚构主体，仅展示结构）。真实运行证据见 [v0.7.2 公开光伏集成运行摘要](docs/reference-runs/v0.7.2-public-solar-integration.zh-CN.md)；它是 integration reference，不是输出质量提升或严格因果效果证明。
+最终交付包只放 `output/delivery/brief.md` 和 `output/delivery/<命名>.docx`。配置来源附录时，来源列表会追加在这两份交付稿底部；独立的 `output/source_appendix.md`、Claim Ledger、audit report 和 audited brief 继续保留为审计追溯文件，不作为额外交付文件。下面是一个**合成示例**（虚构主体，仅展示结构）。真实运行证据见 [v0.7.2 公开光伏集成运行摘要](docs/reference-runs/v0.7.2-public-solar-integration.zh-CN.md)；它是 integration reference，不是输出质量提升或严格因果效果证明。另见 [v0.7.3 类器官行业研究失败研究](docs/reference-runs/v0.7.3-organoid-failure-study.zh-CN.md)：一次真实外部课题如何暴露 source-to-claim 语义支撑边界。
 
 `output/delivery/brief.md`（节选）：
 
