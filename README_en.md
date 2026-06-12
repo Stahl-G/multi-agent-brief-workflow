@@ -111,6 +111,19 @@ MABW does not have a "lite mode." The entry cost can be reduced, but the account
 
 Do not use "audit an arbitrary external AI report" as the lightweight entrypoint. Without a Claim Ledger, external drafts can only receive shallow checks and cannot provide MABW's accountability guarantees.
 
+## Opening A New Sector
+
+MABW is useful when a one-off sector study needs to become a long-running, traceable monitoring workflow. For a new sector such as organoids, AI power demand, energy-storage supply chains, or a regulatory theme, start this way:
+
+1. **Do one exploration pass first**: use Deep Research, human research, or expert interviews to build an initial map of the key questions, regulators, company universe, product categories, keywords, databases, media sources, and event types worth tracking.
+2. **Do not treat the exploration report as the evidence layer**: it is a draft source universe, watchlist, and taxonomy. Important claims in later briefs still need to trace back to original filings, regulatory documents, company releases, financing disclosures, papers, or trusted media.
+3. **Turn the map into workspace configuration**: encode policy, company/product, financing, and commercialization sections in `user.md` / onboarding config, and maintain reusable source lists, keywords, and company watchlists.
+4. **Run weekly before going daily**: first use MABW to process new weekly information, deduplicate, screen stale items, build the Claim Ledger, render the source appendix, and learn which events actually change judgment.
+5. **Use feedback to shape the workflow**: stable requirements such as "lead with business impact before background," "do not make management decisions for the reader," or "verify this data type from primary sources" should enter feedback first, then be human-approved into the Improvement Ledger or later templates/gates.
+6. **Increase cadence only after the shape stabilizes**: move from weekly to daily alerts or topic-specific monitoring only after the source pool, section structure, reader preferences, and gates are stable.
+
+In short: Deep Research is for opening the map; MABW is for monitoring the territory. Sector research is not a one-time search dump. It is an ongoing information-governance process.
+
 ## Quick Start
 
 ### Claude Code (Five-Verb Primary Path)
