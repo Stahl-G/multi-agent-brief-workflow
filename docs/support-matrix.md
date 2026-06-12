@@ -33,6 +33,8 @@ validation unless that is stated separately.
 | Source appendix audit/control copy (`source_appendix.md`) | Supported |
 | `multi-agent-brief run --workspace <path>` | Supported |
 | `multi-agent-brief status --workspace <path>` | Supported |
+| `multi-agent-brief deliver --workspace <path> --target local` | Supported |
+| `multi-agent-brief deliver --workspace <path> --target feishu` | Experimental |
 | `multi-agent-brief state init/check/show/decide/stage-complete/finalize-complete` | Supported |
 | `multi-agent-brief controls build-switchboard/show/select/validate` | Supported |
 | `multi-agent-brief runtime install --workspace <path> --runtime opencode\|claude\|all` | Source-clone-only |

@@ -83,6 +83,9 @@ EVENT_TYPES = {
     "improvement_rejected",
     "improvement_reverted",
     "improvement_memory_snapshot_created",
+    "delivery_attempted",
+    "delivery_succeeded",
+    "delivery_failed",
     "run_blocked",
     "run_reset",
 }

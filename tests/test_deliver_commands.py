@@ -1,0 +1,360 @@
+from __future__ import annotations
+
+import json
+from pathlib import Path
+
+import pytest
+
+from multi_agent_brief.cli.main import main
+from multi_agent_brief.delivery.base import DeliveryResult
+from multi_agent_brief.orchestrator.runtime_state import RuntimeStateError, initialize_runtime_state
+
+
+def _workspace(tmp_path: Path) -> Path:
+    ws = tmp_path / "ws"
+    ws.mkdir()
+    (ws / "config.yaml").write_text("project:\n  name: Deliver Test\n", encoding="utf-8")
+    (ws / "sources.yaml").write_text("manual:\n  sources: []\n", encoding="utf-8")
+    (ws / "user.md").write_text("# Deliver test\n", encoding="utf-8")
+    return ws
+
+
+def _write_bundle(
+    ws: Path,
+    *,
+    reader_clean_status: str = "pass",
+    include_docx: bool = True,
+    delivery_artifacts: list[str] | None = None,
+    init_runtime: bool = True,
+) -> tuple[Path, Path | None]:
+    if init_runtime:
+        initialize_runtime_state(workspace=ws, runtime="claude", actor="cli")
+    delivery = ws / "output" / "delivery"
+    intermediate = ws / "output" / "intermediate"
+    delivery.mkdir(parents=True, exist_ok=True)
+    intermediate.mkdir(parents=True, exist_ok=True)
+    markdown = delivery / "brief.md"
+    markdown.write_text("# Final Brief\n\nSource Appendix\n", encoding="utf-8")
+    docx = delivery / "Weekly_Brief_2026-06-12.docx"
+    if include_docx:
+        docx_module = pytest.importorskip("docx", reason="python-docx not installed")
+        document = docx_module.Document()
+        document.add_paragraph("Final Brief")
+        document.add_paragraph("Source Appendix")
+        document.save(str(docx))
+    else:
+        docx = None
+    artifact_paths = delivery_artifacts
+    if artifact_paths is None:
+        artifact_paths = [str(markdown)]
+        if docx is not None:
+            artifact_paths.append(str(docx))
+    report = {
+        "status": "pass",
+        "reader_clean": {"status": reader_clean_status, "sample_findings": []},
+        "delivery_artifacts": artifact_paths,
+    }
+    (intermediate / "finalize_report.json").write_text(
+        json.dumps(report, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
+    (ws / "output" / "source_appendix.md").write_text("# Audit copy\n", encoding="utf-8")
+    (intermediate / "claim_ledger.json").write_text("[]\n", encoding="utf-8")
+    (intermediate / "audit_report.json").write_text("{}\n", encoding="utf-8")
+    return markdown, docx
+
+
+def _delivery_events(ws: Path) -> list[dict[str, object]]:
+    path = ws / "output" / "intermediate" / "event_log.jsonl"
+    return [
+        json.loads(line)
+        for line in path.read_text(encoding="utf-8").splitlines()
+        if json.loads(line).get("event_type", "").startswith("delivery_")
+    ]
+
+
+def test_deliver_local_lists_only_delivery_bundle(tmp_path: Path, capsys) -> None:
+    ws = _workspace(tmp_path)
+    _write_bundle(ws)
+
+    rc = main(["deliver", "--workspace", str(ws), "--target", "local"])
+
+    assert rc == 0
+    out = capsys.readouterr().out
+    assert "output/delivery/brief.md" in out
+    assert "output/delivery/Weekly_Brief_2026-06-12.docx" in out
+    assert "source_appendix.md" not in out
+    assert "claim_ledger.json" not in out
+    assert "audit_report.json" not in out
+    events = _delivery_events(ws)
+    assert [event["event_type"] for event in events] == ["delivery_attempted", "delivery_succeeded"]
+    assert events[0]["metadata"]["artifact"] == "output/delivery/brief.md"
+
+
+def test_deliver_missing_bundle_returns_typed_error(tmp_path: Path, capsys) -> None:
+    ws = _workspace(tmp_path)
+
+    rc = main(["deliver", "--workspace", str(ws), "--json"])
+
+    assert rc == 1
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["ok"] is False
+    assert payload["error_code"] == "E_DELIVERY_BUNDLE_MISSING"
+    assert "finalize" in payload["message"]
+
+
+def test_deliver_rejects_dirty_finalize_report(tmp_path: Path, capsys) -> None:
+    ws = _workspace(tmp_path)
+    _write_bundle(ws, reader_clean_status="fail", init_runtime=False)
+
+    rc = main(["deliver", "--workspace", str(ws), "--json"])
+
+    assert rc == 1
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["error_code"] == "E_DELIVERY_NOT_CLEAN"
+    assert not (ws / "output" / "intermediate" / "event_log.jsonl").exists()
+
+
+def test_deliver_rejects_dirty_current_delivery_artifact(tmp_path: Path, capsys) -> None:
+    ws = _workspace(tmp_path)
+    markdown, _docx = _write_bundle(ws, include_docx=False)
+    markdown.write_text("# Final Brief\n\nLeaked marker [src:CLAIM-001]\n", encoding="utf-8")
+
+    rc = main(["deliver", "--workspace", str(ws), "--json"])
+
+    assert rc == 1
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["error_code"] == "E_DELIVERY_NOT_CLEAN"
+    assert payload["reader_clean"]["status"] == "fail"
+    assert _delivery_events(ws) == []
+
+
+def test_deliver_requires_existing_runtime_state(tmp_path: Path, capsys) -> None:
+    ws = _workspace(tmp_path)
+    _write_bundle(ws, include_docx=False, init_runtime=False)
+
+    rc = main(["deliver", "--workspace", str(ws), "--json"])
+
+    assert rc == 1
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["error_code"] == "E_DELIVERY_RUNTIME_MISSING"
+    assert payload["runtime_error_code"] == "E_RUNTIME_STATE_NOT_INITIALIZED"
+    assert not (ws / "output" / "intermediate" / "event_log.jsonl").exists()
+
+
+def test_deliver_rejects_non_delivery_artifact_in_report(tmp_path: Path, capsys) -> None:
+    ws = _workspace(tmp_path)
+    bad_path = ws / "output" / "source_appendix.md"
+    _write_bundle(ws, delivery_artifacts=[str(bad_path)])
+
+    rc = main(["deliver", "--workspace", str(ws), "--json"])
+
+    assert rc == 1
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["error_code"] == "E_DELIVERY_BUNDLE_MISSING"
+
+
+def test_deliver_feishu_doc_sends_delivery_markdown_and_sanitizes_events(tmp_path: Path, capsys, monkeypatch) -> None:
+    ws = _workspace(tmp_path)
+    markdown, _docx = _write_bundle(ws)
+    calls: list[tuple[str, str, str]] = []
+
+    def fake_deliver(self, artifact, target):
+        calls.append((artifact.path, target.channel, target.recipient))
+        return DeliveryResult("feishu", True, "Doc created", {"url": "https://example.com/doc"})
+
+    monkeypatch.setattr("multi_agent_brief.cli.deliver_commands.FeishuDeliveryConnector.deliver", fake_deliver)
+
+    rc = main([
+        "deliver",
+        "--workspace",
+        str(ws),
+        "--target",
+        "feishu",
+        "--channel",
+        "doc",
+        "--recipient",
+        "folder_secret_token",
+        "--json",
+    ])
+
+    assert rc == 0
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["ok"] is True
+    assert payload["artifact"] == "output/delivery/brief.md"
+    assert payload["url"] == "https://example.com/doc"
+    assert calls == [(str(markdown), "doc", "folder_secret_token")]
+    event_blob = json.dumps(_delivery_events(ws), ensure_ascii=False)
+    assert "folder_secret_token" not in event_blob
+    assert '"recipient_present": true' in event_blob
+
+
+def test_deliver_feishu_drive_prefers_named_docx(tmp_path: Path, monkeypatch) -> None:
+    ws = _workspace(tmp_path)
+    _markdown, docx = _write_bundle(ws)
+    calls: list[str] = []
+
+    def fake_deliver(self, artifact, target):
+        calls.append(artifact.path)
+        return DeliveryResult("feishu", True, "Uploaded")
+
+    monkeypatch.setattr("multi_agent_brief.cli.deliver_commands.FeishuDeliveryConnector.deliver", fake_deliver)
+
+    rc = main([
+        "deliver",
+        "--workspace",
+        str(ws),
+        "--target",
+        "feishu",
+        "--channel",
+        "drive",
+        "--recipient",
+        "folder_secret_token",
+        "--json",
+    ])
+
+    assert rc == 0
+    assert calls == [str(docx)]
+
+
+def test_deliver_feishu_failure_records_failed_event(tmp_path: Path, capsys, monkeypatch) -> None:
+    ws = _workspace(tmp_path)
+    _write_bundle(ws, include_docx=False)
+
+    def fake_deliver(self, artifact, target):
+        return DeliveryResult(
+            "feishu",
+            False,
+            "feishu failed for oc_secret_chat and folder token abcdefghijklmnopqrstuvwxyz123456",
+        )
+
+    monkeypatch.setattr("multi_agent_brief.cli.deliver_commands.FeishuDeliveryConnector.deliver", fake_deliver)
+
+    rc = main([
+        "deliver",
+        "--workspace",
+        str(ws),
+        "--target",
+        "feishu",
+        "--channel",
+        "chat",
+        "--recipient",
+        "oc_secret_chat",
+        "--json",
+    ])
+
+    assert rc == 1
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["error_code"] == "E_DELIVERY_FAILED"
+    assert "oc_secret_chat" not in payload["message"]
+    assert "abcdefghijklmnopqrstuvwxyz123456" not in payload["message"]
+    assert "[recipient]" in payload["message"]
+    assert "[token]" in payload["message"]
+    events = _delivery_events(ws)
+    assert [event["event_type"] for event in events] == ["delivery_attempted", "delivery_failed"]
+    assert "oc_secret_chat" not in json.dumps(events, ensure_ascii=False)
+
+
+def test_deliver_feishu_success_with_success_event_failure_reports_delivered(
+    tmp_path: Path,
+    capsys,
+    monkeypatch,
+) -> None:
+    ws = _workspace(tmp_path)
+    _write_bundle(ws, include_docx=False)
+
+    def fake_deliver(self, artifact, target):
+        return DeliveryResult("feishu", True, "Doc created", {"url": "https://example.com/doc"})
+
+    real_append_event = __import__(
+        "multi_agent_brief.cli.deliver_commands",
+        fromlist=["append_event"],
+    ).append_event
+
+    def flaky_append_event(**kwargs):
+        if kwargs.get("event_type") == "delivery_succeeded":
+            raise RuntimeStateError("event write failed")
+        return real_append_event(**kwargs)
+
+    monkeypatch.setattr("multi_agent_brief.cli.deliver_commands.FeishuDeliveryConnector.deliver", fake_deliver)
+    monkeypatch.setattr("multi_agent_brief.cli.deliver_commands.append_event", flaky_append_event)
+
+    rc = main([
+        "deliver",
+        "--workspace",
+        str(ws),
+        "--target",
+        "feishu",
+        "--channel",
+        "doc",
+        "--recipient",
+        "folder_secret_token",
+        "--json",
+    ])
+
+    assert rc == 0
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["delivered"] is True
+    assert payload["event_recorded"] is False
+    assert "event write failed" in payload["event_error"]
+    assert [event["event_type"] for event in _delivery_events(ws)] == ["delivery_attempted"]
+
+
+def test_deliver_feishu_success_event_failure_warns_in_text_output(
+    tmp_path: Path,
+    capsys,
+    monkeypatch,
+) -> None:
+    ws = _workspace(tmp_path)
+    _write_bundle(ws, include_docx=False)
+
+    def fake_deliver(self, artifact, target):
+        return DeliveryResult("feishu", True, "Doc created", {"url": "https://example.com/doc"})
+
+    real_append_event = __import__(
+        "multi_agent_brief.cli.deliver_commands",
+        fromlist=["append_event"],
+    ).append_event
+
+    def flaky_append_event(**kwargs):
+        if kwargs.get("event_type") == "delivery_succeeded":
+            raise RuntimeStateError("event write failed")
+        return real_append_event(**kwargs)
+
+    monkeypatch.setattr("multi_agent_brief.cli.deliver_commands.FeishuDeliveryConnector.deliver", fake_deliver)
+    monkeypatch.setattr("multi_agent_brief.cli.deliver_commands.append_event", flaky_append_event)
+
+    rc = main([
+        "deliver",
+        "--workspace",
+        str(ws),
+        "--target",
+        "feishu",
+        "--channel",
+        "doc",
+        "--recipient",
+        "folder_secret_token",
+    ])
+
+    captured = capsys.readouterr()
+    assert rc == 0
+    assert "Delivered to feishu doc: https://example.com/doc" in captured.out
+    assert "delivery_succeeded event was not recorded" in captured.err
+    assert "do not retry blindly" in captured.err
+
+
+def test_mabw_deliver_guidance_uses_delivery_command() -> None:
+    text = Path(".claude/commands/mabw.md").read_text(encoding="utf-8")
+    assert "multi-agent-brief deliver --workspace <workspace> --target local" in text
+    assert "multi-agent-brief deliver --workspace <workspace> --target feishu" in text
+    assert "delivery_artifacts" in text
+    assert "do not send audit/control records" in text
+    assert "`doctor` is not a writer verb" in text
+
+
+def test_deliver_help_mentions_recipient_hash(capsys) -> None:
+    try:
+        main(["deliver", "--help"])
+    except SystemExit as exc:
+        assert exc.code == 0
+    assert "recipient_sha256" in capsys.readouterr().out

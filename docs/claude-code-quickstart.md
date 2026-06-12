@@ -173,8 +173,9 @@ the writer-facing delivery verb:
 /mabw deliver ../mabw-workspace
 ```
 
-It runs the deterministic delivery path and verifies completion with
-`state finalize-complete`. The lower-level command is still available:
+It runs the deterministic finalize path, verifies completion with
+`state finalize-complete`, then shows or sends the delivery bundle. The lower-level
+generation command is still available:
 
 ```bash
 multi-agent-brief finalize --config ../mabw-workspace/config.yaml
@@ -194,6 +195,18 @@ This produces reader-facing output such as:
 Internal audit/control records remain under `output/intermediate/` and
 `output/source_appendix.md`. Do not hand those files to the reader as delivery
 artifacts.
+
+To show the finalized local delivery bundle directly:
+
+```bash
+multi-agent-brief deliver --workspace ../mabw-workspace --target local
+```
+
+To send the bundle to Feishu, choose a channel and recipient explicitly:
+
+```bash
+multi-agent-brief deliver --workspace ../mabw-workspace --target feishu --channel doc --recipient <folder_token>
+```
 
 ## Complete Workflow Example
 

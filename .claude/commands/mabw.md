@@ -197,7 +197,7 @@ Forbidden:
 
 ## `deliver <workspace>`
 
-Purpose: complete reader-facing delivery after auditable artifacts exist.
+Purpose: check gates/finalize status, then deliver the reader delivery bundle.
 
 Run the delivery sequence explicitly:
 
@@ -229,6 +229,22 @@ multi-agent-brief finalize --config <workspace>/config.yaml
 multi-agent-brief state finalize-complete --workspace <workspace> --reason "Reader-facing artifacts passed finalize checks."
 ```
 
+If no delivery target is specified, run:
+
+```bash
+multi-agent-brief deliver --workspace <workspace> --target local
+```
+
+If the user asks to send to Feishu, ask for the missing channel and recipient
+first:
+
+```bash
+multi-agent-brief deliver --workspace <workspace> --target feishu --channel doc|drive|chat --recipient <folder-or-chat-id>
+```
+
+The delivery command may send only files listed in
+`output/intermediate/finalize_report.json.delivery_artifacts`.
+
 Report reader-facing delivery paths:
 
 - `output/delivery/brief.md`;
@@ -242,6 +258,7 @@ Forbidden:
 - do not treat `finalize` as a quality-gate executor;
 - do not bypass quality gates;
 - do not deliver if reader final gate fails;
+- do not send audit/control records;
 - do not silently strip process residue and call the run clean;
 - do not use `state decide --decision finalize`.
 

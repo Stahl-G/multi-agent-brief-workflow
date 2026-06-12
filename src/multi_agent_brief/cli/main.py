@@ -20,6 +20,7 @@ from multi_agent_brief.cli import (
     competitors_commands,
     audit_commands,
     finalize_commands,
+    deliver_commands,
     analysis_commands,
     capability_commands,
     input_commands,
@@ -57,6 +58,7 @@ def build_parser() -> argparse.ArgumentParser:
     # Quality gates
     audit_commands.register(subparsers)
     finalize_commands.register(subparsers)
+    deliver_commands.register(subparsers)
 
     # Analysis tooling
     analysis_commands.register_analysis_blocks(subparsers)
@@ -149,6 +151,9 @@ def _dispatch(args: argparse.Namespace) -> int:
 
     if cmd == "finalize":
         return finalize_commands.handle(args)
+
+    if cmd == "deliver":
+        return deliver_commands.handle(args)
 
     if cmd == "analysis-blocks":
         return analysis_commands.handle_analysis_blocks(args)
