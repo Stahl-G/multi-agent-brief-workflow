@@ -2,6 +2,8 @@
 
 **MABW：Process Accountability for the Briefing Loop**
 
+**MABW：可问责的 AI 简报工作流**
+
 <p align="center">
   <a href="README_en.md">English</a> |
   <a href="README.md">简体中文</a>
