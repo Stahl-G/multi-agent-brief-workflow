@@ -96,6 +96,25 @@ def test_public_safety_scan_catches_no_digit_lark_token_shapes(tmp_path):
     ]
 
 
+def test_public_safety_scan_catches_bare_no_digit_lark_token_shapes(tmp_path):
+    module = _load_module()
+    sample = tmp_path / "candidate_pack.md"
+    sample.write_text(
+        "fldabcdefghijk\n"  # PUBLIC_SAFETY_TEST_FIXTURE
+        "fabcdefghijklmnop\n"  # PUBLIC_SAFETY_TEST_FIXTURE
+        "cliabcdefghijk\n",  # PUBLIC_SAFETY_TEST_FIXTURE
+        encoding="utf-8",
+    )
+
+    findings = module.scan([sample], banned_terms=[])
+
+    assert [finding.sample for finding in findings] == [
+        "fldabcdefghijk",  # PUBLIC_SAFETY_TEST_FIXTURE
+        "fabcdefghijklmnop",  # PUBLIC_SAFETY_TEST_FIXTURE
+        "cliabcdefghijk",  # PUBLIC_SAFETY_TEST_FIXTURE
+    ]
+
+
 def test_public_safety_scan_does_not_flag_common_words_starting_with_token_prefixes(tmp_path):
     module = _load_module()
     sample = tmp_path / "public_docs.md"

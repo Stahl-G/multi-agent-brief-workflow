@@ -185,6 +185,12 @@ _PUBLIC_TEST_FIXTURE_FINDINGS: dict[str, set[str]] = {
 def _looks_like_lark_token(value: str, line: str, start: int) -> bool:
     if any(char.isdigit() for char in value):
         return True
+    if value.startswith("cli") and not value.startswith("cli_"):
+        return True
+    if value.startswith("f") and not value.startswith("fld"):
+        return True
+    if value.startswith("fld") and re.fullmatch(r"fld[a-z-]{8,}", value):
+        return True
     context = line[max(0, start - 48):start]
     return bool(_LARK_TOKEN_CONTEXT_RE.search(context))
 
