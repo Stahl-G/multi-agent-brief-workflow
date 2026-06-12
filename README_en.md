@@ -5,25 +5,48 @@
   <a href="README.md">简体中文</a>
 </p>
 
-A source-grounded, auditable, agent-collaborative briefing workflow for business, research, market, policy, company-tracking, and management-reporting briefs.
+## AI briefs that can answer "where did this number come from?"
 
-> MABW can observe and suggest, but only what you approve is remembered, and every approved memory stays in an inspectable ledger you can undo.
+> When someone asks "where did this number come from?", MABW does not ask the model to improvise an explanation. It opens the ledger.
 
-`Multi-Agent-Brief-Workflow` (MABW) is not an "AI writes a weekly report" prompt. It breaks real briefing work into contract-governed steps: understand the task, discover sources, organize inputs, build a Claim Ledger, assist drafting, audit the result, and render delivery files. Each step has explicit expected artifacts, producer boundaries, transition rules, and inspectable records.
+MABW is an **agent briefing workflow** for business, research, market, policy, company-tracking, investor-relations, and management-reporting briefs. It is not a prompt that makes AI write faster. It turns briefing into an accountable loop: collect sources, build a Claim Ledger, let agents draft, run gates, and have a human deliver the final brief.
 
-This project is not an investment advice tool, trading signal generator, or replacement for human review.
+It is built for:
 
-## Current Status
+- people who produce weekly market briefs, competitor tracking, policy notes, IR drafts, or leadership updates;
+- teams that want AI briefs to be traceable instead of merely plausible;
+- researchers and investors studying how agent workflows can provide process accountability in domains without clean reward signals.
 
-Current version: **v0.7.4**
+<p align="center">
+  <a href="#quick-start">🚀 Quick Start</a> ·
+  <a href="docs/reference-runs/v0.7.2-public-solar-integration.zh-CN.md">🔬 Public Run</a> ·
+  <a href="docs/reference-runs/v0.7.4-organoid-failure-study.zh-CN.md">🧯 Failure Study</a> ·
+  <a href="docs/releases/v0.7.4.md">📦 v0.7.4 Release</a>
+</p>
 
-- **Working today**: subagent-first workflows across Hermes / Claude Code / Codex / OpenCode, runtime state files, Claim Ledger, deterministic quality gates, feedback and repair planning, provenance projection, audience profile snapshots, controlled Improvement Ledger / Improvement Memory, and Markdown / Word output. 1000+ deterministic tests run in CI without LLM calls.
-- **New in v0.7.4**: hardening over v0.7.3, including stale audit-report blocking, clarified source-appendix delivery semantics, release public-safety scan wiring, and a public organoid-industry failure study that makes the source-to-claim semantic support boundary explicit.
-- **Not yet**: not an autonomous agent, does not automatically edit brief content, does not automatically learn, and does not provide a long-term memory system. See [architecture status](docs/architecture-status.md) and [roadmap](docs/roadmap.md).
+## Why It Is Worth Looking At 👀
 
-One-line design principle: **the system proposes; humans decide.** For the hard boundaries, see [docs/red-lines-and-anti-patterns.md](docs/red-lines-and-anti-patterns.md).
+**For writers**: you get more than an AI draft. You get a delivery bundle that can point to sources, dates, gates, and revision records.
 
-## The Four Things It Tracks Each Week
+**For team leads**: briefing quality does not live only in someone's memory. Sources, formats, reader preferences, and quality boundaries can become reusable workflow assets.
+
+**For researchers and investors**: MABW is a dogfooded process-accountability agent workflow. It publishes not only success evidence, but also failure boundaries.
+
+The core claim is deliberately narrow: **traceability, not semantic proof yet**. Important claims link to registered source entries with source/date/gate metadata. That tells you where the claim entered the workflow; it does not yet prove that the source semantically supports every sub-claim.
+
+## How It Works 🧭
+
+| Step | What happens | Why it matters |
+|---|---|---|
+| 🔎 Source collection | Gather candidate evidence from local files, cached packs, or search providers | The model does not start from empty context |
+| 🧾 Claim Ledger | Register important facts with source and date metadata | Numbers, dates, entities, and sources become inspectable |
+| ✍️ Agent drafting | Scout, Screener, Analyst, Editor, and Auditor do bounded work | Writing is split into stages with contracts |
+| 🚦 Gates | Freshness, material-fact, target-relevance, and reader-final checks | Deterministic checks do not rely on prompt memory |
+| 📦 Delivery and learning | Render Markdown / Word and preserve trace, feedback, and approved preferences | Humans deliver; the system records what happened |
+
+One-line architecture rule: **smart parts have no authority; authoritative parts are deterministic; effective changes require humans; human decisions leave traces.**
+
+## The Four Things It Tracks Each Week 🧩
 
 The writer-facing model is not "how many control surfaces exist." Each run is meant to keep four practical things visible:
 
@@ -34,38 +57,23 @@ The writer-facing model is not "how many control surfaces exist." Each run is me
 | What reader preferences were approved | Human-approved reader guidance only; unapproved suggestions do not take effect | `improvement/ledger.jsonl`, `improvement_memory_snapshot.md` |
 | What checks are guarding delivery | Completion transactions, reader-final gate, source appendix, and delivery checks | `finalize_report.json`, `reader_clean`, `state finalize-complete` |
 
-In plain terms: AI can draft; the system records ledgers; only the operator can make preferences affect later runs. See [docs/what-mabw-keeps-track-of.md](docs/what-mabw-keeps-track-of.md) for the user-facing explanation.
+> MABW can observe and suggest, but only what you approve is remembered, and every approved memory stays in an inspectable ledger you can undo.
 
-## Why This Exists
+See [docs/what-mabw-keeps-track-of.md](docs/what-mabw-keeps-track-of.md) for the user-facing explanation.
 
-In corporate strategy teams, sell-side research, buy-side research, investor relations, management offices, and similar environments, people spend a large amount of time producing daily reports, weekly reports, morning-meeting notes, and leadership briefs. The work matters, but the process is repetitive: find sources, decide what matters, remove stale or duplicate information, write a coherent brief, verify numbers, check whether AI invented anything, edit wording, and format the output.
+## Evidence To Inspect 🔬
 
-The deeper problem is that this kind of work does not reliably improve. A junior analyst gets corrected verbally, the correction disappears, and the next person repeats the same mistake. A "this section feels wrong" comment evaporates after the meeting. A stale number enters a brief, and no one can tell where it slipped through.
+- [v0.7.2 public solar integration summary](docs/reference-runs/v0.7.2-public-solar-integration.zh-CN.md): shows Improvement Memory materialization, gate execution, and control-plane closure. It is an integration reference, not proof of output-quality improvement or strict causal effect.
+- [v0.7.4 organoid-industry failure study](docs/reference-runs/v0.7.4-organoid-failure-study.zh-CN.md): a real external research case that exposed the current source-to-claim semantic support boundary. MABW traced how errors propagated; it did not prove semantic correctness.
+- [v0.7.4 release note](docs/releases/v0.7.4.md): safety hardening, boundary wording, and source-clone demo path.
 
-Software engineering improves through tests, Git history, CI, and review. This project brings the same basic machinery into real briefing work: auditability, traceability, structured feedback, and human approval. The goal is to spend more time on judgment, questions, and decision support, and less time on repetitive copying and formatting.
+We publish failure analysis because accountability applies to this project too.
 
-## What It Solves
+## What You Get 📦
 
-The common failure mode of AI-generated reports is not speed. It is control:
+The final delivery bundle contains only `output/delivery/brief.md` and `output/delivery/<named>.docx`. When source appendix output is configured, the source list is appended to those delivery files; standalone `output/source_appendix.md`, Claim Ledger, audit report, and audited brief remain audit/control records, not extra reader handoff files.
 
-- A sentence appears, but its source is unclear.
-- Numbers and dates lose attribution.
-- Citation relationships break after several editing rounds.
-- Too many sources introduce duplicates, stale items, and low-quality material.
-- Long prompts make models skip steps.
-- The final document looks complete but cannot be audited.
-
-The answer is a contract-governed workflow:
-
-```text
-User need → Source discovery → Source governance → Claim Ledger → Agent-assisted drafting → Audit and gates → Markdown / Word output
-```
-
-Each stage is handled by a specialist role: Scout, Screener, Claim Ledger, Analyst, Editor, and Auditor. An Orchestrator coordinates stage transitions, validation, and decisions. State is written to inspectable workspace files. For details, see [docs/architecture.md](docs/architecture.md). For the full technical reference, see [docs/mabw-architecture-reference-v0.1.2.md](docs/mabw-architecture-reference-v0.1.2.md).
-
-## What Output Looks Like
-
-The final delivery bundle contains only `output/delivery/brief.md` and `output/delivery/<named>.docx`. When source appendix output is configured, the source list is appended to those delivery files; standalone `output/source_appendix.md`, Claim Ledger, audit report, and audited brief remain audit/control records, not extra reader handoff files. The example below is **synthetic** and only demonstrates structure. A public-safe integration summary is available in [docs/reference-runs/v0.7.2-public-solar-integration.zh-CN.md](docs/reference-runs/v0.7.2-public-solar-integration.zh-CN.md); it is an integration reference, not proof of output-quality improvement or strict causal effect. See also the [v0.7.4 organoid-industry failure study](docs/reference-runs/v0.7.4-organoid-failure-study.zh-CN.md), a real external research case that exposed the current source-to-claim semantic support boundary.
+The example below is **synthetic** and only demonstrates structure:
 
 `output/delivery/brief.md` excerpt:
 
@@ -97,9 +105,52 @@ Corresponding `output/intermediate/claim_ledger.json` excerpt:
 }
 ```
 
-The point is simple: every important number in the delivered brief should link to a registered source entry with source/date metadata. Stale source metadata and obvious unsupported numbers should be stopped by audit gates instead of silently entering the final document. The execution trace is recorded in `event_log.jsonl`.
+In a contract-following run, important numbers in the delivered brief should link to registered source entries with source/date metadata. Stale source metadata and obvious unsupported numbers should be surfaced by audit and gates instead of silently entering the final document. The execution trace is recorded in `event_log.jsonl`.
 
-The current boundary is explicit: MABW provides process accountability and traceability, not semantic proof. A source link shows where a claim entered the workflow; it does not yet prove that the source semantically supports every sub-claim. Source-to-claim semantic support checking is the top v0.8 evaluation target.
+## Quick Start
+
+```bash
+git clone https://github.com/Stahl-G/multi-agent-brief-workflow.git
+cd multi-agent-brief-workflow
+bash scripts/setup.sh
+bash scripts/demo.sh
+bash scripts/demo-deep-dive.sh
+```
+
+If you want to run your own materials, install the Claude Code writer entrypoint:
+
+```bash
+source .venv/bin/activate
+multi-agent-brief claude install --repo-workdir .
+```
+
+Then use the five writer verbs inside Claude Code CLI or the Claude Desktop Code tab:
+
+```text
+/mabw new
+/mabw run <workspace>
+/mabw status <workspace>
+/mabw feedback <workspace> [text-or-file]
+/mabw deliver <workspace>
+```
+
+See [docs/claude-code-quickstart.md](docs/claude-code-quickstart.md) for the full Claude Code path. Chinese writer-facing operator notes are available in [docs/golden-path.zh-CN.md](docs/golden-path.zh-CN.md) and [docs/weekly-use.zh-CN.md](docs/weekly-use.zh-CN.md).
+
+## Product Boundary 🧱
+
+Current version: **v0.7.4**
+
+MABW currently runs subagent-first workflows across Hermes / Claude Code / Codex / OpenCode, runtime state files, Claim Ledger, deterministic quality gates, feedback and repair planning, provenance projection, audience profile snapshots, controlled Improvement Ledger / Improvement Memory, and Markdown / Word output. 1000+ deterministic tests run in CI without LLM calls.
+
+It is still not an autonomous agent, does not automatically edit brief content, does not automatically learn, does not provide a long-term memory system, and is not an investment advice tool, trading signal generator, or replacement for human review. See [architecture status](docs/architecture-status.md), [roadmap](docs/roadmap.md), and [red lines and anti-patterns](docs/red-lines-and-anti-patterns.md).
+
+## Why This Exists
+
+In corporate strategy teams, sell-side research, buy-side research, investor relations, management offices, and similar environments, people spend a large amount of time producing daily reports, weekly reports, morning-meeting notes, and leadership briefs. The work matters, but the process is repetitive: find sources, decide what matters, remove stale or duplicate information, write a coherent brief, verify numbers, check whether AI invented anything, edit wording, and format the output.
+
+The deeper problem is that this kind of work does not reliably improve. A junior analyst gets corrected verbally, the correction disappears, and the next person repeats the same mistake. A "this section feels wrong" comment evaporates after the meeting. A stale number enters a brief, and no one can tell where it slipped through.
+
+Software engineering improves through tests, Git history, CI, and review. This project brings the same basic machinery into real briefing work: auditability, traceability, structured feedback, and human approval. The goal is to spend more time on judgment, questions, and decision support, and less time on repetitive copying and formatting.
 
 ## Three On-Ramps
 
@@ -126,14 +177,14 @@ MABW is useful when a one-off sector study needs to become a long-running, trace
 
 In short: Deep Research is for opening the map; MABW is for monitoring the territory. Sector research is not a one-time search dump. It is an ongoing information-governance process.
 
-## Quick Start
+## Run Your Own Materials
 
 ### Claude Code (Five-Verb Primary Path)
 
+If you already ran the demo above, activate the virtual environment and install
+the writer entrypoint:
+
 ```bash
-git clone https://github.com/Stahl-G/multi-agent-brief-workflow.git
-cd multi-agent-brief-workflow
-bash scripts/setup.sh
 source .venv/bin/activate
 
 multi-agent-brief claude install --repo-workdir .
@@ -251,6 +302,8 @@ See the full [roadmap](docs/roadmap.md). For implemented vs planned capability, 
 [Evaluation cases](docs/evaluation-cases.md) ·
 [Improvement Ledger](docs/modules/improvement.md) ·
 [Public integration summary](docs/reference-runs/v0.7.2-public-solar-integration.zh-CN.md) ·
+[Failure study](docs/reference-runs/v0.7.4-organoid-failure-study.zh-CN.md) ·
+[v0.7.4 Release](docs/releases/v0.7.4.md) ·
 [Support matrix](docs/support-matrix.md) ·
 [Security](docs/security.md) ·
 [Migration guide](docs/MIGRATION.md)

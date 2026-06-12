@@ -1,33 +1,52 @@
 # Multi-Agent-Brief-Workflow
 
-**MABW：Process Accountability for the Briefing Loop**
-
-**MABW：可问责的 AI 简报工作流**
-
 <p align="center">
   <a href="README_en.md">English</a> |
   <a href="README.md">简体中文</a>
 </p>
 
-一个基于来源、可审计、可由 AI agent 协作执行的简报工作流，用于生成商业、研究、市场、政策、公司跟踪和管理层汇报材料。
+## 让 AI 简报经得起追问
 
-> 它会观察、会提议；但只有你点头的，才会被记住，而且记在一本你随时能翻、能撤销的账上。
+> 当有人问“这个数字哪来的？”MABW 不让模型临场解释，它让系统打开账本。
 
-`Multi-Agent-Brief-Workflow` (MABW)不是一个"AI 写周报"的 Prompt。它把真实工作中的 briefing 流程拆成受契约约束的步骤：理解需求 → 发现来源 → 整理材料 → 建立事实账本 → 辅助写作 → 审计校验 → 输出文档。每一步产出什么文件、由谁产出、何时可以进入下一步，都有明确定义并留有完整记录。
+MABW 是一个面向商业、研究、市场、政策、公司跟踪和管理层汇报的 **agent briefing workflow**。它不是“让 AI 写得更快”的 prompt，而是把简报拆成可追溯、可审计、可交付的工作循环：找来源、建事实账本、让 agent 写作、用门禁把关、由人定稿交付。
 
-本项目不是投资建议工具，不是交易信号生成器，也不能替代人工审核。
+它适合这些人：
 
-## 当前状态（诚实版）
+* 每周要写行业周报、竞品跟踪、政策简报、IR/管理层材料的人；
+* 想把 AI 简报从“看起来像真的”推进到“能回答追问”的团队；
+* 关心 agent workflow 如何在无奖励信号领域做到过程问责的研究者和投资人。
 
-当前版本：**v0.7.4**
+<p align="center">
+  <a href="#快速开始">🚀 快速开始</a> ·
+  <a href="docs/reference-runs/v0.7.2-public-solar-integration.zh-CN.md">🔬 公开运行摘要</a> ·
+  <a href="docs/reference-runs/v0.7.4-organoid-failure-study.zh-CN.md">🧯 失败研究</a> ·
+  <a href="docs/releases/v0.7.4.md">📦 v0.7.4 Release</a>
+</p>
 
-* **能跑的**：subagent-first 工作流（Hermes / Claude Code / Codex / OpenCode），运行时状态文件，事实账本，确定性质量门禁，反馈与修复计划，溯源投影，受众画像快照，受控的改进账本 / 改进记忆，Markdown / Word 输出。1000+ 确定性测试在 CI 中通过，不依赖任何 LLM 调用。
-* **v0.7.4 新增**：在 v0.7.3 的 release safety hardening 之上，补齐 stale audit report 阻断、来源附录交付语义收口、release public-safety 检查接线，并公开一份类器官行业研究失败研究，明确 source-to-claim 语义支撑仍是 v0.8 目标。
-* **还不是的**：不是自治 agent，不会自动修改简报内容，不会自动学习，没有长期记忆系统。详见 [当前架构状态](docs/architecture-status.zh-CN.md) 和 [路线图](docs/roadmap.zh-CN.md)。
+## 为什么值得看 👀
 
-设计原则一句话：**系统提案，人类决定。** 全部红线见 [docs/red-lines-and-anti-patterns.md](docs/red-lines-and-anti-patterns.md)。
+**给写作者**：你不再只拿到一篇 AI 草稿，而是拿到一份能追问来源、日期、门禁和修改记录的交付包。
 
-## 每周它替你记住四件事
+**给团队负责人**：简报工作不再只靠“某个人记得怎么写”，而是沉淀成可复用的来源、格式、读者偏好和质量边界。
+
+**给研究者和投资人**：这是一个真实 dogfood 出来的 process-accountability agent workflow，不只展示成功样例，也公开失败边界。
+
+MABW 的核心承诺很窄，也很硬：**traceability, not semantic proof yet**。重要主张会链接到登记过的来源条目，并保留来源、日期和门禁记录；这说明“它从哪里进入流水线”，不自动证明来源语义上支持每个子主张。
+
+## 它怎么工作 🧭
+
+| 环节 | 做什么 | 为什么重要 |
+|---|---|---|
+| 🔎 找来源 | 从本地材料、缓存源包或搜索后端整理候选信息 | 避免一上来就让模型凭空写 |
+| 🧾 建事实账本 | 把关键事实登记成 Claim Ledger | 让数字、日期、公司、来源有账可查 |
+| ✍️ Agent 协作写作 | Scout、Screener、Analyst、Editor、Auditor 分工执行 | 把“写作”拆成有边界的 stage |
+| 🚦 门禁把关 | freshness、material fact、target relevance、reader-final gate | 能确定性检查的东西不交给 prompt 记忆 |
+| 📦 交付与复盘 | 输出 Markdown / Word，并保留事件轨迹和改进账本 | 人类定稿，系统留痕，后续可改进 |
+
+一句话：**聪明的无权，有权的确定，生效的过人，过人的留痕。**
+
+## 每周它替你记住四件事 🧩
 
 MABW 的用户心智模型不是“有多少个控制面”，而是每次简报运行时它替你守住四件事：
 
@@ -38,43 +57,23 @@ MABW 的用户心智模型不是“有多少个控制面”，而是每次简报
 | 它学到了什么 | 只有人工批准的读者偏好；未批准建议不会生效 | `improvement/ledger.jsonl`、`improvement_memory_snapshot.md` |
 | 什么在替你把关 | 阶段完成事务、reader-final gate、来源附录和交付检查 | `finalize_report.json`、`reader_clean`、`state finalize-complete` |
 
-一句话：AI 可以写草稿；系统记录账本；只有你能让偏好影响后续运行。面向业务用户的解释见 [docs/what-mabw-keeps-track-of.zh-CN.md](docs/what-mabw-keeps-track-of.zh-CN.md)。
+> 它会观察、会提议；但只有你点头的，才会被记住，而且记在一本你随时能翻、能撤销的账上。
 
-## 为什么做这个项目
+面向业务用户的解释见 [docs/what-mabw-keeps-track-of.zh-CN.md](docs/what-mabw-keeps-track-of.zh-CN.md)。
 
-在企业战略部、券商研究所、基金投研、投资者关系、总裁办等场景中，很多人花大量时间制作日报、周报、晨会材料和领导层简报。这些工作重要，但流程高度重复：找来源、判断取舍、去重去旧、整理成文、核对数字出处、检查 AI 有没有编造、改措辞、排版输出。
+## 看一眼证据 🔬
 
-更深一层的问题是：**这类工作无法系统性地变好。** 新人犯的错被口头纠正然后被遗忘，下一个新人重犯；"这段感觉不对"的反馈在会后蒸发；一个过期数字混进简报，没人能追溯它是在哪一步漏掉的。
+* [v0.7.2 公开光伏集成运行摘要](docs/reference-runs/v0.7.2-public-solar-integration.zh-CN.md)：展示 Improvement Memory materialization、门禁执行、控制面闭环。它是 integration reference，不是输出质量提升或严格因果效果证明。
+* [v0.7.4 类器官行业研究失败研究](docs/reference-runs/v0.7.4-organoid-failure-study.zh-CN.md)：一次真实外部课题如何暴露 source-to-claim 语义支撑边界。MABW 当前能追溯错误传播链，但还不能证明每个来源语义支持每个子主张。
+* [v0.7.4 release note](docs/releases/v0.7.4.md)：本次发布的安全修复、边界声明和 source-clone demo 路径。
 
-写代码的世界靠测试、Git 历史、CI 和 code review 形成了改进闭环，所以 coding agent 进步飞快。本项目把同一套基础设施——可审计、可追溯、结构化反馈、人类把关——搬进真实的简报工作流。让人把时间花在判断、提问和决策支持上，而不是重复搬运和排版。
+我们公开失败分析，因为问责也适用于这个项目自己。
 
-### 为什么叫「司乐师」？
+## 你会拿到什么 📦
 
-英文 orchestrator 来自管弦乐编配与协调的语境，在软件工程中常译为“编排器”。MABW 选择译作「司乐师」：它不直接替各个角色写作，而是调度信息侦察员、筛选师、分析师、编辑师和审计师，让不同声部按契约合奏。
+最终交付包只放 `output/delivery/brief.md` 和 `output/delivery/<命名>.docx`。配置来源附录时，来源列表会追加在这两份交付稿底部；独立的 `output/source_appendix.md`、Claim Ledger、audit report 和 audited brief 继续保留为审计追溯文件，不作为额外交付文件。
 
-「司乐」也借用了中国礼乐传统中掌管乐政、乐教的意象。这里不是对古代官职的严格复原，而是一个项目术语：负责维持节奏、边界、秩序和交付。
-
-## 它解决什么问题
-
-AI 生成报告的常见问题不是"写得不够快"，而是：
-
-* 不知道一句话的来源在哪里；数字和日期容易丢失出处；
-* 多轮修改后引用关系断掉；
-* 来源太多，重复、过期、低质量信息混在一起；
-* Prompt 一长，模型容易跳步骤；
-* 最终文档看起来完整，但无法审计。
-
-本项目的回答是一条受契约约束的流水线：
-
-```text
-用户需求 → 来源发现 → 来源治理 → 事实账本 → Agent 辅助写作 → 审计与门禁 → Markdown / Word 输出
-```
-
-每个阶段由专职子代理执行（信息侦察员 → 筛选师 → 事实账本 → 分析师 → 编辑师 → 审计师），由"司乐师"（Orchestrator）统一调度，所有状态落在可检查的文件里。详细架构见 [docs/architecture.zh-CN.md](docs/architecture.zh-CN.md)，完整技术报告见 [docs/mabw-architecture-reference-v0.1.2.md](docs/mabw-architecture-reference-v0.1.2.md)。
-
-## 看一眼产出长什么样
-
-最终交付包只放 `output/delivery/brief.md` 和 `output/delivery/<命名>.docx`。配置来源附录时，来源列表会追加在这两份交付稿底部；独立的 `output/source_appendix.md`、Claim Ledger、audit report 和 audited brief 继续保留为审计追溯文件，不作为额外交付文件。下面是一个**合成示例**（虚构主体，仅展示结构）。真实运行证据见 [v0.7.2 公开光伏集成运行摘要](docs/reference-runs/v0.7.2-public-solar-integration.zh-CN.md)；它是 integration reference，不是输出质量提升或严格因果效果证明。另见 [v0.7.4 类器官行业研究失败研究](docs/reference-runs/v0.7.4-organoid-failure-study.zh-CN.md)：一次真实外部课题如何暴露 source-to-claim 语义支撑边界。
+下面是一个**合成示例**（虚构主体，仅展示结构）：
 
 `output/delivery/brief.md`（节选）：
 
@@ -106,9 +105,58 @@ N 公司宣布其示例州工厂一期产线于本周投产，规划年产能 2G
 }
 ```
 
-也就是说，按契约运行时，成稿里的关键数字应能在事实账本里找到登记的来源和日期；过期来源、无出处数字应被审计和质量门禁暴露出来，而不是无记录地混进终稿。审计轨迹（谁在哪一步做了什么决定）保存在 `event_log.jsonl`。
+按契约运行时，成稿里的关键数字应能在事实账本里找到登记的来源和日期；过期来源、无出处数字应被审计和质量门禁暴露出来，而不是无记录地混进终稿。审计轨迹保存在 `event_log.jsonl`。
 
-当前边界也很明确：MABW 提供过程问责和来源可追溯，重要主张会链接到登记过的来源条目，并保留来源、日期和门禁记录。它还不是语义证明系统；这些链接说明“这条主张从哪里进入流水线”，不自动证明来源逐字支持每个子主张。source-to-claim 语义支撑校验是 v0.8 的头号评估目标。
+## 快速开始
+
+```bash
+git clone https://github.com/Stahl-G/multi-agent-brief-workflow.git
+cd multi-agent-brief-workflow
+bash scripts/setup.sh
+bash scripts/demo.sh
+bash scripts/demo-deep-dive.sh
+```
+
+如果你要跑自己的材料，再安装 Claude Code writer 入口：
+
+```bash
+source .venv/bin/activate
+multi-agent-brief claude install --repo-workdir .
+```
+
+然后在 Claude Code CLI 或 Claude Desktop Code tab 中使用五个 writer 动词：
+
+```text
+/mabw new
+/mabw run <workspace>
+/mabw status <workspace>
+/mabw feedback <workspace> [text-or-file]
+/mabw deliver <workspace>
+```
+
+详细流程见 [docs/claude-code-quickstart.md](docs/claude-code-quickstart.md)。中文写作者可直接看 [MABW 黄金路径](docs/golden-path.zh-CN.md) 和 [我每周怎么用 MABW](docs/weekly-use.zh-CN.md)。
+
+## 产品承诺与边界 🧱
+
+当前版本：**v0.7.4**
+
+MABW 现在能跑 subagent-first 工作流（Hermes / Claude Code / Codex / OpenCode）、运行时状态文件、事实账本、确定性质量门禁、反馈与修复计划、溯源投影、受众画像快照、受控的改进账本 / 改进记忆，以及 Markdown / Word 输出。1000+ 确定性测试在 CI 中通过，不依赖任何 LLM 调用。
+
+它仍然不是自治 agent，不会自动修改简报内容，不会自动学习，没有长期记忆系统，也不是投资建议工具、交易信号生成器或人工审核替代品。详见 [当前架构状态](docs/architecture-status.zh-CN.md)、[路线图](docs/roadmap.zh-CN.md) 和 [红线与反模式](docs/red-lines-and-anti-patterns.md)。
+
+## 为什么做这个项目
+
+在企业战略部、券商研究所、基金投研、投资者关系、总裁办等场景中，很多人花大量时间制作日报、周报、晨会材料和领导层简报。这些工作重要，但流程高度重复：找来源、判断取舍、去重去旧、整理成文、核对数字出处、检查 AI 有没有编造、改措辞、排版输出。
+
+更深一层的问题是：**这类工作无法系统性地变好。** 新人犯的错被口头纠正然后被遗忘，下一个新人重犯；"这段感觉不对"的反馈在会后蒸发；一个过期数字混进简报，没人能追溯它是在哪一步漏掉的。
+
+写代码的世界靠测试、Git 历史、CI 和 code review 形成了改进闭环，所以 coding agent 进步飞快。本项目把同一套基础设施——可审计、可追溯、结构化反馈、人类把关——搬进真实的简报工作流。让人把时间花在判断、提问和决策支持上，而不是重复搬运和排版。
+
+### 为什么叫「司乐师」？
+
+英文 orchestrator 来自管弦乐编配与协调的语境，在软件工程中常译为“编排器”。MABW 选择译作「司乐师」：它不直接替各个角色写作，而是调度信息侦察员、筛选师、分析师、编辑师和审计师，让不同声部按契约合奏。
+
+「司乐」也借用了中国礼乐传统中掌管乐政、乐教的意象。这里不是对古代官职的严格复原，而是一个项目术语：负责维持节奏、边界、秩序和交付。
 
 ## 三条上手路径
 
@@ -135,14 +183,13 @@ MABW 适合把一个行业从“一次性调研”转成“长期、可追踪、
 
 一句话：Deep Research 适合开荒，MABW 适合长期监控。行业研究不是一次性“多搜一点”，而是一个持续的信息治理流程。
 
-## 快速开始
+## 跑自己的材料
 
 ### Claude Code（五动词主路径）
 
+如果你已经完成上面的 demo，只需要激活虚拟环境并安装 writer 入口：
+
 ```bash
-git clone https://github.com/Stahl-G/multi-agent-brief-workflow.git
-cd multi-agent-brief-workflow
-bash scripts/setup.sh
 source .venv/bin/activate
 
 multi-agent-brief claude install --repo-workdir .
@@ -256,6 +303,8 @@ multi-agent-brief run --workspace <workspace> --skip-doctor
 [黄金路径](docs/golden-path.zh-CN.md) ·
 [每周使用脚本](docs/weekly-use.zh-CN.md) ·
 [公开运行摘要](docs/reference-runs/v0.7.2-public-solar-integration.zh-CN.md) ·
+[失败研究](docs/reference-runs/v0.7.4-organoid-failure-study.zh-CN.md) ·
+[v0.7.4 Release](docs/releases/v0.7.4.md) ·
 [发布验证清单](docs/launch-validation.zh-CN.md) ·
 [支持矩阵](docs/support-matrix.md) ·
 [安全](docs/security.md) ·
