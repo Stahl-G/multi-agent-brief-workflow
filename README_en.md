@@ -1,8 +1,8 @@
 # Multi-Agent-Brief-Workflow
 MABW: A Process-Accountable Business Briefing Loop
 <p align="center">
-  <a href="README_en.md">English</a> |
-  <a href="README.md">简体中文</a>
+  <a href="README.md">English</a> |
+  <a href="README.zh-CN.md">简体中文</a>
 </p>
 
 ## AI briefs that can answer "where did this number come from?"
@@ -19,8 +19,8 @@ It is built for:
 
 <p align="center">
   <a href="#quick-start">🚀 Quick Start</a> ·
-  <a href="docs/reference-runs/v0.7.2-public-solar-integration.zh-CN.md">🔬 Public Run</a> ·
-  <a href="docs/reference-runs/v0.7.4-organoid-failure-study.zh-CN.md">🧯 Failure Study</a> ·
+  <a href="docs/reference-runs/v0.7.2-public-solar-integration.md">🔬 Public Run</a> ·
+  <a href="docs/reference-runs/v0.7.4-organoid-failure-study.md">🧯 Failure Study</a> ·
   <a href="docs/releases/v0.7.4.md">📦 v0.7.4 Release</a>
 </p>
 
@@ -63,8 +63,8 @@ See [docs/what-mabw-keeps-track-of.md](docs/what-mabw-keeps-track-of.md) for the
 
 ## Evidence To Inspect 🔬
 
-- [v0.7.2 public solar integration summary](docs/reference-runs/v0.7.2-public-solar-integration.zh-CN.md): shows Improvement Memory materialization, gate execution, and control-plane closure. It is an integration reference, not proof of output-quality improvement or strict causal effect.
-- [v0.7.4 organoid-industry failure study](docs/reference-runs/v0.7.4-organoid-failure-study.zh-CN.md): a real external research case that exposed the current source-to-claim semantic support boundary. MABW traced how errors propagated; it did not prove semantic correctness.
+- [v0.7.2 public solar integration summary](docs/reference-runs/v0.7.2-public-solar-integration.md): shows Improvement Memory materialization, gate execution, and control-plane closure. It is an integration reference, not proof of output-quality improvement or strict causal effect.
+- [v0.7.4 organoid-industry failure study](docs/reference-runs/v0.7.4-organoid-failure-study.md): a real external research case that exposed the current source-to-claim semantic support boundary. MABW traced how errors propagated; it did not prove semantic correctness.
 - [v0.7.4 release note](docs/releases/v0.7.4.md): safety hardening, boundary wording, and source-clone demo path.
 
 We publish failure analysis because accountability applies to this project too.
@@ -158,7 +158,7 @@ MABW does not have a "lite mode." The entry cost can be reduced, but the account
 
 | Path | Best for | How to start | What does not get lighter |
 |---|---|---|---|
-| Look once | You want to decide whether the project is relevant | Read the [public integration summary](docs/reference-runs/v0.7.2-public-solar-integration.zh-CN.md), then run `bash scripts/demo.sh` and `bash scripts/demo-deep-dive.sh` | The demo shows control behavior and traceability, not output-quality improvement |
+| Look once | You want to decide whether the project is relevant | Read the [public integration summary](docs/reference-runs/v0.7.2-public-solar-integration.md), then run `bash scripts/demo.sh` and `bash scripts/demo-deep-dive.sh` | The demo shows control behavior and traceability, not output-quality improvement |
 | Run once | You want to try a few local materials | Skip search backend setup, use a small set of local text sources, and follow the Chinese [golden path](docs/golden-path.zh-CN.md) | Claim Ledger, gates, reader-final gate, and human delivery still apply |
 | Live with it | You want a weekly workflow | Configure search sources, cadence, feedback, and approved preferences with the [weekly-use script](docs/weekly-use.zh-CN.md) | Unapproved preferences do not take effect; approved preferences only affect later frozen runs |
 
@@ -301,8 +301,8 @@ See the full [roadmap](docs/roadmap.md). For implemented vs planned capability, 
 [Quality gates](docs/harness.md) ·
 [Evaluation cases](docs/evaluation-cases.md) ·
 [Improvement Ledger](docs/modules/improvement.md) ·
-[Public integration summary](docs/reference-runs/v0.7.2-public-solar-integration.zh-CN.md) ·
-[Failure study](docs/reference-runs/v0.7.4-organoid-failure-study.zh-CN.md) ·
+[Public integration summary](docs/reference-runs/v0.7.2-public-solar-integration.md) ·
+[Failure study](docs/reference-runs/v0.7.4-organoid-failure-study.md) ·
 [v0.7.4 Release](docs/releases/v0.7.4.md) ·
 [Support matrix](docs/support-matrix.md) ·
 [Security](docs/security.md) ·

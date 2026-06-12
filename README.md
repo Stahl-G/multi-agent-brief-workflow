@@ -1,104 +1,79 @@
-# Multi-Agent-Brief-Workflow
-多Agent简报工作流：一个过程可问责的商业简报Loop
+# 🧾 MABW — Process Accountability for the Briefing Loop
+
+**An AI briefing workflow that can answer "where did this number come from?"**
 
 <p align="center">
-  <a href="README_en.md">English</a> |
-  <a href="README.md">简体中文</a>
+  <a href="README.md">English</a> |
+  <a href="README.zh-CN.md">简体中文</a>
 </p>
 
-## 让 AI 简报经得起追问
+Current version: **v0.7.4**
 
-> 当有人问“这个数字哪来的？”MABW 不让模型临场解释，它让系统打开账本。
+<!-- 当前版本：**v0.7.4** -->
 
-MABW 是一个面向商业、研究、市场、政策、公司跟踪和管理层汇报的 **agent briefing workflow**。它不是“让 AI 写得更快”的 prompt，而是把简报拆成可追溯、可审计、可交付的工作循环：找来源、建事实账本、让 agent 写作、用门禁把关、由人定稿交付。
+> When someone asks where a number came from, MABW does not ask the model to improvise an explanation. It opens the ledger.
 
-它适合这些人：
+MABW turns AI-assisted business briefing into an accountable loop with four steps: **find and screen evidence -> freeze key facts into a Claim Ledger -> write only from the ledger -> audit independently.** A human delivers the final brief. Always.
 
-* 每周要写行业周报、竞品跟踪、政策简报、IR/管理层材料的人；
-* 想把 AI 简报从“看起来像真的”推进到“能回答追问”的团队；
-* 关心 agent workflow 如何在无奖励信号领域做到过程问责的研究者和投资人。
+The core claim is deliberately narrow: **traceability, not semantic proof yet.** Important claims link to registered source entries with source, date, and gate metadata. That tells you where a claim entered the workflow; it does not yet prove the source semantically supports each sub-claim. We published [a failure study](docs/reference-runs/v0.7.4-organoid-failure-study.md) where exactly that boundary was exposed by an external reviewer, because accountability applies to this project too.
 
-<p align="center">
-  <a href="#快速开始">🚀 快速开始</a> ·
-  <a href="docs/reference-runs/v0.7.2-public-solar-integration.zh-CN.md">🔬 公开运行摘要</a> ·
-  <a href="docs/reference-runs/v0.7.4-organoid-failure-study.zh-CN.md">🧯 失败研究</a> ·
-  <a href="docs/releases/v0.7.4.md">📦 v0.7.4 Release</a>
-</p>
+## 🚀 Try It In Two Minutes, No API Key
 
-## 它怎么工作 🧭
-
-| 环节 | 做什么 | 为什么重要 |
-|---|---|---|
-| 🔎 找来源 | 从本地材料、缓存源包或搜索后端整理候选信息 | 避免一上来就让模型凭空写 |
-| 🧾 建事实账本 | 把关键事实登记成 Claim Ledger | 让数字、日期、公司、来源有账可查 |
-| ✍️ Agent 协作写作 | Scout、Screener、Analyst、Editor、Auditor 分工执行 | 把“写作”拆成有边界的 stage |
-| 🚦 门禁把关 | freshness、material fact、target relevance、reader-final gate | 能确定性检查的东西不交给 prompt 记忆 |
-| 📦 交付与复盘 | 输出 Markdown / Word，并保留事件轨迹和改进账本 | 人类定稿，系统留痕，后续可改进 |
-
-一句话：**聪明的无权，有权的确定，生效的过人，过人的留痕。**
-
-## 为什么值得看 👀
-
-**给写作者**：你不再只拿到一篇 AI 草稿，而是拿到一份能追问来源、日期、门禁和修改记录的交付包。
-
-**给团队负责人**：简报工作不再只靠“某个人记得怎么写”，而是沉淀成可复用的来源、格式、读者偏好和质量边界。
-
-**给研究者和投资人**：这是一个真实 dogfood 出来的 process-accountability agent workflow，不只展示成功样例，也公开失败边界。
-
-MABW 的核心承诺很窄，也很硬：**traceability, not semantic proof yet**。重要主张会链接到登记过的来源条目，并保留来源、日期和门禁记录；这说明“它从哪里进入流水线”，不自动证明来源语义上支持每个子主张。
-
-
-
-## 每周它替你记住四件事 🧩
-
-MABW 的用户心智模型不是“有多少个控制面”，而是每次简报运行时它替你守住四件事：
-
-| 问题 | 它记录什么 | 你在哪里看 |
-|---|---|---|
-| 本期写到哪了 | 当前 stage、缺失产物、阻塞原因和下一步安全动作 | `/mabw status`、`workflow_state.json`、`agent_handoff.md` |
-| 每个数字哪来的 | Claim Ledger、来源日期、审计和质量门禁结果 | `claim_ledger.json`、`quality_gate_report.json`、`source_appendix.md` |
-| 它学到了什么 | 只有人工批准的读者偏好；未批准建议不会生效 | `improvement/ledger.jsonl`、`improvement_memory_snapshot.md` |
-| 什么在替你把关 | 阶段完成事务、reader-final gate、来源附录和交付检查 | `finalize_report.json`、`reader_clean`、`state finalize-complete` |
-
-> 它会观察、会提议；但只有你点头的，才会被记住，而且记在一本你随时能翻、能撤销的账上。
-
-面向业务用户的解释见 [docs/what-mabw-keeps-track-of.zh-CN.md](docs/what-mabw-keeps-track-of.zh-CN.md)。
-
-## 看一眼证据 🔬
-
-* [v0.7.2 公开光伏集成运行摘要](docs/reference-runs/v0.7.2-public-solar-integration.zh-CN.md)：展示 Improvement Memory materialization、门禁执行、控制面闭环。它是 integration reference，不是输出质量提升或严格因果效果证明。
-* [v0.7.4 类器官行业研究失败研究](docs/reference-runs/v0.7.4-organoid-failure-study.zh-CN.md)：一次真实外部课题如何暴露 source-to-claim 语义支撑边界。MABW 当前能追溯错误传播链，但还不能证明每个来源语义支持每个子主张。
-* [v0.7.4 release note](docs/releases/v0.7.4.md)：本次发布的安全修复、边界声明和 source-clone demo 路径。
-
-我们公开失败分析，因为问责也适用于这个项目自己。
-
-## 你会拿到什么 📦
-
-最终交付包只放 `output/delivery/brief.md` 和 `output/delivery/<命名>.docx`。配置来源附录时，来源列表会追加在这两份交付稿底部；独立的 `output/source_appendix.md`、Claim Ledger、audit report 和 audited brief 继续保留为审计追溯文件，不作为额外交付文件。
-
-下面是一个**合成示例**（虚构主体，仅展示结构）：
-
-`output/delivery/brief.md`（节选）：
-
-```markdown
-## 二、市场动态
-本周示例光伏组件现货均价环比下降 1.8%，为连续第三周回落。
-N 公司宣布其示例州工厂一期产线于本周投产，规划年产能 2GW……
+```bash
+git clone https://github.com/Stahl-G/multi-agent-brief-workflow.git
+cd multi-agent-brief-workflow
+bash scripts/setup.sh
+bash scripts/demo.sh            # control behavior on synthetic materials
+bash scripts/demo-deep-dive.sh  # walk the ledgers and gate records the run left behind
 ```
 
-`output/intermediate/claim_ledger.json`（对应条目，节选）：
+The demo runs on synthetic materials and demonstrates control behavior and traceability: what gets recorded, what gets blocked, and what a human must approve. It does not claim output-quality improvement.
+
+1,000+ deterministic tests run in CI with zero LLM calls.
+
+## 🧯 What Broke, And What Didn't
+
+I'm a management trainee at a manufacturer. Two months into the job, I was writing real weekly briefings for executives and doing what everyone does: orchestrating seven carefully prompted agents: scout, screeners, analysts, an editor, and an auditor.
+
+The deterministic parts never broke. Everything entrusted to prompts eventually did. Facts mutated in handoffs. Weak sources became confident conclusions. The system needed so much human re-verification that it was no better than one long prompt.
+
+The lesson MABW is built on: **if a rule actually matters, it cannot live in a prompt.** It has to become a schema, a validator, a gate, a transaction, an event log, or a test.
+
+## 🧱 The Design Rule
+
+> The smart parts have no authority.
+> The authoritative parts are deterministic.
+> Nothing takes effect without a human.
+> Nothing passes a human without a record.
+
+Concretely: Python owns state and ledgers and never calls an LLM. The LLM runtime owns drafts and executes content work through a contract handoff. Humans own approval. **One writer per field**: no module gets to "helpfully" update state it does not own, because shared writers are how audit trails and rollbacks die.
+
+## 📚 What A Run Leaves Behind
+
+A delivered brief is just two files: `output/delivery/brief.md` and a `.docx`. Everything else a run produces exists so the brief can be questioned later. Synthetic excerpts below use fictional entities and show structure only.
+
+`output/delivery/brief.md`
+
+```markdown
+## 2. Market Updates
+This week, the sample PV module spot price fell 1.8% week over week,
+the third consecutive weekly decline. Company N announced Phase I of
+its sample-state factory started production, with planned capacity of 2 GW...
+```
+
+`output/intermediate/claim_ledger.json`: the registered entry behind that number:
 
 ```json
 {
   "claim_id": "CL-0012",
-  "statement": "示例组件现货均价环比下降 1.8%",
+  "statement": "The sample module spot price fell 1.8% week over week.",
   "source_id": "SRC-003",
   "source_date": "2026-06-05",
   "support": "supported"
 }
 ```
 
-`output/intermediate/quality_gate_report.json`（节选）：
+`output/intermediate/quality_gate_report.json`: deterministic checks that can block delivery. There is no force flag.
 
 ```json
 {
@@ -108,212 +83,89 @@ N 公司宣布其示例州工厂一期产线于本周投产，规划年产能 2G
 }
 ```
 
-按契约运行时，成稿里的关键数字应能在事实账本里找到登记的来源和日期；过期来源、无出处数字应被审计和质量门禁暴露出来，而不是无记录地混进终稿。审计轨迹保存在 `event_log.jsonl`。
+In a contract-following run, important numbers in the delivered brief link back to registered source entries. Stale sources and unsupported numbers are surfaced by gates and audit instead of silently entering the final document. The full execution trace lives in `event_log.jsonl`.
 
-## 快速开始
+## 🧩 The Four Things It Tracks Every Week
 
-```bash
-git clone https://github.com/Stahl-G/multi-agent-brief-workflow.git
-cd multi-agent-brief-workflow
-bash scripts/setup.sh
-bash scripts/demo.sh
-bash scripts/demo-deep-dive.sh
-```
+The writer-facing mental model is not "28 control surfaces." Each run keeps four practical questions answerable:
 
-如果你要跑自己的材料，再安装 Claude Code writer 入口：
-
-```bash
-source .venv/bin/activate
-multi-agent-brief claude install --repo-workdir .
-```
-
-然后在 Claude Code CLI 或 Claude Desktop Code tab 中使用五个 writer 动词：
-
-```text
-/mabw new
-/mabw run <workspace>
-/mabw status <workspace>
-/mabw feedback <workspace> [text-or-file]
-/mabw deliver <workspace>
-```
-
-详细流程见 [docs/claude-code-quickstart.md](docs/claude-code-quickstart.md)。中文写作者可直接看 [MABW 黄金路径](docs/golden-path.zh-CN.md) 和 [我每周怎么用 MABW](docs/weekly-use.zh-CN.md)。
-
-## 产品承诺与边界 🧱
-
-当前版本：**v0.7.4**
-
-MABW 现在能跑 subagent-first 工作流（最初发布版本只适配了Claude Code）其他Runtime暂时还未测试、运行时状态文件、事实账本、确定性质量门禁、反馈与修复计划、溯源投影、受众画像快照、受控的改进账本 / 改进记忆，以及 Markdown / Word 输出。1000+ 确定性测试在 CI 中通过，不依赖任何 LLM 调用。
-
-它仍然不是自治 agent，不会自动修改简报内容，不会自动学习，没有长期记忆系统，也不是投资建议工具、交易信号生成器或人工审核替代品——但我们的目标是只要这些问题能够被持续记录、复核和修正，我们或许就可以一步步逼近这个 harness 的边界：让 AI 输出不再只是“像一份报告”，而是逐渐接近企业高管、监管机构、律师或者任何严肃场景真正需要的那种材料——逻辑可追溯，事实可论证，责任边界清楚，幻觉被尽可能压低。详见 [当前架构状态](docs/architecture-status.zh-CN.md)、[路线图](docs/roadmap.zh-CN.md) 和 [红线与反模式](docs/red-lines-and-anti-patterns.md)。
-
-## 为什么做这个项目
-
-在企业战略部、券商研究所、基金投研、投资者关系、总裁办等场景中，很多人花大量时间制作日报、周报、晨会材料和领导层简报。这些工作重要，但流程高度重复：找来源、判断取舍、去重去旧、整理成文、核对数字出处、检查 AI 有没有编造、改措辞、排版输出。
-
-更深一层的问题是：**这类工作无法系统性地变好。** 新人犯的错被口头纠正然后被遗忘，下一个新人重犯；"这段感觉不对"的反馈在会后蒸发；一个过期数字混进简报，没人能追溯它是在哪一步漏掉的。
-
-写代码的世界靠测试、Git 历史、CI 和 code review 形成了改进闭环，所以 coding agent 进步飞快。本项目把同一套基础设施——可审计、可追溯、结构化反馈、人类把关——搬进真实的简报工作流。让人把时间花在判断、提问和决策支持上，而不是重复搬运和排版。
-
-### 为什么叫「司乐师」？
-
-英文 orchestrator 来自管弦乐编配与协调的语境，在软件工程中常译为“编排器”。MABW 选择译作「司乐师」：它不直接替各个角色写作，而是调度信息侦察员、筛选师、分析师、编辑师和审计师，让不同声部按契约合奏。
-
-「司乐」也借用了中国礼乐传统中掌管乐政、乐教的意象。这里不是对古代官职的严格复原，而是一个项目术语：负责维持节奏、边界、秩序和交付。
-
-## 三条上手路径
-
-MABW 没有“轻量版”。降低的是进入成本，不降低的是信任标准：事实账本、门禁、人工交付、运行轨迹和冻结快照仍然在场。
-
-| 路径 | 适合谁 | 怎么做 | 不降低什么 |
-|---|---|---|---|
-| 看一眼 | 想先判断这个项目是不是有意义 | 读 [公开运行摘要](docs/reference-runs/v0.7.2-public-solar-integration.zh-CN.md)，跑 `bash scripts/demo.sh` 和 `bash scripts/demo-deep-dive.sh` | demo 展示的是控制行为和可追问性，不声称输出质量提升 |
-| 跑一遍 | 想用几份本地材料试一次 | 不配搜索后端，只放少量本地文本材料，按 [黄金路径](docs/golden-path.zh-CN.md) 走 `new → run → status → deliver` | Claim Ledger、gates、reader-final gate 和人工 deliver 仍然执行 |
-| 过日子 | 想每周稳定使用 | 配置搜索后端、来源节奏、feedback 和已批准偏好，按 [每周使用脚本](docs/weekly-use.zh-CN.md) 运行 | 未批准偏好不会生效，已批准偏好只在后续 run 冻结 |
-
-不要把外部 AI 报告直接丢进来“审计”当作轻量入口。没有 Claim Ledger 的外来稿只能做浅层检查，不能提供 MABW 的核心问责能力。
-
-## 开荒一个新行业
-
-MABW 适合把一个行业从“一次性调研”转成“长期、可追踪、可反馈修正的监控流程”。如果你要跟踪一个新赛道，例如类器官、AI 电力需求、储能供应链或新政策主题，建议这样开始：
-
-1. **先做一次开荒研究**：用 Deep Research、人工研究或行业专家访谈建立初始地图，包括核心问题、监管机构、公司宇宙、产品类型、关键词、数据库、常用媒体和需要持续跟踪的事件类型。
-2. **不要把开荒报告当作事实来源**：它只能作为 source universe、watchlist 和分类框架的草稿。后续简报里的关键事实仍必须回到原始公告、监管文件、公司新闻、投融资披露、论文或可信媒体。
-3. **把行业地图转成 workspace 配置**：把政策、公司/产品、投融资、商业化信号等栏目写入 `user.md` / onboarding 配置，把常用来源、关键词和公司名单整理成可复用 watchlist。
-4. **先按周跑，不急着日报化**：第一阶段用 MABW 每周处理新增信息，去重、筛旧、建立 Claim Ledger、生成来源附录，并记录哪些信息真正影响判断。
-5. **用反馈修正口径**：当你发现“先讲影响再讲背景”“不要替管理层下决策”“某类数据必须核原始来源”这类稳定要求，先记录为反馈，再由人工批准进入 Improvement Ledger 或后续模板/门禁。
-6. **稳定后再提高频率**：只有当来源池、栏目结构、读者偏好和门禁规则稳定后，再把周报拆成日报、预警或专题跟踪。
-
-一句话：Deep Research 适合开荒，MABW 适合长期监控。行业研究不是一次性“多搜一点”，而是一个持续的信息治理流程。
-
-## 跑自己的材料
-
-### Claude Code（五动词主路径）
-
-如果你已经完成上面的 demo，只需要激活虚拟环境并安装 writer 入口：
-
-```bash
-source .venv/bin/activate
-
-multi-agent-brief claude install --repo-workdir .
-```
-
-然后在 Claude Code CLI 或 Claude Desktop Code tab 中使用五个 writer 动词：
-
-```text
-/mabw new
-/mabw run <workspace>
-/mabw status <workspace>
-/mabw feedback <workspace> [text-or-file]
-/mabw deliver <workspace>
-```
-
-`/mabw` 是 writer-facing 入口；完整 delegated subagent workflow 仍由 `/generate-brief <workspace>` 执行。`status` 调用只读的 `multi-agent-brief status`，`feedback` 只记录和分诊，`deliver` 必须经过 gates、reader-final gate 和 `state finalize-complete`。
-
-详细流程见 [docs/claude-code-quickstart.md](docs/claude-code-quickstart.md)。中文写作者可直接看 [MABW 黄金路径](docs/golden-path.zh-CN.md) 和 [我每周怎么用 MABW](docs/weekly-use.zh-CN.md)。
-
-### 其他 runtime（暂未启动E2E适配）
-
-First release版本不保证其他runtime的效果
-
-```bash
-multi-agent-brief onboard
-multi-agent-brief init ../mabw-workspace --from-onboarding onboarding.json
-multi-agent-brief run --workspace ../mabw-workspace --runtime claude
-```
-
-Claude Code 是 first-class writer / five-verb path。Hermes 仍是 supported delegated / scheduled runtime path。OpenCode、Codex 和 manual fallback 保留各自现有入口。
-
-Hermes 插件仍可用于 `delegate_task` 原生路径：
-
-```bash
-multi-agent-brief hermes install-plugin
-hermes plugins enable mabw
-```
-
-运行时安装细节、workspace-local kit、常见问题见 [docs/claude-code-quickstart.md](docs/claude-code-quickstart.md) 和 [docs/runtime-recipes.md](docs/runtime-recipes.md)。
-
-### 使用自己的材料 / 启用可选能力
-
-* 导入本地资料与输入分类：见 [docs/onboarding.md](docs/onboarding.md)
-* Web 搜索选项（runtime 自带搜索，或 Tavily/Exa/Brave 等 API 增强）：见 [docs/search-backends.md](docs/search-backends.md)
-* 源发现候选合并（包括 `llm_decide` source profile）：`multi-agent-brief sources decide --config <workspace>/config.yaml --merge`
-* 飞书集成（采集 + 推送）：见 [docs/feishu-integration.md](docs/feishu-integration.md)
-* SEC Filing 解析：见 [docs/opencli-source-provider.md](docs/opencli-source-provider.md)
-* Windows PowerShell：见 [docs/windows-powershell.md](docs/windows-powershell.md)
-
-常用命令片段：
-
-```bash
-multi-agent-brief init --from-onboarding onboarding.json
-multi-agent-brief sources decide --config <workspace>/config.yaml
-```
-
-## 记录一个已批准的读者偏好
-
-v0.7.0 增加了受控的 Improvement Ledger / Improvement Memory。它用于保存人工撰写、人工批准的读者偏好，例如"证据支持时，先给出决策相关数字"。它不是自动学习系统，也不会自动改稿，但是它可以记录人类排版的喜好。
-
-```bash
-multi-agent-brief improve propose --workspace <workspace> \
-  --guidance "Lead with the decision-relevant number when evidence supports it." \
-  --category audience_mismatch \
-  --scope brief \
-  --source-summary "Operator-created audience guidance proposal."
-
-multi-agent-brief improve approve --workspace <workspace> --entry-id AG-0001 --by <operator>
-multi-agent-brief improve rebuild --workspace <workspace>
-multi-agent-brief run --workspace <workspace> --skip-doctor
-```
-
-`approve` 不会改变已经创建的当前 run snapshot；下一次 `run` / `start` / `handoff` 才会把已批准偏好冻结为 runtime 可读 snapshot。MABW 可以证明该 snapshot 是否被生成、记录并交给 runtime；最终文本是否体现这些偏好仍需要单独评估。运行时只读取 `output/intermediate/improvement_memory_snapshot.md`，不把 `improvement/memory.md` 当作实时输入。详细说明见 [docs/modules/improvement.md](docs/modules/improvement.md)。
-
-## 寻找合作 🤝
-
-这个项目由一名制造业从业者在真实简报工作中开发和使用。它现在最需要的不是更多功能，而是更多真实场景。如果你符合以下任何一类，欢迎联系（GitHub Issue / Discussion 均可）：
-
-* **试点用户**：你在战略、投研、IR、总裁办、研究所等岗位，每周真实地写行业周报、竞品跟踪或管理层简报，愿意用它跑自己的真实流程并反馈摩擦点。我们会优先支持试点场景的问题。
-* **评估合作者**：你在高校或研究机构做 LLM agent / 多智能体系统方向，对"契约治理的工作流 vs 单模型基线"的对照实验、消融实验感兴趣。系统、真实场景和运行数据由项目方提供。
-* **贡献者**：从一个 [good first issue](https://github.com/Stahl-G/multi-agent-brief-workflow/issues) 开始即可；提交前请读 [红线与反模式](docs/red-lines-and-anti-patterns.md)。
-
-## 术语表（Glossary）
-
-| 中文术语 | English | 说明 |
+| Question | What it records | Where you look |
 |---|---|---|
-| 司乐师 | Orchestrator | 运行时主智能体，负责调度、检查、决策和交付门禁 |
-| 事实账本 | Claim Ledger | 登记关键事实主张及其证据来源 |
-| 运行交接单 | Runtime Handoff | 向不同 agent runtime 交付执行上下文和契约引用 |
-| 产物契约 | Artifact Contract | 定义每个阶段应产生、消费和验证的文件 |
-| 质量门禁 | Quality Gate | 在进入下一阶段或定稿前执行的质量检查 |
-| 溯源图 | Provenance Graph | 从运行状态、产物、事实、反馈和门禁派生的审计图 |
-| 控制台 | Control Switchboard | 记录可用控制项、建议和司乐师选择 |
-| 信息侦察员 / 筛选师 / 分析师 / 编辑师 / 审计师 | Scout / Screener / Analyst / Editor / Auditor | 各阶段专职子代理 |
+| Where is this run? | Current stage, missing artifacts, blockers, next safe action | `/mabw status`, `workflow_state.json` |
+| Where did each number come from? | Claim Ledger entries, source dates, gate findings | `claim_ledger.json`, `quality_gate_report.json`, `source_appendix.md` |
+| What has it learned? | Human-approved reader preferences only; unapproved suggestions never take effect | `improvement/ledger.jsonl` (append-only, hash-chained, revertible) |
+| What is guarding delivery? | Stage-completion transactions, reader-final gate, delivery checks | `finalize_report.json`, `state finalize-complete` |
 
-## 路线图（摘要）
+> It observes and it proposes. But only what you approve is remembered: in a ledger you can open, audit, and undo.
 
-* **v0.7**：改进账本（Improvement Ledger）——把人工撰写、人工批准的读者偏好按运行冻结为 Improvement Memory snapshot；不做自动学习、FrictionStore 自动检测或输出质量承诺。
-* **v0.8**：评估实验与策略包——定义 guidance manifestation / regression 评估协议，对照单模型基线，并推进 mode registry 与第二个 policy pack。
-* **v0.9**：分发与参考工作流——零 API key 快速上手、参考运行、文档整顿。
-* **v1.0**：稳定基线——schema 冻结、CLI 表面冻结、安全威胁模型、明确支持边界。
+## 🔬 Evidence, Including The Failures
 
-完整版见 [docs/roadmap.zh-CN.md](docs/roadmap.zh-CN.md)；已实现 vs 目标的区分见 [docs/architecture-status.zh-CN.md](docs/architecture-status.zh-CN.md)。
+- **[Public solar integration run (v0.7.2)](docs/reference-runs/v0.7.2-public-solar-integration.md)**: Improvement Memory materialization, gate execution, and control-plane closure on public materials. It is an integration reference, not a causal claim about output quality.
+- **[Organoid-industry failure study (v0.7.4)](docs/reference-runs/v0.7.4-organoid-failure-study.md)**: a real external research task where an external reviewer caught semantic mismatches the gates passed *by design*. Includes a five-error taxonomy of how each mistake entered the pipeline. This is the honest current boundary of the system.
+- **[v0.7.4 release notes](docs/releases/v0.7.4.md)**: safety hardening and boundary wording.
 
-## 文档索引
+We can say precisely which ledger line each error entered through. That is what the system is for, and it is also why we publish the failure analysis.
 
-[架构](docs/architecture.zh-CN.md) ·
-[技术报告 v0.1.2](docs/mabw-architecture-reference-v0.1.2.md) ·
-[司乐契约模型](docs/orchestrator-contracts.zh-CN.md) ·
-[质量门禁](docs/harness.md) ·
-[评估用例](docs/evaluation-cases.md) ·
-[改进账本](docs/modules/improvement.md) ·
-[黄金路径](docs/golden-path.zh-CN.md) ·
-[每周使用脚本](docs/weekly-use.zh-CN.md) ·
-[公开运行摘要](docs/reference-runs/v0.7.2-public-solar-integration.zh-CN.md) ·
-[失败研究](docs/reference-runs/v0.7.4-organoid-failure-study.zh-CN.md) ·
-[v0.7.4 Release](docs/releases/v0.7.4.md) ·
-[发布验证清单](docs/launch-validation.zh-CN.md) ·
-[支持矩阵](docs/support-matrix.md) ·
-[安全](docs/security.md) ·
-[迁移说明](docs/MIGRATION.zh-CN.md)
+## 🚫 What It Is Not
+
+MABW is not an autonomous agent. It does not auto-edit brief content, does not auto-learn, has no long-term memory system, and is not an investment-advice tool or a replacement for human review.
+
+The current first-class writer path is Claude Code. Hermes is supported as a delegated / scheduled runtime. OpenCode, Codex, and manual entrypoints exist, but they are not yet end-to-end validated as the primary writer path.
+
+## 🛠️ Why This Exists
+
+Coding agents improved fast because their loop has infrastructure: tests, CI, git history, code review. Business briefings have none of that. A junior analyst gets corrected verbally and the correction evaporates; the next hire repeats the mistake. A stale number slips into a brief and nobody can say at which step. The work is important, repetitive, and structurally unable to get better.
+
+MABW moves that same machinery: auditability, structured feedback, human gating, execution traces, into a domain with no clean reward signal, where the human *is* the reward channel and deterministic gates build the reward surface.
+
+## 🧑‍💻 Using It For Real Work
+
+Install the writer entrypoint and use five verbs inside Claude Code:
+
+```bash
+source .venv/bin/activate
+multi-agent-brief claude install --repo-workdir .
+```
+
+```text
+/mabw new
+/mabw run <workspace>
+/mabw status <workspace>      # strictly read-only
+/mabw feedback <workspace>    # recorded immediately; takes effect only after approval
+/mabw deliver <workspace>     # always human-triggered, gated, no force flag
+```
+
+Three on-ramps, one spine. There is no lite mode: entry cost drops, the accountability spine does not. Claim Ledger, gates, human delivery, event trace, and frozen snapshots stay present.
+
+| Path | Time | What you do |
+|---|---:|---|
+| Look once | ~5 min | Read the reference runs, run the demos |
+| Run once | ~30 min | A few local text files, no search backend, `new -> run -> status -> deliver` |
+| Live with it | weekly | Configured sources, feedback loop, approved preferences |
+
+Full paths: [Claude Code quickstart](docs/claude-code-quickstart.md) · [onboarding](docs/onboarding.md) · [search backends](docs/search-backends.md) · [roadmap](docs/roadmap.md) · [red lines and anti-patterns](docs/red-lines-and-anti-patterns.md)
+
+## 🧭 A Note On Provenance
+
+I build and use MABW as part of my actual weekly briefing work at a listed manufacturer, in a role that touches strategy and investor relations. Nothing from my employer enters this repository: no data, no documents, no non-public information. What crosses over is discipline, not data: patterns rewritten from memory in vocabulary that holds for any company. And where this project makes guarantees, they are written as mechanisms: schemas, gates, transactions, tests, not as promises.
+
+## 🎼 Why The Orchestrator Is Called 司乐师
+
+The runtime orchestrator is named after the office in the Chinese ritual-music tradition responsible for keeping ensembles in time and in order. It does not write; it dispatches the scout, screener, analyst, editor, and auditor, and holds them to their contracts. Not a strict historical reconstruction: a project term for the thing that maintains tempo, boundaries, and delivery discipline.
+
+## 🗺️ Roadmap
+
+**v0.8**: evaluation experiments against single-prompt baselines, evidence schema upgrade with raw excerpts / source tiers / graded support vocabulary, and a second policy pack.
+
+**v0.9**: distribution and reference workflows.
+
+**v1.0**: frozen schemas and CLI surface, compatibility policy, and threat model.
+
+## 🤝 Collaboration
+
+This project needs real scenarios more than it needs features. If you write recurring briefings in strategy, equity research, IR, policy tracking, or similar work and want to run your real workflow through it, open an issue or discussion. If you research agent evaluation and want a dogfooded process-accountability system with run data, that is also welcome.
+
+Start with a [good first issue](https://github.com/Stahl-G/multi-agent-brief-workflow/issues). Read [red lines and anti-patterns](docs/red-lines-and-anti-patterns.md) first.
 
 ## License
 
