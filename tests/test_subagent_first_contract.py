@@ -100,7 +100,8 @@ def test_claude_generate_brief_command_uses_orchestrator_contract():
 
 def test_claude_mabw_command_is_five_verb_writer_surface():
     text = _read(".claude/commands/mabw.md")
-    assert "First-class runtime: Claude Code" in text
+    assert "Claude Code is the first-class writer / five-verb path." in text
+    assert "Hermes remains a supported delegated/scheduled runtime path." in text
     assert "Do not mirror this five-verb command into Hermes, OpenCode, Codex" in text
 
     first_screen = text.split("## First-Screen Writer Help", 1)[1].split(

@@ -23,7 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Success path uses transactions**: generated handoff/runtime guidance now routes successful stage progress through `state stage-complete` and terminal delivery through `state finalize-complete`; `state decide` remains for retry, repair, human review, and block decisions.
 - **Delivery path hardened**: `/mabw deliver` and runtime handoff guidance require gates, strict state checks, final rendering, reader-final cleanliness, and `finalize-complete` before terminal completion is recorded.
 - **Improvement materialization remains computed**: superseded guidance is a read-time/materialization computation, not a stored ledger status. Reverting a superseder can re-expose the previous approved entry by design.
-- **Five-verb language clarified**: `doctor` remains a diagnostic/maintainer command, not a sixth writer verb; five-verb UX ships first on Claude Code and does not claim all-runtime parity.
+- **Five-verb language clarified**: `doctor` remains a diagnostic/maintainer command, not a sixth writer verb. Claude Code is the first-class writer / five-verb path; Hermes remains a supported delegated/scheduled runtime path.
 
 ### Boundaries
 

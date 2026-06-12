@@ -138,9 +138,9 @@ multi-agent-brief init ../mabw-workspace --from-onboarding onboarding.json
 multi-agent-brief run --workspace ../mabw-workspace --runtime claude
 ```
 
-Hermes, OpenCode, Codex, and manual fallback keep their existing entrypoints.
-The five-verb product entrypoint first ships on Claude Code only, to avoid a
-false cross-runtime parity contract.
+Claude Code is the first-class writer / five-verb path. Hermes remains a
+supported delegated/scheduled runtime path. OpenCode, Codex, and manual fallback
+keep their existing entrypoints.
 
 The Hermes plugin remains available for the native `delegate_task` path:
 

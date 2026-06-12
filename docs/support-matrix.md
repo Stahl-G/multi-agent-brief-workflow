@@ -75,10 +75,9 @@ Source appendices are reader-facing delivery artifacts generated during finalize
 | Codex (subagent workflow) | Supported |
 | Manual (print workflow steps) | Supported |
 
-The five-verb writer product entrypoint (`new`, `run`, `status`, `feedback`,
-`deliver`) first ships on Claude Code only. Other runtimes keep their existing
-workflow entrypoints; this avoids a false parity contract across runtime
-surfaces.
+Claude Code is the first-class writer / five-verb path (`new`, `run`, `status`,
+`feedback`, `deliver`). Hermes remains a supported delegated/scheduled runtime
+path. Other runtimes keep their existing workflow entrypoints.
 
 Runtime source assets under `.agents/`, `.claude/`, `.codex/`, `.opencode/`,
 and `integrations/hermes-plugin/` are source-clone assets. Package-only installs

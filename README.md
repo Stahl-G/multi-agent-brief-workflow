@@ -143,7 +143,7 @@ multi-agent-brief init ../mabw-workspace --from-onboarding onboarding.json
 multi-agent-brief run --workspace ../mabw-workspace --runtime claude
 ```
 
-Hermes、OpenCode、Codex 和 manual fallback 保留各自现有入口。五动词产品入口先在 Claude Code 首发，避免伪造跨 runtime parity。
+Claude Code 是 first-class writer / five-verb path。Hermes 仍是 supported delegated / scheduled runtime path。OpenCode、Codex 和 manual fallback 保留各自现有入口。
 
 Hermes 插件仍可用于 `delegate_task` 原生路径：
 

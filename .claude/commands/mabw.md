@@ -9,7 +9,8 @@ This command is the product-facing route for writer intent. It is not a second
 workflow engine. Python remains the deterministic setup, validation, control,
 and rendering layer; Claude Code remains the Orchestrator runtime.
 
-First-class runtime: Claude Code.
+Claude Code is the first-class writer / five-verb path.
+Hermes remains a supported delegated/scheduled runtime path.
 Do not mirror this five-verb command into Hermes, OpenCode, Codex, or manual
 runtime surfaces in this PR.
 
