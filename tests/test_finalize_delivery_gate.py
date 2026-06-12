@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 from pathlib import Path
 
@@ -7,6 +8,14 @@ import pytest
 
 from multi_agent_brief.cli.main import main
 from multi_agent_brief.outputs.finalize import finalize_reader_outputs
+
+
+def _sha256_file(path: Path) -> str:
+    h = hashlib.sha256()
+    with path.open("rb") as f:
+        for chunk in iter(lambda: f.read(1024 * 1024), b""):
+            h.update(chunk)
+    return h.hexdigest()
 
 
 def _docx_text(path: Path) -> str:
@@ -470,6 +479,11 @@ def test_finalize_delivery_bundle_contains_appended_sources_without_audit_files(
     assert result.delivery_docx == str(delivery_docx)
     assert result.delivery_artifacts == [str(delivery_markdown), str(delivery_docx)]
     assert report["delivery_artifacts"] == [str(delivery_markdown), str(delivery_docx)]
+    assert report["delivery_artifact_sha256"] == {
+        str(delivery_markdown): _sha256_file(delivery_markdown),
+        str(delivery_docx): _sha256_file(delivery_docx),
+    }
+    assert result.delivery_artifact_sha256 == report["delivery_artifact_sha256"]
     assert report["reader_clean"]["status"] == "pass"
 
 

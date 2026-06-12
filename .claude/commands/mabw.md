@@ -73,11 +73,37 @@ Allowed:
 Rules:
 
 - ask at most four grouped business questions if required fields are missing;
+- the required onboarding fields are explicit user-provided values, not inferred values;
 - never ask the user to edit YAML, JSON, schema, or CLI flags;
 - never ask the user to paste API keys into chat;
 - do not generate the brief;
 - do not invoke specialist subagents;
 - do not approve or materialize Improvement Ledger entries.
+
+Private Context Safety:
+
+- `company_or_org` / `company` must come only from the user's explicit answer in this onboarding turn.
+- Do not infer company, organization, employer, recipient, or business identity from:
+  - maintainer identity;
+  - repository history;
+  - previous workspaces;
+  - chat memory;
+  - local directory names;
+  - prior reports;
+  - global user profile.
+- If the user does not specify a company or organization, ask one follow-up question.
+- For third-party sector research where the company is intentionally generic, use a neutral explicit value only after user confirmation, such as `Generic target organization`.
+- Never silently fill a real company name.
+
+Before writing onboarding.json, show a short "values I will write" summary:
+
+- company_or_org;
+- industry_or_theme;
+- task_objective;
+- audience;
+- workspace path.
+
+If any value was inferred rather than explicitly provided, stop and ask.
 
 After successful setup, tell the writer that the next full workflow command is:
 

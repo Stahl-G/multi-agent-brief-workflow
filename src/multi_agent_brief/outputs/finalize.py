@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import re
 import shutil
+import hashlib
 from dataclasses import dataclass, asdict, field
 from pathlib import Path
 from typing import Any
@@ -49,6 +50,7 @@ class FinalizeResult:
     delivery_markdown: str = ""
     delivery_docx: str = ""
     delivery_artifacts: list[str] = field(default_factory=list)
+    delivery_artifact_sha256: dict[str, str] = field(default_factory=dict)
     reader_clean: dict[str, Any] | None = None
 
     def to_dict(self) -> dict[str, Any]:
@@ -189,6 +191,7 @@ def finalize_reader_outputs(
     result.delivery_markdown = delivery_bundle["delivery_markdown"]
     result.delivery_docx = delivery_bundle["delivery_docx"]
     result.delivery_artifacts = delivery_bundle["delivery_artifacts"]
+    result.delivery_artifact_sha256 = delivery_bundle["delivery_artifact_sha256"]
 
     report_path = intermediate_dir / "finalize_report.json"
     reader_clean = _reader_clean_report(
@@ -266,11 +269,21 @@ def _build_delivery_bundle(
     artifacts = [str(delivery_markdown)]
     if delivery_docx:
         artifacts.append(delivery_docx)
+    artifact_sha256 = {artifact: _sha256_file(Path(artifact)) for artifact in artifacts}
     return {
         "delivery_markdown": str(delivery_markdown),
         "delivery_docx": delivery_docx,
         "delivery_artifacts": artifacts,
+        "delivery_artifact_sha256": artifact_sha256,
     }
+
+
+def _sha256_file(path: Path) -> str:
+    h = hashlib.sha256()
+    with path.open("rb") as f:
+        for chunk in iter(lambda: f.read(1024 * 1024), b""):
+            h.update(chunk)
+    return h.hexdigest()
 
 
 def _reader_clean_report(
@@ -319,6 +332,7 @@ def _update_audit_report_metadata(
     metadata["reader_brief_artifact"] = result.reader_brief
     metadata["delivery_markdown_artifact"] = result.delivery_markdown
     metadata["delivery_artifacts"] = result.delivery_artifacts
+    metadata["delivery_artifact_sha256"] = result.delivery_artifact_sha256
     metadata["reader_brief_transform"] = "strip_claim_citations"
     metadata["reader_brief_finalized"] = True
     metadata["reader_brief_stripped_src_marker_count"] = result.stripped_src_marker_count

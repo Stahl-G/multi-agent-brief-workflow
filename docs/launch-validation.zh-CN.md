@@ -162,13 +162,36 @@ multi-agent-brief run --workspace /tmp/mabw-demo --skip-doctor
 - 如果有 Claude Code，能看到 `/mabw` 五动词。
 - 卡点可以归类为文档、环境、runtime、模型或产品理解问题。
 
-## 3. 发布前记录
+## 3. 发布前泄漏扫描
+
+目标：在公开发布、公开 reference pack、或外部试点材料发出前，先用本地私有词和路径做一次可重复扫描。
+
+先扫仓库 tracked files：
+
+```bash
+MABW_PUBLIC_SAFETY_BANNED_TERMS="<local private terms>" \
+  python3 scripts/check_public_safety.py
+```
+
+再扫候选公开 workspace、reference pack 或 demo bundle：
+
+```bash
+MABW_PUBLIC_SAFETY_BANNED_TERMS="<local private terms>" \
+  python3 scripts/check_public_safety.py --path <candidate-reference-workspace-or-pack>
+```
+
+`<local private terms>` 不写进仓库。它应该包含本机用户名、真实公司名、内部项目名、本地绝对路径片段、私有聊天或云文档 token 片段等。
+
+任何真实公司名、用户名、本地绝对路径、聊天/飞书 token、私有扫描词命中，都必须先解释、移除或确认仅存在于本地不发布材料中。
+
+## 4. 发布前记录
 
 把两次验证结果整理成一段 release note 内部记录：
 
 ```text
 Golden-path self-test: PASS / FAIL / PARTIAL
 Fresh-clone pilot: PASS / FAIL / PARTIAL
+Public-safety scan: PASS / FAIL / PARTIAL
 Top friction:
 Release doc changes made:
 Known limitations left for next release:

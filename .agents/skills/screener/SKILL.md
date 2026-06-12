@@ -36,6 +36,13 @@ Use after scout has written candidate_claims.json.
 - Apply topic capacity and reporting-window rules from config.
 - Preserve source identity, evidence text, and exclusion reasons.
 
+## Freshness Policy
+
+- Treat workspace config freshness settings as authoritative.
+- Do not retain stale sources beyond `max_source_age_days` when `fail_on_stale_source` is true, unless the input artifact/config contains an explicit structured override.
+- If the configured freshness window leaves too few candidates, report this as a screening blocker or needs-human-review condition. Do not silently relax the threshold.
+- Screening rationale may explain staleness, but explanation is not approval.
+
 ## Handoff
 
 Pass screened_candidates.json to claim-ledger.

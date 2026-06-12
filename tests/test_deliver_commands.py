@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 from pathlib import Path
 
@@ -8,6 +9,14 @@ import pytest
 from multi_agent_brief.cli.main import main
 from multi_agent_brief.delivery.base import DeliveryResult
 from multi_agent_brief.orchestrator.runtime_state import RuntimeStateError, initialize_runtime_state
+
+
+def _sha256_file(path: Path) -> str:
+    h = hashlib.sha256()
+    with path.open("rb") as f:
+        for chunk in iter(lambda: f.read(1024 * 1024), b""):
+            h.update(chunk)
+    return h.hexdigest()
 
 
 def _workspace(tmp_path: Path) -> Path:
@@ -49,10 +58,16 @@ def _write_bundle(
         artifact_paths = [str(markdown)]
         if docx is not None:
             artifact_paths.append(str(docx))
+    artifact_hashes = {
+        artifact: _sha256_file(Path(artifact))
+        for artifact in artifact_paths
+        if Path(artifact).exists()
+    }
     report = {
         "status": "pass",
         "reader_clean": {"status": reader_clean_status, "sample_findings": []},
         "delivery_artifacts": artifact_paths,
+        "delivery_artifact_sha256": artifact_hashes,
     }
     (intermediate / "finalize_report.json").write_text(
         json.dumps(report, ensure_ascii=False, indent=2) + "\n",
@@ -124,8 +139,59 @@ def test_deliver_rejects_dirty_current_delivery_artifact(tmp_path: Path, capsys)
 
     assert rc == 1
     payload = json.loads(capsys.readouterr().out)
-    assert payload["error_code"] == "E_DELIVERY_NOT_CLEAN"
-    assert payload["reader_clean"]["status"] == "fail"
+    assert payload["error_code"] == "E_DELIVERY_ARTIFACT_MISMATCH"
+    assert _delivery_events(ws) == []
+
+
+def test_deliver_rejects_clean_markdown_changed_after_finalize(tmp_path: Path, capsys) -> None:
+    ws = _workspace(tmp_path)
+    markdown, _docx = _write_bundle(ws, include_docx=False)
+    markdown.write_text("# Different Clean Brief\n\nSource Appendix\n", encoding="utf-8")
+
+    rc = main(["deliver", "--workspace", str(ws), "--target", "local", "--json"])
+
+    assert rc == 1
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["error_code"] == "E_DELIVERY_ARTIFACT_MISMATCH"
+    assert payload["artifact"] == "output/delivery/brief.md"
+    assert "Run finalize again" in payload["message"]
+    assert _delivery_events(ws) == []
+
+
+def test_deliver_rejects_clean_docx_changed_after_finalize(tmp_path: Path, capsys) -> None:
+    docx_module = pytest.importorskip("docx", reason="python-docx not installed")
+    ws = _workspace(tmp_path)
+    _markdown, docx = _write_bundle(ws, include_docx=True)
+    assert docx is not None
+    document = docx_module.Document()
+    document.add_paragraph("Different clean DOCX")
+    document.add_paragraph("Source Appendix")
+    document.save(str(docx))
+
+    rc = main(["deliver", "--workspace", str(ws), "--target", "local", "--json"])
+
+    assert rc == 1
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["error_code"] == "E_DELIVERY_ARTIFACT_MISMATCH"
+    assert payload["artifact"].endswith(".docx")
+    assert "Run finalize again" in payload["message"]
+    assert _delivery_events(ws) == []
+
+
+def test_deliver_rejects_missing_delivery_hashes(tmp_path: Path, capsys) -> None:
+    ws = _workspace(tmp_path)
+    _write_bundle(ws, include_docx=False)
+    report_path = ws / "output" / "intermediate" / "finalize_report.json"
+    report = json.loads(report_path.read_text(encoding="utf-8"))
+    report.pop("delivery_artifact_sha256")
+    report_path.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
+
+    rc = main(["deliver", "--workspace", str(ws), "--json"])
+
+    assert rc == 1
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["error_code"] == "E_DELIVERY_BUNDLE_MISSING"
+    assert "delivery_artifact_sha256" in payload["message"]
     assert _delivery_events(ws) == []
 
 

@@ -98,6 +98,59 @@ def test_claude_generate_brief_command_uses_orchestrator_contract():
     assert "Check the expected artifact" in text
 
 
+def test_claude_generate_brief_requires_stage_complete_before_next_specialist():
+    text = _read(".claude/commands/generate-brief.md")
+    assert "A stage is not complete when its artifact is written." in text
+    assert "Only after `stage-complete` succeeds may you dispatch the next specialist" in text
+    assert "Do not call the next specialist" in text
+    assert "Never treat `state stage-complete` as after-the-fact bookkeeping" in text
+
+
+def test_claude_generate_brief_requires_source_discovery_transaction_for_all_profiles():
+    text = _read(".claude/commands/generate-brief.md")
+    source_section = text.split("**Source discovery transaction (all source profiles):**", 1)[1].split(
+        "**Input governance gate", 1
+    )[0]
+    assert "Source discovery is a workflow stage for every run, not only for `llm_decide`." in source_section
+    assert "Complete the `source-discovery` transaction before invoking Scout." in source_section
+    assert "configured non-`llm_decide` source profile" in source_section
+    assert (
+        "multi-agent-brief state stage-complete --workspace $ARGUMENTS --stage source-discovery"
+        in source_section
+    )
+    assert "after the `source-discovery` transaction succeeds" in source_section
+
+
+def test_orchestrator_agent_treats_stage_completion_as_transaction_defined():
+    text = _read(".claude/agents/orchestrator.md")
+    assert "Stage completion is transaction-defined, not artifact-defined." in text
+    assert "not allowed to call the next specialist agent or tool" in text
+    assert "If `state stage-complete` fails, stop" in text
+
+
+def test_claude_generate_brief_does_not_weaken_config_freshness():
+    text = _read(".claude/commands/generate-brief.md")
+    assert "Configuration is authoritative." in text
+    assert "Do not weaken or override `config.yaml` constraints" in text
+    assert "Do not tell Screener that older sources may be retained" in text
+    assert "stop and report the mismatch instead of relaxing the rule" in text
+
+
+def test_orchestrator_agent_does_not_turn_config_into_guidance():
+    text = _read(".claude/agents/orchestrator.md")
+    assert "Configuration is authoritative." in text
+    assert "must not weaken it through specialist prompts" in text
+    assert "Do not convert hard config settings into soft guidance" in text
+    assert "max_source_age_days" in text
+    assert "fail_on_stale_source" in text
+
+
+def test_screener_role_treats_freshness_config_as_authoritative():
+    text = _read(".agents/skills/screener/SKILL.md")
+    assert "Treat workspace config freshness settings as authoritative" in text
+    assert "Do not silently relax the threshold" in text
+
+
 def test_claude_mabw_command_is_five_verb_writer_surface():
     text = _read(".claude/commands/mabw.md")
     assert "Claude Code is the first-class writer / five-verb path." in text
@@ -119,6 +172,17 @@ def test_claude_mabw_command_is_five_verb_writer_surface():
     assert "/mabw doctor" not in first_screen
     assert "eval-cases" not in first_screen
     assert "runtime install" not in first_screen
+
+
+def test_claude_mabw_new_forbids_private_company_inference():
+    text = _read(".claude/commands/mabw.md")
+    new_section = text.split("## `new`", 1)[1].split("## `run <workspace>`", 1)[0]
+    assert "must come only from the user's explicit answer" in new_section
+    assert "Do not infer company" in new_section
+    assert "previous workspaces" in new_section
+    assert "chat memory" in new_section
+    assert "Never silently fill a real company name" in new_section
+    assert "Before writing onboarding.json" in new_section
 
 
 def test_claude_mabw_status_is_read_only_and_feedback_is_bounded():

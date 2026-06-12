@@ -32,6 +32,7 @@ E_DELIVERY_FAILED = "E_DELIVERY_FAILED"
 E_DELIVERY_EVENT_FAILED = "E_DELIVERY_EVENT_FAILED"
 E_DELIVERY_RUNTIME_MISSING = "E_DELIVERY_RUNTIME_MISSING"
 E_DELIVERY_TARGET_INVALID = "E_DELIVERY_TARGET_INVALID"
+E_DELIVERY_ARTIFACT_MISMATCH = "E_DELIVERY_ARTIFACT_MISMATCH"
 
 _RECIPIENT_ID_RE = re.compile(r"\b(?:oc|ou|on|om|cli|fld|f)[A-Za-z0-9_-]{8,}\b")
 _LONG_TOKEN_RE = re.compile(r"\b[A-Za-z0-9][A-Za-z0-9_-]{23,}\b")
@@ -43,6 +44,7 @@ class DeliveryBundle:
     artifacts: list[Path]
     markdown: Path | None
     docx: Path | None
+    artifact_sha256: dict[str, str]
 
     def relative_artifacts(self) -> list[str]:
         return [_workspace_relative(self.workspace, path) for path in self.artifacts]
@@ -302,9 +304,16 @@ def _load_delivery_bundle(workspace: Path) -> DeliveryBundle:
             "Delivery bundle is missing delivery_artifacts. Run: multi-agent-brief finalize --config <workspace>/config.yaml",
             error_code=E_DELIVERY_BUNDLE_MISSING,
         )
+    raw_hashes = report.get("delivery_artifact_sha256")
+    if not isinstance(raw_hashes, dict) or not raw_hashes:
+        raise DeliverCommandError(
+            "Delivery bundle is missing delivery_artifact_sha256. Run finalize again before delivery.",
+            error_code=E_DELIVERY_BUNDLE_MISSING,
+        )
 
     delivery_root = (workspace / "output" / "delivery").resolve()
     artifacts: list[Path] = []
+    artifact_hashes: dict[str, str] = {}
     for raw in raw_artifacts:
         if not isinstance(raw, str) or not raw.strip():
             raise DeliverCommandError(
@@ -325,11 +334,58 @@ def _load_delivery_bundle(workspace: Path) -> DeliveryBundle:
                 f"Delivery artifact not found: {_workspace_relative(workspace, resolved)}",
                 error_code=E_DELIVERY_BUNDLE_MISSING,
             )
+        expected_hash = _hash_for_delivery_artifact(
+            raw_hashes,
+            raw_path=raw,
+            workspace=workspace,
+            resolved=resolved,
+        )
+        rel = _workspace_relative(workspace, resolved)
+        if not expected_hash:
+            raise DeliverCommandError(
+                f"Delivery artifact hash missing for {rel}. Run finalize again before delivery.",
+                error_code=E_DELIVERY_BUNDLE_MISSING,
+            )
+        actual_hash = _sha256_file(resolved)
+        if actual_hash != expected_hash:
+            raise DeliverCommandError(
+                f"Delivery artifact has changed since finalize: {rel}. Run finalize again before delivery.",
+                error_code=E_DELIVERY_ARTIFACT_MISMATCH,
+                extra={"artifact": rel},
+            )
         artifacts.append(resolved)
+        artifact_hashes[rel] = expected_hash
 
     markdown = next((path for path in artifacts if path.name == "brief.md"), None)
     docx = next((path for path in artifacts if path.suffix.lower() == ".docx"), None)
-    return DeliveryBundle(workspace=workspace, artifacts=artifacts, markdown=markdown, docx=docx)
+    return DeliveryBundle(
+        workspace=workspace,
+        artifacts=artifacts,
+        markdown=markdown,
+        docx=docx,
+        artifact_sha256=artifact_hashes,
+    )
+
+
+def _hash_for_delivery_artifact(
+    hashes: dict[str, Any],
+    *,
+    raw_path: str,
+    workspace: Path,
+    resolved: Path,
+) -> str:
+    rel = _workspace_relative(workspace, resolved)
+    candidates = [
+        raw_path,
+        rel,
+        resolved.as_posix(),
+        str(resolved),
+    ]
+    for key in candidates:
+        value = hashes.get(key)
+        if isinstance(value, str) and value.strip():
+            return value.strip()
+    return ""
 
 
 def _verify_current_delivery_artifacts(bundle: DeliveryBundle) -> None:
@@ -467,6 +523,14 @@ def _workspace_relative(workspace: Path, path: Path) -> str:
 
 def _sha256(value: str) -> str:
     return hashlib.sha256(value.encode("utf-8")).hexdigest()
+
+
+def _sha256_file(path: Path) -> str:
+    h = hashlib.sha256()
+    with path.open("rb") as f:
+        for chunk in iter(lambda: f.read(1024 * 1024), b""):
+            h.update(chunk)
+    return h.hexdigest()
 
 
 def _safe_delivery_message(result: DeliveryResult, channel: str, *, recipient: str = "") -> str:
