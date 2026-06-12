@@ -25,16 +25,6 @@ MABW 是一个面向商业、研究、市场、政策、公司跟踪和管理层
   <a href="docs/releases/v0.7.4.md">📦 v0.7.4 Release</a>
 </p>
 
-## 为什么值得看 👀
-
-**给写作者**：你不再只拿到一篇 AI 草稿，而是拿到一份能追问来源、日期、门禁和修改记录的交付包。
-
-**给团队负责人**：简报工作不再只靠“某个人记得怎么写”，而是沉淀成可复用的来源、格式、读者偏好和质量边界。
-
-**给研究者和投资人**：这是一个真实 dogfood 出来的 process-accountability agent workflow，不只展示成功样例，也公开失败边界。
-
-MABW 的核心承诺很窄，也很硬：**traceability, not semantic proof yet**。重要主张会链接到登记过的来源条目，并保留来源、日期和门禁记录；这说明“它从哪里进入流水线”，不自动证明来源语义上支持每个子主张。
-
 ## 它怎么工作 🧭
 
 | 环节 | 做什么 | 为什么重要 |
@@ -46,6 +36,18 @@ MABW 的核心承诺很窄，也很硬：**traceability, not semantic proof yet*
 | 📦 交付与复盘 | 输出 Markdown / Word，并保留事件轨迹和改进账本 | 人类定稿，系统留痕，后续可改进 |
 
 一句话：**聪明的无权，有权的确定，生效的过人，过人的留痕。**
+
+## 为什么值得看 👀
+
+**给写作者**：你不再只拿到一篇 AI 草稿，而是拿到一份能追问来源、日期、门禁和修改记录的交付包。
+
+**给团队负责人**：简报工作不再只靠“某个人记得怎么写”，而是沉淀成可复用的来源、格式、读者偏好和质量边界。
+
+**给研究者和投资人**：这是一个真实 dogfood 出来的 process-accountability agent workflow，不只展示成功样例，也公开失败边界。
+
+MABW 的核心承诺很窄，也很硬：**traceability, not semantic proof yet**。重要主张会链接到登记过的来源条目，并保留来源、日期和门禁记录；这说明“它从哪里进入流水线”，不自动证明来源语义上支持每个子主张。
+
+
 
 ## 每周它替你记住四件事 🧩
 
@@ -141,9 +143,9 @@ multi-agent-brief claude install --repo-workdir .
 
 当前版本：**v0.7.4**
 
-MABW 现在能跑 subagent-first 工作流（Hermes / Claude Code / Codex / OpenCode）、运行时状态文件、事实账本、确定性质量门禁、反馈与修复计划、溯源投影、受众画像快照、受控的改进账本 / 改进记忆，以及 Markdown / Word 输出。1000+ 确定性测试在 CI 中通过，不依赖任何 LLM 调用。
+MABW 现在能跑 subagent-first 工作流（最初发布版本只适配了Claude Code）其他Runtime暂时还未测试、运行时状态文件、事实账本、确定性质量门禁、反馈与修复计划、溯源投影、受众画像快照、受控的改进账本 / 改进记忆，以及 Markdown / Word 输出。1000+ 确定性测试在 CI 中通过，不依赖任何 LLM 调用。
 
-它仍然不是自治 agent，不会自动修改简报内容，不会自动学习，没有长期记忆系统，也不是投资建议工具、交易信号生成器或人工审核替代品。详见 [当前架构状态](docs/architecture-status.zh-CN.md)、[路线图](docs/roadmap.zh-CN.md) 和 [红线与反模式](docs/red-lines-and-anti-patterns.md)。
+它仍然不是自治 agent，不会自动修改简报内容，不会自动学习，没有长期记忆系统，也不是投资建议工具、交易信号生成器或人工审核替代品——但我们的目标是只要这些问题能够被持续记录、复核和修正，我们或许就可以一步步逼近这个 harness 的边界：让 AI 输出不再只是“像一份报告”，而是逐渐接近企业高管、监管机构、律师或者任何严肃场景真正需要的那种材料——逻辑可追溯，事实可论证，责任边界清楚，幻觉被尽可能压低。详见 [当前架构状态](docs/architecture-status.zh-CN.md)、[路线图](docs/roadmap.zh-CN.md) 和 [红线与反模式](docs/red-lines-and-anti-patterns.md)。
 
 ## 为什么做这个项目
 
@@ -210,7 +212,9 @@ multi-agent-brief claude install --repo-workdir .
 
 详细流程见 [docs/claude-code-quickstart.md](docs/claude-code-quickstart.md)。中文写作者可直接看 [MABW 黄金路径](docs/golden-path.zh-CN.md) 和 [我每周怎么用 MABW](docs/weekly-use.zh-CN.md)。
 
-### 其他 runtime
+### 其他 runtime（暂未启动E2E适配）
+
+First release版本不保证其他runtime的效果
 
 ```bash
 multi-agent-brief onboard
@@ -247,7 +251,7 @@ multi-agent-brief sources decide --config <workspace>/config.yaml
 
 ## 记录一个已批准的读者偏好
 
-v0.7.0 增加了受控的 Improvement Ledger / Improvement Memory。它用于保存人工撰写、人工批准的读者偏好，例如"证据支持时，先给出决策相关数字"。它不是自动学习系统，也不会自动改稿。
+v0.7.0 增加了受控的 Improvement Ledger / Improvement Memory。它用于保存人工撰写、人工批准的读者偏好，例如"证据支持时，先给出决策相关数字"。它不是自动学习系统，也不会自动改稿，但是它可以记录人类排版的喜好。
 
 ```bash
 multi-agent-brief improve propose --workspace <workspace> \
