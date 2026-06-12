@@ -203,7 +203,7 @@ contracts / policy / source-supported facts
 
 ### v0.7.2 — Deterministic Foundation
 
-- Transaction layer (`stage complete` / `stage block` / `finalize complete`): P0
+- Transaction layer (`stage-complete` / `finalize-complete` for success paths; block, retry, and human-review remain lower-level `state decide` decisions): P0
 - Product path: P1
 - Improvement Ledger supersession hygiene:
   - top-level immutable `supersedes_id`
