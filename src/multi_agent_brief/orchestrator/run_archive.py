@@ -67,6 +67,7 @@ def archive_finalized_run(
         "source": "finalize-complete",
         "runtime_manifest_run_id": manifest.get("run_id"),
         "workflow_current_stage": workflow.get("current_stage"),
+        "run_integrity": _run_integrity_for_manifest(workflow.get("run_integrity")),
         "event_log_semantics": "copied_before_current_archive_event",
         "files": files,
     }
@@ -130,6 +131,7 @@ def preflight_finalized_run_archive(
         "run_id": run_id,
         "runtime_manifest_run_id": manifest.get("run_id"),
         "workflow_current_stage": workflow.get("current_stage"),
+        "run_integrity": _run_integrity_for_manifest(workflow.get("run_integrity")),
     }
 
 
@@ -388,6 +390,26 @@ def _archive_result(archive_root: Path) -> dict[str, Any]:
 def _write_manifest(path: Path, manifest: dict[str, Any]) -> None:
     text = json.dumps(manifest, ensure_ascii=False, indent=2, sort_keys=True) + "\n"
     path.write_text(text, encoding="utf-8")
+
+
+def _run_integrity_for_manifest(value: Any) -> dict[str, Any]:
+    if not isinstance(value, dict):
+        return {
+            "status": "clean",
+            "reference_eligible": True,
+            "clean_single_shot": True,
+            "reasons": [],
+        }
+    status = str(value.get("status") or "clean")
+    if status != "contaminated":
+        status = "clean"
+    reasons = value.get("reasons") if isinstance(value.get("reasons"), list) else []
+    return {
+        "status": status,
+        "reference_eligible": False if status == "contaminated" else bool(value.get("reference_eligible", True)),
+        "clean_single_shot": False if status == "contaminated" else bool(value.get("clean_single_shot", True)),
+        "reasons": [item for item in reasons if isinstance(item, dict)],
+    }
 
 
 def _sha256_file(path: Path) -> str:

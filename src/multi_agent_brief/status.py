@@ -120,6 +120,11 @@ def format_workspace_status(status: dict[str, Any]) -> str:
             f"[status] blocked: {workflow.get('blocked')}",
             f"[status] blocking_reason: {workflow.get('blocking_reason') or ''}",
             (
+                "[status] run_integrity: "
+                f"{(workflow.get('run_integrity') or {}).get('status') or 'unknown'} "
+                f"reference_eligible={(workflow.get('run_integrity') or {}).get('reference_eligible')}"
+            ),
+            (
                 "[status] artifacts: "
                 f"valid={artifacts.get('valid_count', 0)} "
                 f"invalid={artifacts.get('invalid_count', 0)} "
@@ -189,6 +194,27 @@ def _workflow_summary(result: dict[str, Any]) -> dict[str, Any]:
         "blocked": payload.get("blocked"),
         "blocking_reason": payload.get("blocking_reason"),
         "next_allowed_decisions": payload.get("next_allowed_decisions") or [],
+        "run_integrity": _run_integrity_summary(payload.get("run_integrity")),
+    }
+
+
+def _run_integrity_summary(value: Any) -> dict[str, Any]:
+    if not isinstance(value, dict):
+        return {
+            "status": "clean",
+            "reference_eligible": True,
+            "clean_single_shot": True,
+            "reasons": [],
+        }
+    status = str(value.get("status") or "clean")
+    if status != "contaminated":
+        status = "clean"
+    reasons = value.get("reasons") if isinstance(value.get("reasons"), list) else []
+    return {
+        "status": status,
+        "reference_eligible": False if status == "contaminated" else bool(value.get("reference_eligible", True)),
+        "clean_single_shot": False if status == "contaminated" else bool(value.get("clean_single_shot", True)),
+        "reasons": [item for item in reasons if isinstance(item, dict)],
     }
 
 

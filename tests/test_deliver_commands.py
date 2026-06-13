@@ -8,7 +8,7 @@ import pytest
 
 from multi_agent_brief.cli.main import main
 from multi_agent_brief.delivery.base import DeliveryResult
-from multi_agent_brief.orchestrator.runtime_state import RuntimeStateError, initialize_runtime_state
+from multi_agent_brief.orchestrator.runtime_state import RuntimeStateError, initialize_runtime_state, runtime_state_paths
 
 
 def _sha256_file(path: Path) -> str:
@@ -88,6 +88,24 @@ def _delivery_events(ws: Path) -> list[dict[str, object]]:
     ]
 
 
+def _mark_run_contaminated(ws: Path) -> None:
+    paths = runtime_state_paths(ws)
+    workflow = json.loads(paths["workflow_state"].read_text(encoding="utf-8"))
+    workflow["run_integrity"] = {
+        "status": "contaminated",
+        "reference_eligible": False,
+        "clean_single_shot": False,
+        "reasons": [
+            {
+                "reason_code": "run_reset",
+                "message": "run_reset occurred; this run is not clean single-shot reference evidence.",
+                "created_at": "2026-06-13T00:00:00+00:00",
+            }
+        ],
+    }
+    paths["workflow_state"].write_text(json.dumps(workflow, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+
 def test_deliver_local_lists_only_delivery_bundle(tmp_path: Path, capsys) -> None:
     ws = _workspace(tmp_path)
     _write_bundle(ws)
@@ -104,6 +122,42 @@ def test_deliver_local_lists_only_delivery_bundle(tmp_path: Path, capsys) -> Non
     events = _delivery_events(ws)
     assert [event["event_type"] for event in events] == ["delivery_attempted", "delivery_succeeded"]
     assert events[0]["metadata"]["artifact"] == "output/delivery/brief.md"
+
+
+def test_deliver_local_allows_contaminated_run_but_reports_integrity(tmp_path: Path, capsys) -> None:
+    ws = _workspace(tmp_path)
+    _write_bundle(ws)
+    _mark_run_contaminated(ws)
+
+    rc = main(["deliver", "--workspace", str(ws), "--target", "local", "--json"])
+
+    assert rc == 0
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["ok"] is True
+    assert payload["run_integrity"]["status"] == "contaminated"
+    assert payload["run_integrity"]["reference_eligible"] is False
+
+    rc = main(["deliver", "--workspace", str(ws), "--target", "local"])
+
+    assert rc == 0
+    captured = capsys.readouterr()
+    assert "Delivery bundle ready" in captured.out
+    assert "Run integrity: contaminated" in captured.err
+    assert "Reference eligible: no" in captured.err
+
+
+def test_deliver_json_returns_typed_error_for_corrupt_workflow_state(tmp_path: Path, capsys) -> None:
+    ws = _workspace(tmp_path)
+    _write_bundle(ws)
+    runtime_state_paths(ws)["workflow_state"].write_text("{broken", encoding="utf-8")
+
+    rc = main(["deliver", "--workspace", str(ws), "--target", "local", "--json"])
+
+    assert rc == 1
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["ok"] is False
+    assert payload["error_code"] == "E_DELIVERY_EVENT_FAILED"
+    assert "workflow_state.json is unreadable" in payload["message"]
 
 
 def test_deliver_missing_bundle_returns_typed_error(tmp_path: Path, capsys) -> None:

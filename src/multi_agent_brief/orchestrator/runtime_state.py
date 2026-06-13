@@ -110,6 +110,7 @@ EVENT_TYPES = {
     "delivery_failed",
     "run_archived",
     "run_blocked",
+    "run_integrity_contaminated",
     "run_reset",
 }
 
@@ -120,6 +121,9 @@ STAGE_READY = "ready"
 STAGE_COMPLETE = "complete"
 STAGE_BLOCKED = "blocked"
 STAGE_SKIPPED = "skipped"
+
+RUN_INTEGRITY_CLEAN = "clean"
+RUN_INTEGRITY_CONTAMINATED = "contaminated"
 
 ARTIFACT_EXPECTED = "expected"
 ARTIFACT_MISSING = "missing"
@@ -550,6 +554,193 @@ def _initial_stage_statuses(stages: list[dict[str, Any]], *, now: str) -> dict[s
     return statuses
 
 
+def _clean_run_integrity() -> dict[str, Any]:
+    return {
+        "status": RUN_INTEGRITY_CLEAN,
+        "reference_eligible": True,
+        "clean_single_shot": True,
+        "reasons": [],
+    }
+
+
+def _normalize_run_integrity(value: Any) -> dict[str, Any]:
+    if not isinstance(value, dict):
+        return _clean_run_integrity()
+    status = str(value.get("status") or RUN_INTEGRITY_CLEAN)
+    if status != RUN_INTEGRITY_CONTAMINATED:
+        status = RUN_INTEGRITY_CLEAN
+    reasons = value.get("reasons")
+    if not isinstance(reasons, list):
+        reasons = []
+    normalized_reasons = [item for item in reasons if isinstance(item, dict)]
+    return {
+        "status": status,
+        "reference_eligible": False if status == RUN_INTEGRITY_CONTAMINATED else bool(value.get("reference_eligible", True)),
+        "clean_single_shot": False if status == RUN_INTEGRITY_CONTAMINATED else bool(value.get("clean_single_shot", True)),
+        "reasons": normalized_reasons,
+    }
+
+
+def _workflow_with_run_integrity(workflow: dict[str, Any]) -> dict[str, Any]:
+    updated = dict(workflow)
+    updated["run_integrity"] = _normalize_run_integrity(updated.get("run_integrity"))
+    return updated
+
+
+def _contaminate_run_integrity(
+    workflow: dict[str, Any],
+    *,
+    reason_code: str,
+    message: str,
+    created_at: str,
+    event_type: str | None = None,
+    stage_id: str | None = None,
+    artifact_id: str | None = None,
+    metadata: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    contaminated, _reason_added = _contaminate_run_integrity_with_event_flag(
+        workflow,
+        reason_code=reason_code,
+        message=message,
+        created_at=created_at,
+        event_type=event_type,
+        stage_id=stage_id,
+        artifact_id=artifact_id,
+        metadata=metadata,
+    )
+    return contaminated
+
+
+def _contaminate_run_integrity_with_event_flag(
+    workflow: dict[str, Any],
+    *,
+    reason_code: str,
+    message: str,
+    created_at: str,
+    event_type: str | None = None,
+    stage_id: str | None = None,
+    artifact_id: str | None = None,
+    metadata: dict[str, Any] | None = None,
+) -> tuple[dict[str, Any], bool]:
+    updated = _workflow_with_run_integrity(workflow)
+    integrity = _normalize_run_integrity(updated.get("run_integrity"))
+    reason: dict[str, Any] = {
+        "reason_code": reason_code,
+        "message": message,
+        "created_at": created_at,
+    }
+    if event_type:
+        reason["event_type"] = event_type
+    if stage_id:
+        reason["stage_id"] = stage_id
+    if artifact_id:
+        reason["artifact_id"] = artifact_id
+    if metadata:
+        reason["metadata"] = metadata
+    existing = integrity.get("reasons") if isinstance(integrity.get("reasons"), list) else []
+    already_present = any(
+        isinstance(item, dict)
+        and item.get("reason_code") == reason_code
+        and item.get("message") == message
+        and item.get("stage_id") == stage_id
+        and item.get("artifact_id") == artifact_id
+        for item in existing
+    )
+    if not already_present:
+        existing = [*existing, reason]
+    integrity.update({
+        "status": RUN_INTEGRITY_CONTAMINATED,
+        "reference_eligible": False,
+        "clean_single_shot": False,
+        "reasons": existing,
+    })
+    updated["run_integrity"] = integrity
+    updated["updated_at"] = created_at
+    return updated, not already_present
+
+
+def _run_integrity_contamination_event_metadata(reason: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "reason_code": reason.get("reason_code"),
+        "message": reason.get("message"),
+        "reference_eligible": False,
+        "clean_single_shot": False,
+        "stage_id": reason.get("stage_id"),
+        "artifact_id": reason.get("artifact_id"),
+        "details": reason.get("metadata") if isinstance(reason.get("metadata"), dict) else {},
+    }
+
+
+def _persist_run_contamination(
+    *,
+    workspace: Path,
+    paths: dict[str, Path],
+    run_id: str,
+    workflow: dict[str, Any],
+    reason_code: str,
+    message: str,
+    actor: str,
+    event_type: str | None = None,
+    stage_id: str | None = None,
+    artifact_id: str | None = None,
+    metadata: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    contaminated, reason_added = _contaminate_run_integrity_with_event_flag(
+        workflow,
+        reason_code=reason_code,
+        message=message,
+        created_at=utc_now(),
+        event_type=event_type,
+        stage_id=stage_id,
+        artifact_id=artifact_id,
+        metadata=metadata,
+    )
+    _write_json_atomic(paths["workflow_state"], contaminated)
+    if reason_added:
+        reasons = (contaminated.get("run_integrity") or {}).get("reasons")
+        reason = reasons[-1] if isinstance(reasons, list) and reasons and isinstance(reasons[-1], dict) else {}
+        append_event(
+            workspace=workspace,
+            run_id=run_id,
+            event_type="run_integrity_contaminated",
+            actor=actor,
+            stage_id=stage_id,
+            artifact_id=artifact_id,
+            reason=message,
+            metadata=_run_integrity_contamination_event_metadata(reason),
+        )
+    return contaminated
+
+
+def _older_stage_replay_message(
+    *,
+    stage_id: str,
+    current_stage: str | None,
+    stages: list[dict[str, Any]],
+    workflow: dict[str, Any],
+) -> str:
+    if current_stage is None or stage_id == current_stage:
+        return ""
+    stage_ids = _stage_ids(stages)
+    if stage_id not in stage_ids or current_stage not in stage_ids:
+        return ""
+    if stage_ids.index(stage_id) >= stage_ids.index(current_stage):
+        return ""
+    statuses = workflow.get("stage_statuses") if isinstance(workflow.get("stage_statuses"), dict) else {}
+    downstream_ids = stage_ids[stage_ids.index(stage_id) + 1:]
+    downstream_touched = [
+        item
+        for item in downstream_ids
+        if ((statuses.get(item) or {}).get("status") or "") in {STAGE_COMPLETE, STAGE_READY, STAGE_BLOCKED, STAGE_SKIPPED}
+    ]
+    if not downstream_touched:
+        return ""
+    return (
+        f"Stage-complete was attempted for older stage '{stage_id}' after downstream "
+        f"stage '{downstream_touched[0]}' already existed."
+    )
+
+
 def _initial_workflow_state(
     *,
     run_id: str,
@@ -570,6 +761,7 @@ def _initial_workflow_state(
         "stage_statuses": stage_statuses,
         "last_decision": None,
         "next_allowed_decisions": _allowed_decisions_for_stage(stages, current_stage),
+        "run_integrity": _clean_run_integrity(),
     }
 
 
@@ -654,6 +846,15 @@ def initialize_runtime_state(
     created = old_manifest is None or reset_state
     previous_run_id = _safe_previous_run_id((old_manifest or {}).get("run_id")) if reset_state else None
     archived_event_log: str | None = None
+    reset_contamination_reason_added = False
+    reset_touched_existing_state = bool(
+        reset_state
+        and (
+            old_manifest is not None
+            or old_workflow is not None
+            or paths["event_log"].exists()
+        )
+    )
 
     if reset_state:
         if old_manifest and _workflow_is_finalized(old_workflow):
@@ -735,7 +936,7 @@ def initialize_runtime_state(
                     "schema_version": old_workflow.get("schema_version"),
                 },
             )
-        workflow = dict(old_workflow)
+        workflow = _workflow_with_run_integrity(old_workflow)
         workflow["updated_at"] = now
         workflow["run_id"] = run_id
     else:
@@ -745,6 +946,18 @@ def initialize_runtime_state(
             created_at=created_at,
             updated_at=now,
         )
+        if reset_touched_existing_state:
+            workflow, reset_contamination_reason_added = _contaminate_run_integrity_with_event_flag(
+                workflow,
+                reason_code="run_reset",
+                message="run_reset occurred; this run is not clean single-shot reference evidence.",
+                created_at=now,
+                event_type="run_reset",
+                metadata={
+                    "previous_run_id": previous_run_id,
+                    "archived_event_log": archived_event_log,
+                },
+            )
 
     _write_json_atomic(paths["runtime_manifest"], manifest)
     _write_json_atomic(paths["workflow_state"], workflow)
@@ -762,6 +975,17 @@ def initialize_runtime_state(
                 "archived_event_log": archived_event_log,
             } if reset_state else {"runtime": runtime},
         )
+        if reset_state and reset_contamination_reason_added:
+            reasons = (workflow.get("run_integrity") or {}).get("reasons")
+            reason = reasons[-1] if isinstance(reasons, list) and reasons and isinstance(reasons[-1], dict) else {}
+            append_event(
+                workspace=ws,
+                run_id=run_id,
+                event_type="run_integrity_contaminated",
+                actor=actor,
+                reason=str(reason.get("message") or "Runtime state reset contaminated run integrity."),
+                metadata=_run_integrity_contamination_event_metadata(reason),
+            )
 
     return show_runtime_state(workspace=ws)
 
@@ -790,6 +1014,7 @@ def _load_manifest_and_workflow(workspace: str | Path) -> tuple[Path, dict[str, 
             "workflow_state.json has an unsupported schema.",
             details={"path": str(paths["workflow_state"]), "schema_version": workflow.get("schema_version")},
         )
+    workflow = _workflow_with_run_integrity(workflow)
     if workflow.get("run_id") is not None:
         workflow["run_id"] = _validate_runtime_run_id(
             workflow.get("run_id"),
@@ -1931,6 +2156,17 @@ def check_runtime_state(
         mutating_stage=str(workflow.get("current_stage") or ""),
     )
     if frozen_reasons:
+        workflow = _persist_run_contamination(
+            workspace=ws,
+            paths=paths,
+            run_id=run_id,
+            workflow=workflow,
+            reason_code="frozen_artifact_changed",
+            message=" ".join(frozen_reasons),
+            actor=actor,
+            stage_id=str(workflow.get("current_stage") or ""),
+            metadata={"blocking_reasons": frozen_reasons},
+        )
         _raise_completion_reasons(
             message="Runtime state integrity check failed because a frozen artifact changed",
             reasons=frozen_reasons,
@@ -2298,6 +2534,23 @@ def _complete_stage_transaction(
     stages = load_stage_specs(repo)
     artifacts = load_artifact_contracts(repo)
     stage_by_id = {str(stage.get("stage_id")): stage for stage in stages}
+    replay_message = _older_stage_replay_message(
+        stage_id=stage_id,
+        current_stage=workflow.get("current_stage"),
+        stages=stages,
+        workflow=workflow,
+    )
+    if replay_message:
+        workflow = _persist_run_contamination(
+            workspace=ws,
+            paths=paths,
+            run_id=str(manifest["run_id"]),
+            workflow=workflow,
+            reason_code="older_stage_replay",
+            message=replay_message,
+            actor=actor,
+            stage_id=stage_id,
+        )
     stage = _validate_completion_target(
         stage_id=stage_id,
         workflow=workflow,
@@ -2393,6 +2646,17 @@ def _complete_stage_transaction(
         mutating_stage=stage_id,
     )
     if frozen_reasons:
+        workflow = _persist_run_contamination(
+            workspace=ws,
+            paths=paths,
+            run_id=run_id,
+            workflow=workflow,
+            reason_code="frozen_artifact_changed",
+            message=" ".join(frozen_reasons),
+            actor=actor,
+            stage_id=stage_id,
+            metadata={"blocking_reasons": frozen_reasons},
+        )
         _raise_completion_reasons(
             message="Completion transaction cannot proceed because a frozen upstream artifact changed",
             reasons=frozen_reasons,

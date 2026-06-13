@@ -302,6 +302,13 @@ def test_state_init_creates_runtime_control_files_without_old_run_manifest(tmp_p
     assert manifest["workspace"] == "."
     assert manifest["runtime_state_files"] == RUNTIME_STATE_FILES
     assert manifest["stage_order"][0] == "doctor"
+    workflow = json.loads(_state_file(ws, "workflow_state").read_text(encoding="utf-8"))
+    assert workflow["run_integrity"] == {
+        "status": "clean",
+        "reference_eligible": True,
+        "clean_single_shot": True,
+        "reasons": [],
+    }
 
 
 def test_state_check_fresh_workspace_is_not_globally_blocked(tmp_path):
@@ -1013,7 +1020,35 @@ def test_stage_complete_duplicate_rejects_without_duplicate_event(tmp_path):
         )
 
     assert excinfo.value.error_code == "E_STAGE_ALREADY_COMPLETED"
-    assert _event_records(ws) == before_events
+    workflow = json.loads(_state_file(ws, "workflow_state").read_text(encoding="utf-8"))
+    assert workflow["run_integrity"]["status"] == "contaminated"
+    assert workflow["run_integrity"]["reference_eligible"] is False
+    assert workflow["run_integrity"]["reasons"][0]["reason_code"] == "older_stage_replay"
+    contamination_events = [
+        event for event in _event_records(ws)
+        if event["event_type"] == "run_integrity_contaminated"
+    ]
+    assert len(contamination_events) == 1
+    assert contamination_events[0]["metadata"]["reason_code"] == "older_stage_replay"
+    assert contamination_events[0]["metadata"]["reference_eligible"] is False
+    assert contamination_events[0]["metadata"]["clean_single_shot"] is False
+
+    with pytest.raises(RuntimeStateError):
+        complete_stage_transaction(
+            workspace=ws,
+            repo_workdir=ROOT,
+            stage_id="doctor",
+            reason="doctor passed yet again",
+        )
+
+    workflow = json.loads(_state_file(ws, "workflow_state").read_text(encoding="utf-8"))
+    contamination_events = [
+        event for event in _event_records(ws)
+        if event["event_type"] == "run_integrity_contaminated"
+    ]
+    assert len(workflow["run_integrity"]["reasons"]) == 1
+    assert len(contamination_events) == 1
+    assert len(_event_records(ws)) == len(before_events) + 1
 
 
 def test_stage_complete_missing_required_output_writes_nothing(tmp_path):
@@ -1292,6 +1327,16 @@ def test_state_check_blocks_modified_frozen_claim_ledger(tmp_path):
     assert excinfo.value.error_code == runtime_state.E_TRANSACTION_INTEGRITY
     assert "Frozen artifact" in str(excinfo.value)
     assert "owner stage 'claim-ledger'" in str(excinfo.value)
+    workflow = json.loads(_state_file(ws, "workflow_state").read_text(encoding="utf-8"))
+    assert workflow["run_integrity"]["status"] == "contaminated"
+    assert workflow["run_integrity"]["reference_eligible"] is False
+    assert workflow["run_integrity"]["reasons"][0]["reason_code"] == "frozen_artifact_changed"
+    contamination_events = [
+        event for event in _event_records(ws)
+        if event["event_type"] == "run_integrity_contaminated"
+    ]
+    assert len(contamination_events) == 1
+    assert contamination_events[0]["metadata"]["reason_code"] == "frozen_artifact_changed"
 
 
 def test_state_check_accepts_unchanged_frozen_claim_ledger(tmp_path):
@@ -1762,6 +1807,12 @@ def test_run_archive_records_sha256_for_every_file(tmp_path):
 
     assert manifest["schema_version"] == "mabw.run_archive.v1"
     assert manifest["run_id"] == state["manifest"]["run_id"]
+    assert manifest["run_integrity"] == {
+        "status": "clean",
+        "reference_eligible": True,
+        "clean_single_shot": True,
+        "reasons": [],
+    }
     assert manifest["files"]
     for record in manifest["files"]:
         path = archive / record["archive_path"]
@@ -1853,6 +1904,26 @@ def test_reset_state_archives_finalized_run_before_new_run(tmp_path):
     assert (ws / "output" / "runs" / old_run_id / "manifest.json").exists()
 
 
+def test_fresh_reset_state_init_remains_reference_eligible(tmp_path):
+    ws = _write_workspace(tmp_path)
+
+    state = initialize_runtime_state(
+        workspace=ws,
+        repo_workdir=ROOT,
+        reset_state=True,
+    )
+
+    integrity = state["workflow_state"]["run_integrity"]
+    assert integrity["status"] == "clean"
+    assert integrity["reference_eligible"] is True
+    assert integrity["clean_single_shot"] is True
+    assert integrity["reasons"] == []
+    assert [
+        event for event in _event_records(ws)
+        if event["event_type"] == "run_integrity_contaminated"
+    ] == []
+
+
 def test_reset_state_does_not_require_archive_for_incomplete_run(tmp_path):
     ws = _write_workspace(tmp_path)
     first = initialize_runtime_state(workspace=ws, repo_workdir=ROOT)
@@ -1865,6 +1936,17 @@ def test_reset_state_does_not_require_archive_for_incomplete_run(tmp_path):
 
     assert second["manifest"]["run_id"] != first["manifest"]["run_id"]
     assert not (ws / "output" / "runs" / first["manifest"]["run_id"]).exists()
+    integrity = second["workflow_state"]["run_integrity"]
+    assert integrity["status"] == "contaminated"
+    assert integrity["reference_eligible"] is False
+    assert integrity["clean_single_shot"] is False
+    assert integrity["reasons"][0]["reason_code"] == "run_reset"
+    contamination_events = [
+        event for event in _event_records(ws)
+        if event["event_type"] == "run_integrity_contaminated"
+    ]
+    assert len(contamination_events) == 1
+    assert contamination_events[0]["metadata"]["reason_code"] == "run_reset"
 
 
 def test_archive_rejects_finalize_report_delivery_artifact_outside_output_delivery(tmp_path):

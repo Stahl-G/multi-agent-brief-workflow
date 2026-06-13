@@ -132,6 +132,7 @@ def handle(args: argparse.Namespace) -> int:
         for artifact in payload["delivery_artifacts"]:
             print(f"  - {artifact}")
         print("[deliver] Internal audit/control records remain under output/intermediate/.")
+        _print_run_integrity_warning(payload)
     else:
         suffix = f" {payload['channel']}" if payload.get("channel") else ""
         url = payload.get("url") or ""
@@ -144,6 +145,7 @@ def handle(args: argparse.Namespace) -> int:
                 "[deliver] Warning: delivery succeeded but delivery_succeeded event was not recorded; do not retry blindly.",
                 file=sys.stderr,
             )
+        _print_run_integrity_warning(payload)
     return 0
 
 
@@ -158,6 +160,7 @@ def deliver_workspace(
     bundle = _load_delivery_bundle(ws)
     _verify_current_delivery_artifacts(bundle)
     _preflight_delivery_event_surface(ws)
+    run_integrity = _delivery_run_integrity(ws)
 
     if target == "local":
         artifact = bundle.markdown or bundle.artifacts[0]
@@ -185,6 +188,7 @@ def deliver_workspace(
             "delivery_artifacts": bundle.relative_artifacts(),
             "delivered": False,
             "message": "Delivery bundle ready",
+            "run_integrity": run_integrity,
         }
 
     if target != "feishu":
@@ -259,6 +263,7 @@ def deliver_workspace(
         "url": str(result.metadata.get("url") or ""),
         "event_recorded": event_recorded,
         "event_error": event_error,
+        "run_integrity": run_integrity,
     }
 
 
@@ -503,6 +508,60 @@ def _delivery_run_id(workspace: Path) -> str:
     if not isinstance(run_id, str) or not run_id.strip():
         raise RuntimeStateError("runtime_manifest.json is missing run_id.")
     return run_id
+
+
+def _delivery_run_integrity(workspace: Path) -> dict[str, Any]:
+    paths = runtime_state_paths(workspace)
+    if not paths["workflow_state"].exists():
+        return {
+            "status": "unknown",
+            "reference_eligible": False,
+            "clean_single_shot": False,
+            "reasons": [{"reason_code": "workflow_state_missing", "message": "workflow_state.json is missing."}],
+        }
+    try:
+        workflow = json.loads(paths["workflow_state"].read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise DeliverCommandError(
+            f"workflow_state.json is unreadable; cannot verify run integrity: {exc}",
+            error_code=E_DELIVERY_EVENT_FAILED,
+        ) from exc
+    if not isinstance(workflow, dict):
+        raise DeliverCommandError(
+            "workflow_state.json must contain an object; cannot verify run integrity.",
+            error_code=E_DELIVERY_EVENT_FAILED,
+        )
+    value = workflow.get("run_integrity") if isinstance(workflow, dict) else None
+    if not isinstance(value, dict):
+        return {
+            "status": "clean",
+            "reference_eligible": True,
+            "clean_single_shot": True,
+            "reasons": [],
+        }
+    status = str(value.get("status") or "clean")
+    if status != "contaminated":
+        status = "clean"
+    reasons = value.get("reasons") if isinstance(value.get("reasons"), list) else []
+    return {
+        "status": status,
+        "reference_eligible": False if status == "contaminated" else bool(value.get("reference_eligible", True)),
+        "clean_single_shot": False if status == "contaminated" else bool(value.get("clean_single_shot", True)),
+        "reasons": [item for item in reasons if isinstance(item, dict)],
+    }
+
+
+def _print_run_integrity_warning(payload: dict[str, Any]) -> None:
+    integrity = payload.get("run_integrity")
+    if not isinstance(integrity, dict) or integrity.get("status") != "contaminated":
+        return
+    print("[deliver] Run integrity: contaminated", file=sys.stderr)
+    print("[deliver] Reference eligible: no", file=sys.stderr)
+    reasons = integrity.get("reasons") if isinstance(integrity.get("reasons"), list) else []
+    if reasons:
+        first = reasons[0] if isinstance(reasons[0], dict) else {}
+        message = first.get("message") or first.get("reason_code") or "run is contaminated"
+        print(f"[deliver] Reason: {message}", file=sys.stderr)
 
 
 def _event_reason(event_type: str) -> str:

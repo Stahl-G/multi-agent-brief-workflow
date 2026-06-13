@@ -57,6 +57,8 @@ def test_status_command_is_read_only_for_existing_runtime_state(tmp_path, capsys
     assert payload["read_only"] is True
     assert payload["runtime"]["runtime"] == "claude"
     assert payload["workflow"]["current_stage"] == "doctor"
+    assert payload["workflow"]["run_integrity"]["status"] == "clean"
+    assert payload["workflow"]["run_integrity"]["reference_eligible"] is True
     assert payload["artifacts"]["expected_count"] == 1
     assert payload["events"]["event_count"] == before_event_count
     assert "stage-complete" not in payload["suggested_next_command"]
@@ -66,6 +68,32 @@ def test_status_command_is_read_only_for_existing_runtime_state(tmp_path, capsys
         assert path.read_bytes() == before_bytes[path]
         assert path.stat().st_mtime_ns == before_mtime[path]
     assert len(paths["event_log"].read_text(encoding="utf-8").splitlines()) == before_event_count
+
+
+def test_status_command_reports_contaminated_run_integrity(tmp_path, capsys):
+    ws = _minimal_workspace(tmp_path / "ws")
+    initialize_runtime_state(workspace=ws, runtime="claude", actor="cli")
+    paths = runtime_state_paths(ws)
+    workflow = json.loads(paths["workflow_state"].read_text(encoding="utf-8"))
+    workflow["run_integrity"] = {
+        "status": "contaminated",
+        "reference_eligible": False,
+        "clean_single_shot": False,
+        "reasons": [
+            {
+                "reason_code": "run_reset",
+                "message": "run_reset occurred; this run is not clean single-shot reference evidence.",
+                "created_at": "2026-06-13T00:00:00+00:00",
+            }
+        ],
+    }
+    paths["workflow_state"].write_text(json.dumps(workflow, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+    rc = main(["status", "--workspace", str(ws)])
+
+    assert rc == 0
+    out = capsys.readouterr().out
+    assert "[status] run_integrity: contaminated reference_eligible=False" in out
 
 
 def test_status_command_does_not_initialize_missing_runtime_state(tmp_path, capsys):
