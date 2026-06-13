@@ -69,7 +69,8 @@ def archive_finalized_run(
         "files": files,
     }
     if archive_root.exists():
-        return _verify_existing_archive(archive_root=archive_root)
+        _verify_existing_archive_matches_plan(archive_root=archive_root, planned_files=files)
+        return _archive_result(archive_root)
 
     tmp_root = ws / "output" / "runs" / f".tmp-{run_id}-{uuid.uuid4().hex}"
     try:
@@ -96,6 +97,38 @@ def archive_finalized_run(
             shutil.rmtree(tmp_root, ignore_errors=True)
         raise
     return _archive_result(archive_root)
+
+
+def preflight_finalized_run_archive(
+    *,
+    workspace: Path,
+    run_id: str,
+    manifest: dict[str, Any],
+    workflow: dict[str, Any],
+    artifact_registry: dict[str, Any],
+    finalize_report: dict[str, Any],
+) -> dict[str, Any]:
+    """Validate whether the finalized run archive can be created without mutating state."""
+    ws = workspace.expanduser().resolve()
+    archive_root = ws / "output" / "runs" / run_id
+    files = _archive_file_plan(
+        workspace=ws,
+        finalize_report=finalize_report,
+        artifact_registry=artifact_registry,
+    )
+    if archive_root.exists():
+        return _verify_existing_archive_matches_plan(
+            archive_root=archive_root,
+            planned_files=files,
+        )
+    return {
+        "archive_path": str(archive_root),
+        "file_count": len(files),
+        "would_create": True,
+        "run_id": run_id,
+        "runtime_manifest_run_id": manifest.get("run_id"),
+        "workflow_current_stage": workflow.get("current_stage"),
+    }
 
 
 def _archive_file_plan(
@@ -271,6 +304,67 @@ def _verify_existing_archive(
                 error_code=E_RUN_ARCHIVE_CONFLICT,
             )
     return _archive_result(archive_root)
+
+
+def _verify_existing_archive_matches_plan(
+    *,
+    archive_root: Path,
+    planned_files: list[dict[str, Any]],
+) -> dict[str, Any]:
+    result = _verify_existing_archive(archive_root=archive_root)
+    existing_files = result["manifest"].get("files")
+    if not isinstance(existing_files, list):
+        raise RunArchiveError(
+            "Existing run archive manifest is invalid.",
+            details={"archive_path": _workspaceish(archive_root)},
+            error_code=E_RUN_ARCHIVE_CONFLICT,
+        )
+    planned_by_archive_path = {
+        str(record.get("archive_path")): record
+        for record in planned_files
+        if isinstance(record, dict) and record.get("archive_path")
+    }
+    existing_by_archive_path = {
+        str(record.get("archive_path")): record
+        for record in existing_files
+        if isinstance(record, dict) and record.get("archive_path")
+    }
+    if set(planned_by_archive_path) != set(existing_by_archive_path):
+        raise RunArchiveError(
+            "Existing run archive file set differs from the current finalized run.",
+            details={
+                "archive_path": _workspaceish(archive_root),
+                "missing_from_existing": sorted(
+                    set(planned_by_archive_path) - set(existing_by_archive_path)
+                ),
+                "extra_in_existing": sorted(
+                    set(existing_by_archive_path) - set(planned_by_archive_path)
+                ),
+            },
+            error_code=E_RUN_ARCHIVE_CONFLICT,
+        )
+    for archive_path, planned in planned_by_archive_path.items():
+        existing = existing_by_archive_path[archive_path]
+        for field in ("original_path", "sha256", "size_bytes"):
+            if (
+                archive_path == "control/event_log.jsonl"
+                and field in {"sha256", "size_bytes"}
+                and result["manifest"].get("event_log_semantics")
+                == "copied_before_current_archive_event"
+            ):
+                continue
+            if existing.get(field) != planned.get(field):
+                raise RunArchiveError(
+                    "Existing run archive differs from the current finalized run.",
+                    details={
+                        "archive_path": archive_path,
+                        "field": field,
+                        "existing": existing.get(field),
+                        "planned": planned.get(field),
+                    },
+                    error_code=E_RUN_ARCHIVE_CONFLICT,
+                )
+    return result
 
 
 def _archive_result(archive_root: Path) -> dict[str, Any]:

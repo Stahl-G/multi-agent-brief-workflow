@@ -21,6 +21,7 @@ from multi_agent_brief.orchestrator.runtime_state import (
     show_runtime_state,
 )
 from multi_agent_brief.orchestrator.run_archive import archive_finalized_run
+from multi_agent_brief.outputs.finalize import finalize_reader_outputs
 
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -174,6 +175,22 @@ def _write_finalize_report(
             "delivery_artifacts": [str(delivery_brief)],
             "delivery_artifact_sha256": {
                 str(delivery_brief): runtime_state._sha256_file(delivery_brief),
+            },
+            "audit_binding": {
+                "status": "pass",
+                "claim_ledger_sha256": runtime_state._sha256_file(
+                    _intermediate(ws) / "claim_ledger.json"
+                ),
+                "audited_brief_sha256": runtime_state._sha256_file(
+                    _intermediate(ws) / "audited_brief.md"
+                ),
+                "audit_report_sha256": runtime_state._sha256_file(
+                    _intermediate(ws) / "audit_report.json"
+                ),
+                "ledger_claim_count": 1,
+                "audited_brief_cited_claim_count": 0,
+                "findings": [],
+                "warnings": [],
             },
             "reader_clean": {
                 "status": reader_clean_status,
@@ -1254,6 +1271,80 @@ def test_auditor_stage_complete_records_ledger_and_audit_report_sha(tmp_path):
     assert metadata["produced_artifact_sha256"]["audit_report"] == registry["audit_report"]["sha256"]
 
 
+def test_state_check_preserves_auditor_binding_metadata_for_finalize(tmp_path):
+    ws = _write_workspace(tmp_path)
+    initialize_runtime_state(workspace=ws, repo_workdir=ROOT)
+    _advance_to_auditor(ws)
+    _write_quality_gate_report(ws)
+
+    complete_stage_transaction(
+        workspace=ws,
+        repo_workdir=ROOT,
+        stage_id="auditor",
+        reason="auditor and gates passed",
+    )
+
+    refreshed = check_runtime_state(workspace=ws, repo_workdir=ROOT)
+    metadata = refreshed["workflow_state"]["stage_statuses"]["auditor"]["metadata"]
+    assert metadata["upstream_artifact_sha256"]["claim_ledger"]
+    assert metadata["upstream_artifact_sha256"]["audited_brief"]
+    assert metadata["produced_artifact_sha256"]["audit_report"]
+
+    result = finalize_reader_outputs(
+        output_dir=ws / "output",
+        project_name="Runtime State Test",
+        output_formats=["markdown"],
+        output_named_outputs=False,
+    )
+    assert result.audit_binding["status"] == "pass"
+
+
+def test_finalize_complete_requires_passing_audit_binding(tmp_path):
+    ws = _write_workspace(tmp_path)
+    initialize_runtime_state(workspace=ws, repo_workdir=ROOT)
+    _advance_to_finalize(ws)
+    _write_quality_gate_report(ws)
+    _write_finalize_report(ws)
+    report_path = _intermediate(ws) / "finalize_report.json"
+    report = json.loads(report_path.read_text(encoding="utf-8"))
+    report.pop("audit_binding")
+    report_path.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
+
+    with pytest.raises(RuntimeStateError) as excinfo:
+        complete_finalize_transaction(
+            workspace=ws,
+            repo_workdir=ROOT,
+            reason="reader artifacts finalized and clean",
+        )
+
+    assert excinfo.value.error_code == "E_READER_FINAL_GATE_FAILED"
+    assert "audit_binding.status must be pass" in str(excinfo.value)
+
+
+def test_finalize_complete_rejects_stale_audit_binding_hash(tmp_path):
+    ws = _write_workspace(tmp_path)
+    initialize_runtime_state(workspace=ws, repo_workdir=ROOT)
+    _advance_to_finalize(ws)
+    _write_quality_gate_report(ws)
+    _write_finalize_report(ws)
+    report_path = _intermediate(ws) / "finalize_report.json"
+    report = json.loads(report_path.read_text(encoding="utf-8"))
+    report["audit_binding"]["claim_ledger_sha256"] = "0" * 64
+    report_path.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
+
+    with pytest.raises(RuntimeStateError) as excinfo:
+        complete_finalize_transaction(
+            workspace=ws,
+            repo_workdir=ROOT,
+            reason="reader artifacts finalized and clean",
+        )
+
+    assert excinfo.value.error_code == "E_READER_FINAL_GATE_FAILED"
+    assert "audit_binding.claim_ledger_sha256 does not match current artifact bytes" in str(
+        excinfo.value
+    )
+
+
 def test_finalize_complete_rejects_forged_clean_report_with_dirty_artifact(tmp_path):
     ws = _write_workspace(tmp_path)
     initialize_runtime_state(workspace=ws, repo_workdir=ROOT)
@@ -1369,6 +1460,7 @@ def test_finalize_complete_rejects_archive_conflict_for_same_run_id(tmp_path):
     _advance_to_finalize(ws)
     _write_quality_gate_report(ws)
     _write_finalize_report(ws)
+    before_workflow = json.loads(_state_file(ws, "workflow_state").read_text(encoding="utf-8"))
     archive = ws / "output" / "runs" / run_id
     (archive / "delivery").mkdir(parents=True)
     (archive / "delivery" / "brief.md").write_text("conflicting archive content\n", encoding="utf-8")
@@ -1403,6 +1495,10 @@ def test_finalize_complete_rejects_archive_conflict_for_same_run_id(tmp_path):
         )
 
     assert excinfo.value.error_code == runtime_state.E_RUN_ARCHIVE_CONFLICT
+    after_workflow = json.loads(_state_file(ws, "workflow_state").read_text(encoding="utf-8"))
+    assert after_workflow == before_workflow
+    assert after_workflow["current_stage"] == "finalize"
+    assert after_workflow["stage_statuses"]["finalize"]["status"] == "ready"
 
 
 def test_reset_state_archives_finalized_run_before_new_run(tmp_path):

@@ -43,6 +43,7 @@ from multi_agent_brief.orchestrator.run_archive import (
     E_RUN_ARCHIVE_CONFLICT,
     RunArchiveError,
     archive_finalized_run,
+    preflight_finalized_run_archive,
 )
 from multi_agent_brief.outputs.reader_final_gate import (
     combine_reader_final_gate_results,
@@ -1586,6 +1587,34 @@ def _finalize_completion_reasons(workspace: Path) -> list[str]:
     reader_clean = report.get("reader_clean")
     if not isinstance(reader_clean, dict) or reader_clean.get("status") != "pass":
         reasons.append("finalize_report.json reader_clean.status must be pass.")
+    audit_binding = report.get("audit_binding")
+    if not isinstance(audit_binding, dict) or audit_binding.get("status") != "pass":
+        reasons.append("finalize_report.json audit_binding.status must be pass.")
+    else:
+        audit_binding_paths = {
+            "claim_ledger_sha256": workspace / "output" / "intermediate" / "claim_ledger.json",
+            "audited_brief_sha256": workspace / "output" / "intermediate" / "audited_brief.md",
+            "audit_report_sha256": workspace / "output" / "intermediate" / "audit_report.json",
+        }
+        for field, path in audit_binding_paths.items():
+            value = audit_binding.get(field)
+            if not isinstance(value, str) or not value.strip():
+                reasons.append(f"finalize_report.json audit_binding.{field} is required.")
+                continue
+            if not path.exists():
+                reasons.append(f"finalize_report.json audit_binding.{field} target is missing: {path}.")
+                continue
+            try:
+                current_sha256 = _sha256_file(path)
+            except OSError as exc:
+                reasons.append(
+                    f"finalize_report.json audit_binding.{field} target could not be read: {exc}"
+                )
+                continue
+            if value != current_sha256:
+                reasons.append(
+                    f"finalize_report.json audit_binding.{field} does not match current artifact bytes."
+                )
     reasons.extend(_finalize_report_delivery_artifact_reasons(workspace, report))
 
     artifact_paths = _finalize_report_reader_artifact_paths(workspace, report)
@@ -1660,10 +1689,12 @@ def _recompute_stage_state(
         previous = previous_statuses.get(stage_id) or {}
         previous_status = str(previous.get("status") or STAGE_PENDING)
         if previous_status in {STAGE_COMPLETE, STAGE_SKIPPED}:
+            metadata = previous.get("metadata") if isinstance(previous.get("metadata"), dict) else None
             new_statuses[stage_id] = _status_entry(
                 previous_status,
                 str(previous.get("reason") or ""),
                 str(previous.get("updated_at") or updated_at),
+                metadata=metadata,
             )
             continue
 
@@ -2248,6 +2279,20 @@ def _complete_stage_transaction(
         )
         statuses["auditor"] = auditor_status
         next_workflow["stage_statuses"] = statuses
+    finalize_report: dict[str, Any] | None = None
+    if finalize:
+        finalize_report = _read_json(paths["runtime_manifest"].parent / "finalize_report.json")
+        try:
+            preflight_finalized_run_archive(
+                workspace=ws,
+                run_id=run_id,
+                manifest=manifest,
+                workflow=next_workflow,
+                artifact_registry=registry,
+                finalize_report=finalize_report,
+            )
+        except RunArchiveError as exc:
+            raise _wrap_archive_error(exc) from exc
     artifact_events = _changed_artifact_events(old_registry=old_registry, registry=registry)
 
     state_written = False
@@ -2284,13 +2329,12 @@ def _complete_stage_transaction(
     _assert_manifest_extensions_preserved(before=preserved_extensions, after=current_manifest)
     archive_result: dict[str, Any] | None = None
     if finalize:
-        finalize_report = _read_json(paths["runtime_manifest"].parent / "finalize_report.json")
         archive_result = _archive_finalized_state_if_needed(
             workspace=ws,
             manifest=current_manifest,
             workflow=next_workflow,
             artifact_registry=registry,
-            finalize_report=finalize_report,
+            finalize_report=finalize_report or _read_json(paths["runtime_manifest"].parent / "finalize_report.json"),
         )
         try:
             append_event(
