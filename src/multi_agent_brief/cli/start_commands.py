@@ -302,6 +302,30 @@ def _codex_handoff(workspace: Path, repo: Path, venv: str) -> AgentHandoff:
         "- auditor -> .codex/agents/auditor.toml\n"
         "- formatter/finalize -> Python finalize tool, not a drafting agent\n"
     )
+    writer_flow_protocol = (
+        "Codex writer flow protocol:\n"
+        "- When the user asks to inspect a folder, produce a Workspace Card before taking action: "
+        "workspace path, MABW config found/missing, Codex runtime kit installed/not installed, "
+        "trust status, input source count, demo-looking sources yes/no, existing output/control state, "
+        "current workflow_state, and recommended next action.\n"
+        "- Trust status is one Workspace Card line, not the main answer.\n"
+        "- Do not launch the interactive terminal onboarding wizard inside Codex chat.\n"
+        "- For workspace creation, collect onboarding fields in one batch, write onboarding.json, "
+        "show the values to be written, then run multi-agent-brief init --from-onboarding.\n"
+        "- Before initializing into an existing directory, check output/intermediate/runtime_manifest.json, "
+        "workflow_state.json, artifact_registry.json, event_log.jsonl, and output/runs/. If present, ask whether "
+        "to create a new workspace, overwrite config only while keeping old output, or reset old output/control state "
+        "before running.\n"
+        "- After init or config inspection, show a Source Mode Card: manual local files enabled/disabled, "
+        "runtime WebSearch enabled/disabled, external API search enabled/disabled, existing source files count, "
+        "and demo-looking source files yes/no.\n"
+        "- If runtime_tool search and old demo-looking source files both exist, ask whether to keep or remove "
+        "the old source files before running.\n"
+        "- During production runs, report progress after every successful stage-complete transaction in this form: "
+        "[stage] produced <artifact> -> stage-complete passed -> next <stage>.\n"
+        "- Final status must list the delivery bundle and control status: gates, finalize_report, finalize-complete, "
+        "and archive.\n"
+    )
     return AgentHandoff(
         runtime=RUNTIME_CODEX,
         recipe=RUNTIME_RECIPE_FULL,
@@ -323,6 +347,7 @@ def _codex_handoff(workspace: Path, repo: Path, venv: str) -> AgentHandoff:
             "Codex custom agents are in .codex/agents/. Spawn the named Codex custom agent for each specialist stage.\n"
             "Codex loads project .codex/config.toml and custom agents only after the workspace is trusted in Codex.\n"
             "If Codex cannot see these custom agents, stop and ask the user to install Codex runtime assets.\n\n"
+            f"{writer_flow_protocol}\n"
             "Read contract references before delegation:\n"
             "- configs/orchestrator_contract.yaml\n"
             "- configs/stage_specs.yaml\n"

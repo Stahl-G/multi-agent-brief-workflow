@@ -38,6 +38,17 @@ ORCHESTRATOR_LOOP_TEXT = (
     "delegate specialist -> check expected artifact -> decide continue / retry_stage / "
     "delegate_repair / request_human_review / block_run / finalize"
 )
+CODEX_WRITER_FLOW_PROTOCOL = """Codex writer flow protocol:
+        - When the user asks to inspect a folder, produce a Workspace Card before taking action: workspace path, MABW config found/missing, Codex runtime kit installed/not installed, trust status, input source count, demo-looking sources yes/no, existing output/control state, current workflow_state, and recommended next action.
+        - Trust status is one Workspace Card line, not the main answer.
+        - Do not launch the interactive terminal onboarding wizard inside Codex chat.
+        - For workspace creation, collect onboarding fields in one batch, write onboarding.json, show the values to be written, then run multi-agent-brief init --from-onboarding.
+        - Before initializing into an existing directory, check output/intermediate/runtime_manifest.json, workflow_state.json, artifact_registry.json, event_log.jsonl, and output/runs/. If present, ask whether to create a new workspace, overwrite config only while keeping old output, or reset old output/control state before running.
+        - After init or config inspection, show a Source Mode Card: manual local files enabled/disabled, runtime WebSearch enabled/disabled, external API search enabled/disabled, existing source files count, and demo-looking source files yes/no.
+        - If runtime_tool search and old demo-looking source files both exist, ask whether to keep or remove the old source files before running.
+        - During production runs, report progress after every successful stage-complete transaction in this form: [stage] produced <artifact> -> stage-complete passed -> next <stage>.
+        - Final status must list the delivery bundle and control status: gates, finalize_report, finalize-complete, and archive.
+"""
 
 TARGETS = {"codex", "claude", "docs", "opencode"}
 
@@ -213,6 +224,8 @@ def render_codex_agent(role_name: str, role: dict, manifest: dict) -> str:
         f"Repository rules:\n"
         f"{repository_rules}"
     )
+    if role_name == "orchestrator":
+        instructions = f"{instructions}\n{CODEX_WRITER_FLOW_PROTOCOL}"
     return (
         f"{AUTOGEN_HEADER_TOML}\n"
         f"\n"

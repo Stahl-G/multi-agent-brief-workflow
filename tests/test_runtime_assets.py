@@ -155,9 +155,14 @@ def test_runtime_install_codex_workspace_kit_is_local(tmp_path: Path, capsys) ->
         assert key in scout
     assert scout["name"] == "scout"
     assert "setup.ps1" in scout["developer_instructions"]
-    _assert_frontmatter_first(
-        ws / ".codex" / "skills" / "multi-agent-brief-workflow" / "SKILL.md"
-    )
+    skill_path = ws / ".codex" / "skills" / "multi-agent-brief-workflow" / "SKILL.md"
+    _assert_frontmatter_first(skill_path)
+    skill_text = skill_path.read_text(encoding="utf-8")
+    assert "Codex writer flow" in skill_text
+    assert "Workspace Card" in skill_text
+    assert "Do not launch the interactive terminal onboarding wizard inside Codex chat" in skill_text
+    assert "Source Mode Card" in skill_text
+    assert "state stage-complete" in skill_text
 
     combined = "\n".join(path.read_text(encoding="utf-8") for path in _all_text_files(ws))
     assert ROOT.as_posix() not in combined

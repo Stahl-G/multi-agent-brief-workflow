@@ -411,6 +411,16 @@ def test_start_codex_handoff_uses_root_session_orchestrator(tmp_path):
     assert "state finalize-complete" in prompt
     assert "workspace is trusted in Codex" in prompt
     assert "install Codex runtime assets" in prompt
+    assert "Codex writer flow protocol" in prompt
+    assert "Workspace Card" in prompt
+    assert "Trust status is one Workspace Card line, not the main answer" in prompt
+    assert "Do not launch the interactive terminal onboarding wizard inside Codex chat" in prompt
+    assert "show the values to be written" in prompt
+    assert "Before initializing into an existing directory" in prompt
+    assert "output/intermediate/runtime_manifest.json" in prompt
+    assert "Source Mode Card" in prompt
+    assert "report progress after every successful stage-complete transaction" in prompt
+    assert "[stage] produced <artifact> -> stage-complete passed -> next <stage>" in prompt
     _assert_orchestrator_contract_handoff(data)
 
 
@@ -577,6 +587,11 @@ def test_build_handoff_codex_maps_specialists_to_custom_agents(tmp_path):
     assert "state stage-complete" in handoff.prompt
     assert "state finalize-complete" in handoff.prompt
     assert "workspace is trusted in Codex" in handoff.prompt
+    assert "Codex writer flow protocol" in handoff.prompt
+    assert "Workspace Card" in handoff.prompt
+    assert "Source Mode Card" in handoff.prompt
+    assert "Do not launch the interactive terminal onboarding wizard inside Codex chat" in handoff.prompt
+    assert "[stage] produced <artifact> -> stage-complete passed -> next <stage>" in handoff.prompt
     assert any("Codex must trust the workspace" in note for note in handoff.notes)
     _assert_orchestrator_contract_handoff(handoff.to_dict())
 

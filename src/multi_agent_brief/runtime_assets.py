@@ -312,6 +312,28 @@ multi-agent-brief finalize --config <workspace>/config.yaml
 
 
 def _workspace_skill_text(*, runtime: str) -> str:
+    codex_protocol = ""
+    if runtime == "Codex":
+        codex_protocol = """
+Codex writer flow:
+
+- When asked to inspect a folder, produce a Workspace Card before taking action:
+  MABW config, Codex runtime kit, trust, input sources, demo-looking files,
+  existing output/control state, workflow_state, and recommended next action.
+- Do not launch the interactive terminal onboarding wizard inside Codex chat.
+  Collect onboarding fields in one batch, write onboarding.json, show the values,
+  then run `multi-agent-brief init --from-onboarding`.
+- Before initializing into an existing directory, check for
+  `output/intermediate/runtime_manifest.json`, `workflow_state.json`,
+  `artifact_registry.json`, `event_log.jsonl`, and `output/runs/`. If present,
+  ask whether to create a new workspace, overwrite config only, or reset old
+  output/control state before running.
+- After init or config inspection, show a Source Mode Card: manual local files,
+  runtime WebSearch, external API search, source file count, and demo-looking
+  source files.
+- During production runs, report progress after every successful
+  `state stage-complete` transaction.
+"""
     return _with_install_marker(f"""---
 name: multi-agent-brief-workflow
 description: Workspace-local MABW runtime contract for {runtime}.
@@ -330,6 +352,7 @@ References:
 - `references/runtime-workflow.md`
 - `references/control-surfaces.md`
 - `references/artifact-boundary.md`
+{codex_protocol}
 """)
 
 

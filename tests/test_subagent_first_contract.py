@@ -167,6 +167,21 @@ def test_orchestrator_agent_blocks_zero_runtime_websearch():
     assert "source plan, not source evidence" in text
 
 
+def test_codex_orchestrator_has_writer_flow_protocol():
+    text = _read(".codex/agents/orchestrator.toml")
+    assert "Codex writer flow protocol" in text
+    assert "Workspace Card" in text
+    assert "Trust status is one Workspace Card line, not the main answer" in text
+    assert "Do not launch the interactive terminal onboarding wizard inside Codex chat" in text
+    assert "show the values to be written" in text
+    assert "Before initializing into an existing directory" in text
+    assert "output/intermediate/runtime_manifest.json" in text
+    assert "Source Mode Card" in text
+    assert "runtime WebSearch enabled/disabled" in text
+    assert "report progress after every successful stage-complete transaction" in text
+    assert "[stage] produced <artifact> -> stage-complete passed -> next <stage>" in text
+
+
 def test_screener_role_treats_freshness_config_as_authoritative():
     text = _read(".agents/skills/screener/SKILL.md")
     assert "Treat workspace config freshness settings as authoritative" in text
