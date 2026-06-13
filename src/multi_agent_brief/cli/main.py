@@ -27,6 +27,7 @@ from multi_agent_brief.cli import (
     status_commands,
     state_commands,
     feedback_commands,
+    repair_commands,
     gates_commands,
     eval_cases_commands,
     claude_commands,
@@ -81,6 +82,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     # Feedback and repair planning
     feedback_commands.register(subparsers)
+    repair_commands.register(subparsers)
 
     # Deterministic quality gate controls
     gates_commands.register(subparsers)
@@ -181,6 +183,9 @@ def _dispatch(args: argparse.Namespace) -> int:
 
     if cmd == "feedback":
         return feedback_commands.handle(args)
+
+    if cmd == "repair":
+        return repair_commands.handle(args)
 
     if cmd == "gates":
         return gates_commands.handle(args)
