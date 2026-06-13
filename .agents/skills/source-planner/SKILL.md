@@ -30,13 +30,22 @@ Use when sources.yaml uses llm_decide, or when the workspace needs source candid
 - `source_candidates.yaml`
 - search tasks or source-discovery notes as configured
 
+`source_candidates.yaml` is a planning/review artifact, not source evidence.
+
 ## Work
 
 - Understand company, industry, audience, cadence, focus areas, and source preference.
 - Propose public, citable, timestamped sources.
 - Align sources with selected source profile and runtime search mode.
-- Prepare candidates for review and merge.
+- Prepare candidates for review. Do not treat `source_plan_only` candidates as
+  mergeable evidence.
+- If using runtime WebSearch, write collected public sources into
+  `input/sources/` as durable source files before source-discovery completion.
+- Do not call `sources decide --search` unless `web_search.mode` is
+  `external_api`.
+- Do not call `sources decide --merge` on `source_plan_only` artifacts.
 
 ## Handoff
 
-After source candidates are reviewed and merged, pass source configuration to doctor/source-provider.
+After approved sources exist as durable files or supported source configuration,
+pass source configuration to doctor/source-provider.

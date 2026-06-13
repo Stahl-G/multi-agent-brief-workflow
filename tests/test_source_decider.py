@@ -6,7 +6,11 @@ from pathlib import Path
 import pytest
 import yaml
 
+from multi_agent_brief.cli.main import main
 from multi_agent_brief.sources.decider import (
+    E_SOURCE_CANDIDATES_PLAN_ONLY,
+    E_SOURCE_CANDIDATES_UNSUPPORTED_SCHEMA,
+    SourceCandidatesError,
     build_search_queries,
     build_daily_news_search_tasks,
     generate_source_candidates,
@@ -257,10 +261,144 @@ def test_merge_candidates_to_sources(workspace_with_sources: Path):
     assert updated["web_search"]["enabled"] is False
 
 
+def test_merge_rejects_source_plan_only_without_writing(workspace_with_sources: Path):
+    sources_path = workspace_with_sources / "sources.yaml"
+    original_sources = sources_path.read_text(encoding="utf-8")
+    candidates_path = workspace_with_sources / "source_candidates.yaml"
+    candidates_path.write_text(
+        yaml.dump(
+            {
+                "schema_version": "mabw.source_candidates.v1",
+                "artifact_type": "source_plan_only",
+                "status": "proposed_not_collected",
+                "evidence_status": "not_evidence",
+                "recommended_sources": [
+                    {
+                        "name": "Planning item",
+                        "url": "https://example.com/planned",
+                        "enabled": True,
+                    }
+                ],
+            },
+            allow_unicode=True,
+        ),
+        encoding="utf-8",
+    )
+    original_candidates = candidates_path.read_text(encoding="utf-8")
+
+    with pytest.raises(SourceCandidatesError) as excinfo:
+        merge_candidates_to_sources(sources_path, candidates_path)
+
+    assert excinfo.value.error_code == E_SOURCE_CANDIDATES_PLAN_ONLY
+    assert "source plan only" in str(excinfo.value)
+    assert "input/sources/" in str(excinfo.value)
+    assert sources_path.read_text(encoding="utf-8") == original_sources
+    assert candidates_path.read_text(encoding="utf-8") == original_candidates
+
+
+def test_merge_rejects_unknown_schema_without_writing(workspace_with_sources: Path):
+    sources_path = workspace_with_sources / "sources.yaml"
+    original_sources = sources_path.read_text(encoding="utf-8")
+    candidates_path = workspace_with_sources / "source_candidates.yaml"
+    candidates_path.write_text(
+        yaml.dump(
+            {
+                "schema_version": "mabw.source_candidates.v1",
+                "artifact_type": "approved_source_candidates",
+                "recommended_sources": [
+                    {
+                        "name": "Unsupported shape",
+                        "url": "https://example.com/unsupported",
+                        "enabled": True,
+                    }
+                ],
+            },
+            allow_unicode=True,
+        ),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(SourceCandidatesError) as excinfo:
+        merge_candidates_to_sources(sources_path, candidates_path)
+
+    assert excinfo.value.error_code == E_SOURCE_CANDIDATES_UNSUPPORTED_SCHEMA
+    assert "missing metadata object" in str(excinfo.value)
+    assert sources_path.read_text(encoding="utf-8") == original_sources
+
+
+def test_merge_rejects_unmarked_plan_with_empty_metadata_without_writing(
+    workspace_with_sources: Path,
+):
+    sources_path = workspace_with_sources / "sources.yaml"
+    original_sources = sources_path.read_text(encoding="utf-8")
+    candidates_path = workspace_with_sources / "source_candidates.yaml"
+    candidates_path.write_text(
+        yaml.dump(
+            {
+                "metadata": {},
+                "recommended_sources": [
+                    {
+                        "name": "Unmarked plan item",
+                        "url": "https://example.com/unmarked-plan",
+                        "enabled": True,
+                    }
+                ],
+            },
+            allow_unicode=True,
+        ),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(SourceCandidatesError) as excinfo:
+        merge_candidates_to_sources(sources_path, candidates_path)
+
+    assert excinfo.value.error_code == E_SOURCE_CANDIDATES_UNSUPPORTED_SCHEMA
+    assert "metadata.generated_by must be source_decider" in str(excinfo.value)
+    assert sources_path.read_text(encoding="utf-8") == original_sources
+
+
+def test_sources_decide_merge_rejects_source_plan_only_cli(
+    workspace_with_sources: Path,
+    capsys,
+):
+    sources_path = workspace_with_sources / "sources.yaml"
+    original_sources = sources_path.read_text(encoding="utf-8")
+    candidates_path = workspace_with_sources / "source_candidates.yaml"
+    candidates_path.write_text(
+        yaml.dump(
+            {
+                "schema_version": "mabw.source_candidates.v1",
+                "artifact_type": "source_plan_only",
+                "evidence_status": "not_evidence",
+                "recommended_sources": [
+                    {"name": "Plan", "url": "https://example.com/plan"}
+                ],
+            },
+            allow_unicode=True,
+        ),
+        encoding="utf-8",
+    )
+
+    rc = main([
+        "sources",
+        "decide",
+        "--config",
+        str(workspace_with_sources / "config.yaml"),
+        "--merge",
+    ])
+
+    out = capsys.readouterr().out
+    assert rc == 1
+    assert E_SOURCE_CANDIDATES_PLAN_ONLY in out
+    assert "source plan only" in out
+    assert "not evidence" in out or "as evidence" in out
+    assert sources_path.read_text(encoding="utf-8") == original_sources
+
+
 def test_merge_candidates_preserves_daily_backfill_source_metadata(workspace_with_sources: Path):
     sources_path = workspace_with_sources / "sources.yaml"
     candidates = {
-        "metadata": {},
+        "metadata": {"generated_by": "source_decider"},
         "recommended_sources": [
             {
                 "name": "Daily Source",
@@ -320,7 +458,7 @@ def test_merge_candidates_normalizes_yaml_null_list_fields(tmp_path: Path):
 
     candidates_path = tmp_path / "source_candidates.yaml"
     candidates = {
-        "metadata": {},
+        "metadata": {"generated_by": "source_decider"},
         "recommended_sources": [
             {
                 "name": "DemoCo Official",
@@ -529,7 +667,7 @@ def test_merge_candidates_filing_handles_existing_mapping_tickers(workspace_with
     sources_path.write_text(yaml.dump(sources, allow_unicode=True), encoding="utf-8")
 
     candidates = {
-        "metadata": {},
+        "metadata": {"generated_by": "source_decider"},
         "filing_sources": [
             {
                 "name": "Peer Corp — SEC EDGAR filings",
@@ -564,7 +702,7 @@ def test_merge_candidates_filing_normalizes_existing_string_tickers(workspace_wi
     sources_path.write_text(yaml.dump(sources, allow_unicode=True), encoding="utf-8")
 
     candidates = {
-        "metadata": {},
+        "metadata": {"generated_by": "source_decider"},
         "filing_sources": [
             {
                 "name": "First Solar — SEC EDGAR filings",

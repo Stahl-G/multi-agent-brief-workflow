@@ -21,6 +21,24 @@ from multi_agent_brief.sources.local_signal_planner import (
     generate_collector_tasks,
 )
 
+E_SOURCE_CANDIDATES_PLAN_ONLY = "E_SOURCE_CANDIDATES_PLAN_ONLY"
+E_SOURCE_CANDIDATES_UNSUPPORTED_SCHEMA = "E_SOURCE_CANDIDATES_UNSUPPORTED_SCHEMA"
+
+
+class SourceCandidatesError(RuntimeError):
+    """Raised when source_candidates.yaml cannot be safely consumed."""
+
+    def __init__(
+        self,
+        message: str,
+        *,
+        error_code: str,
+        details: dict[str, Any] | None = None,
+    ) -> None:
+        super().__init__(message)
+        self.error_code = error_code
+        self.details = details or {}
+
 
 
 def _load_yaml(path: Path) -> dict[str, Any]:
@@ -39,6 +57,43 @@ def _save_yaml(path: Path, data: dict[str, Any]) -> None:
         raise RuntimeError("PyYAML is required: pip install pyyaml")
     with open(path, "w", encoding="utf-8") as f:
         yaml.dump(data, f, allow_unicode=True, default_flow_style=False, sort_keys=False)
+
+
+def _validate_mergeable_candidates(candidates: Any) -> None:
+    """Reject non-evidence candidate schemas before mutating sources.yaml."""
+    if not isinstance(candidates, dict):
+        raise SourceCandidatesError(
+            "source_candidates.yaml uses an unsupported schema: expected a mapping.",
+            error_code=E_SOURCE_CANDIDATES_UNSUPPORTED_SCHEMA,
+        )
+
+    artifact_type = str(candidates.get("artifact_type") or "")
+    evidence_status = str(candidates.get("evidence_status") or "")
+    if artifact_type == "source_plan_only" or evidence_status == "not_evidence":
+        raise SourceCandidatesError(
+            "source_candidates.yaml is a source plan only; it cannot be "
+            "merged into sources.yaml as evidence. Collect approved sources "
+            "into input/sources/ or use a supported candidate schema.",
+            error_code=E_SOURCE_CANDIDATES_PLAN_ONLY,
+            details={
+                "artifact_type": artifact_type,
+                "evidence_status": evidence_status,
+            },
+        )
+
+    metadata = candidates.get("metadata")
+    if not isinstance(metadata, dict):
+        raise SourceCandidatesError(
+            "source_candidates.yaml uses an unsupported schema for merge: "
+            "missing metadata object.",
+            error_code=E_SOURCE_CANDIDATES_UNSUPPORTED_SCHEMA,
+        )
+    if metadata.get("generated_by") != "source_decider":
+        raise SourceCandidatesError(
+            "source_candidates.yaml uses an unsupported schema for merge: "
+            "metadata.generated_by must be source_decider.",
+            error_code=E_SOURCE_CANDIDATES_UNSUPPORTED_SCHEMA,
+        )
 
 
 def _ensure_mapping(
@@ -502,6 +557,7 @@ def merge_candidates_to_sources(
     """
     sources = _load_yaml(sources_path)
     candidates = _load_yaml(candidates_path)
+    _validate_mergeable_candidates(candidates)
 
     recommended = candidates.get("recommended_sources") or []
     enabled = [s for s in recommended if s.get("enabled", True)]

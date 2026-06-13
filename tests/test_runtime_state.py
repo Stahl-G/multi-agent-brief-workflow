@@ -575,10 +575,11 @@ def test_source_discovery_runtime_tool_rejects_positive_observation_without_dura
         )
 
     assert excinfo.value.error_code == "E_REQUIRED_ARTIFACT_MISSING"
-    assert "durable runtime search result URL" in str(excinfo.value)
+    assert "no evidence source is available" in str(excinfo.value)
+    assert "input/sources/" in str(excinfo.value)
 
 
-def test_source_discovery_runtime_tool_allows_partial_zero_observations_with_candidates(tmp_path):
+def test_source_discovery_runtime_tool_rejects_candidates_urls_even_with_positive_observation(tmp_path):
     ws = _write_workspace(tmp_path)
     (ws / "sources.yaml").write_text(
         "source_strategy:\n"
@@ -606,14 +607,16 @@ def test_source_discovery_runtime_tool_allows_partial_zero_observations_with_can
     initialize_runtime_state(workspace=ws, repo_workdir=ROOT)
     complete_stage_transaction(workspace=ws, repo_workdir=ROOT, stage_id="doctor", reason="doctor complete")
 
-    state = complete_stage_transaction(
-        workspace=ws,
-        repo_workdir=ROOT,
-        stage_id="source-discovery",
-        reason="source discovery complete",
-    )
+    with pytest.raises(RuntimeStateError) as excinfo:
+        complete_stage_transaction(
+            workspace=ws,
+            repo_workdir=ROOT,
+            stage_id="source-discovery",
+            reason="source discovery complete",
+        )
 
-    assert state["workflow_state"]["current_stage"] == "input-governance"
+    assert excinfo.value.error_code == "E_REQUIRED_ARTIFACT_MISSING"
+    assert "source_candidates.yaml is a source plan, not evidence" in str(excinfo.value)
 
 
 def test_optional_feedback_artifacts_do_not_become_missing_after_auditor_complete(tmp_path):

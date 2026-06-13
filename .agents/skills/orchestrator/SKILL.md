@@ -51,6 +51,13 @@ Use for runtime handoff, Orchestrator contract changes, generated adapter config
   controls afterward.
 - Keep role handoffs artifact-based.
 - Coordinate source-planner, scout, screener, claim-ledger, analyst, editor, auditor, and formatter as delegated specialists.
+- Treat `source_candidates.yaml` as planning/review only, not evidence. Do not
+  call `sources decide --merge` on `source_plan_only` artifacts, and do not
+  dispatch Scout from source plans alone.
+- If using runtime WebSearch, ensure collected public sources are written into
+  `input/sources/` as durable source files before source-discovery completion.
+- Do not call `sources decide --search` unless `web_search.mode` is
+  `external_api`.
 - Check expected artifacts after each delegated stage.
 - Make stage decisions with completion transactions for successful progress, and `retry_stage`, `delegate_repair`, `request_human_review`, or `block_run` for non-success paths.
 - Record successful delegated stage completion with `multi-agent-brief state stage-complete --workspace <workspace> --stage <stage_id> --reason "<reason>"` before moving to the next stage. Use `multi-agent-brief state decide` only for non-success decisions such as retry, repair, human review, or block; if the command rejects the decision or completion, stop and correct the stage state.

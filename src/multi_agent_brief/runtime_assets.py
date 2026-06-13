@@ -331,6 +331,12 @@ Codex writer flow:
 - After init or config inspection, show a Source Mode Card: manual local files,
   runtime WebSearch, external API search, source file count, and demo-looking
   source files.
+- If using Codex/runtime WebSearch, write collected public sources into
+  `input/sources/` as durable source files.
+- Do not call `sources decide --search` unless `web_search.mode` is
+  `external_api`.
+- Do not call `sources decide --merge` on `source_plan_only` artifacts.
+- `source_candidates.yaml` is planning/review only, not evidence.
 - During production runs, report progress after every successful
   `state stage-complete` transaction.
 """

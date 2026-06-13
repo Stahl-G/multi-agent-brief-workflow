@@ -1400,31 +1400,6 @@ def _contains_zero_runtime_search_observation(path: Path) -> bool:
     return has_observation and counts and all(count == 0 for count in counts)
 
 
-def _contains_positive_runtime_search_observation(path: Path) -> bool:
-    has_observation, counts = _runtime_search_observation_counts(path)
-    return has_observation and any(count > 0 for count in counts)
-
-
-def _source_candidates_durable_entry_count(path: Path) -> int:
-    if not path.exists():
-        return 0
-    try:
-        data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
-    except (OSError, yaml.YAMLError):
-        return 0
-    if not isinstance(data, dict):
-        return 0
-    count = 0
-    for key in ("recommended_sources", "runtime_search_results", "search_results"):
-        items = data.get(key)
-        if not isinstance(items, list):
-            continue
-        for item in items:
-            if isinstance(item, dict) and item.get("url"):
-                count += 1
-    return count
-
-
 def _source_discovery_runtime_tool_reasons(workspace: Path) -> list[str]:
     sources = _load_workspace_yaml(workspace / "sources.yaml")
     web_search = sources.get("web_search") if isinstance(sources.get("web_search"), dict) else {}
@@ -1438,13 +1413,8 @@ def _source_discovery_runtime_tool_reasons(workspace: Path) -> list[str]:
         ]
     if _configured_evidence_source_count(sources, workspace) > 0:
         return []
-    if (
-        _contains_positive_runtime_search_observation(candidates_path)
-        and _source_candidates_durable_entry_count(candidates_path) > 0
-    ):
-        return []
     return [
-        "Cannot complete source-discovery: runtime_tool web search is enabled, but no evidence source, durable runtime search result URL, or positive runtime search observation is available. source_candidates.yaml is a source plan, not evidence."
+        "Cannot complete source-discovery: runtime_tool web search is enabled, but no evidence source is available. Runtime WebSearch results must be written as durable source files under input/sources/ or into supported source configuration. source_candidates.yaml is a source plan, not evidence."
     ]
 
 

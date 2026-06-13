@@ -1227,7 +1227,10 @@ def test_merge_does_not_auto_enable_web_search(tmp_path):
         yaml.dump(sources, f)
 
     candidates = {
-        "metadata": {"status": "pending_review"},
+        "metadata": {
+            "generated_by": "source_decider",
+            "status": "pending_review",
+        },
         "recommended_sources": [
             {"name": "Tech News", "url": "https://technews.com", "category": "industry_media", "enabled": True},
         ],

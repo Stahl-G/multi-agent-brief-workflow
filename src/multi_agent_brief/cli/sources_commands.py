@@ -6,6 +6,7 @@ import argparse
 from pathlib import Path
 
 from multi_agent_brief.sources.decider import (
+    SourceCandidatesError,
     load_source_discovery,
     build_search_queries,
     build_daily_news_search_tasks,
@@ -133,7 +134,11 @@ def _sources_decide(args: argparse.Namespace) -> int:
                 f" {candidates_path}"
             )
             return 1
-        result = merge_candidates_to_sources(sources_path, candidates_path)
+        try:
+            result = merge_candidates_to_sources(sources_path, candidates_path)
+        except SourceCandidatesError as exc:
+            print(f"[error] {exc.error_code}: {exc}")
+            return 1
         added_local = result.get("added_local", 0)
         local_part = (
             f" + {added_local} local signal tasks" if added_local else ""

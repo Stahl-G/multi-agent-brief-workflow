@@ -419,6 +419,10 @@ def test_start_codex_handoff_uses_root_session_orchestrator(tmp_path):
     assert "Before initializing into an existing directory" in prompt
     assert "output/intermediate/runtime_manifest.json" in prompt
     assert "Source Mode Card" in prompt
+    assert "input/sources/" in prompt
+    assert "Do not call sources decide --search unless web_search.mode is external_api" in prompt
+    assert "Do not call sources decide --merge on source_plan_only artifacts" in prompt
+    assert "source_candidates.yaml is planning/review only, not evidence" in prompt
     assert "report progress after every successful stage-complete transaction" in prompt
     assert "[stage] produced <artifact> -> stage-complete passed -> next <stage>" in prompt
     _assert_orchestrator_contract_handoff(data)
@@ -590,6 +594,10 @@ def test_build_handoff_codex_maps_specialists_to_custom_agents(tmp_path):
     assert "Codex writer flow protocol" in handoff.prompt
     assert "Workspace Card" in handoff.prompt
     assert "Source Mode Card" in handoff.prompt
+    assert "input/sources/" in handoff.prompt
+    assert "Do not call sources decide --search unless web_search.mode is external_api" in handoff.prompt
+    assert "Do not call sources decide --merge on source_plan_only artifacts" in handoff.prompt
+    assert "source_candidates.yaml is planning/review only, not evidence" in handoff.prompt
     assert "Do not launch the interactive terminal onboarding wizard inside Codex chat" in handoff.prompt
     assert "[stage] produced <artifact> -> stage-complete passed -> next <stage>" in handoff.prompt
     assert any("Codex must trust the workspace" in note for note in handoff.notes)
