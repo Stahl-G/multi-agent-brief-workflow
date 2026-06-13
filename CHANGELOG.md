@@ -7,6 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.5] — 2026-06-13
+
+### Added
+
+- **Stage-scoped quality gate reports**: `gates check --stage auditor` and `gates check --stage finalize` now write separate authoritative reports under `output/intermediate/gates/`. The legacy `output/intermediate/quality_gate_report.json` remains a latest/compatibility projection and is no longer the frozen authority for both stages.
+- **Run integrity marker**: runtime state now records whether a run remains clean single-shot reference evidence or has become contaminated by reset, older-stage replay, or frozen-artifact mutation. Contaminated runs can still be completed locally, but should not be packaged as clean reference evidence.
+- **Deterministic repair router**: added `multi-agent-brief repair route` to map known gate/audit/control findings to the owning stage and allowed artifacts without executing repair or calling an agent.
+- **Codex experimental runtime kit hardening**: Codex custom-agent assets remain Experimental, with clearer workspace-local install and control-flow guidance.
+
+### Changed
+
+- **Source-discovery evidence boundary tightened**: `source_candidates.yaml` is treated as planning/review only. It cannot be merged as evidence, and source-discovery completion requires durable source evidence instead of a plan-only artifact.
+- **Runtime/source hardening**: web-search configuration now rejects ambiguous modes, disabled search cannot run through `sources decide --search`, workspace `.env` loading is allowlisted, and invalid provider config no longer contributes source items.
+- **Audit binding moved into Python control state**: finalize verifies frozen Claim Ledger, audited brief, and audit report hashes through deterministic runtime state instead of trusting auditor-written binding metadata.
+- **Run archive added for finalized runs**: finalized runs are archived under `output/runs/<run_id>/` with delivery, intermediate, control files, and SHA-256 manifest entries so repeated weekly runs do not erase historical evidence chains.
+- **Run integrity contamination made transactional**: contamination state and `run_integrity_contaminated` events now commit together; event append failure rolls back workflow state, and duplicate contamination reasons are no-ops.
+- **Repair routing honors gate metadata**: router output now trusts existing `repair_owner`, `repair_stage_id`, and `repair_artifact_id` fields before falling back to deterministic heuristics.
+- **Docs-only CI safety**: docs-only changes now run public-safety, terminology, version, and release-consistency checks so README/docs cannot bypass release guardrails.
+
+### Boundaries
+
+- v0.7.5 does not claim semantic proof, autonomous repair, automatic learning, Codex parity, or output-quality improvement.
+- Codex remains Experimental. Real-workspace control-flow E2E reached terminal delivery, but clean repair semantics and specialist parity are not yet promoted to supported-runtime claims.
+- `repair route` is a read-only router. It does not create repair plans, mutate artifacts, execute repair, or decide taste.
+
 ## [0.7.4] — 2026-06-12
 
 ### Added
