@@ -199,7 +199,7 @@ def derive_control_timing_from_path(
                 missing="run_integrity" not in workflow_state,
             )
         else:
-            integrity = classify_run_integrity(None, missing=True)
+            integrity = classify_run_integrity(None)
         return _timing_payload(
             status="invalid_event_log",
             stages=[],

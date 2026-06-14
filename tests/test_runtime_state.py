@@ -359,6 +359,53 @@ def test_state_check_rejects_malformed_run_integrity_without_rewrite(tmp_path):
     assert workflow_path.read_bytes() == before
 
 
+def test_state_show_rejects_invalid_run_integrity_status_without_rewrite(tmp_path):
+    ws = _write_workspace(tmp_path)
+    initialize_runtime_state(workspace=ws, repo_workdir=ROOT)
+    workflow_path = _state_file(ws, "workflow_state")
+    workflow = json.loads(workflow_path.read_text(encoding="utf-8"))
+    workflow["run_integrity"] = {
+        "status": "unknown",
+        "reference_eligible": True,
+        "clean_single_shot": True,
+        "reasons": [],
+    }
+    workflow_path.write_text(json.dumps(workflow, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    before = workflow_path.read_bytes()
+
+    with pytest.raises(RuntimeStateError) as excinfo:
+        show_runtime_state(workspace=ws)
+
+    assert excinfo.value.error_code == runtime_state.E_TRANSACTION_INTEGRITY
+    assert workflow_path.read_bytes() == before
+
+
+def test_stage_complete_rejects_invalid_run_integrity_status_without_rewrite(tmp_path):
+    ws = _write_workspace(tmp_path)
+    initialize_runtime_state(workspace=ws, repo_workdir=ROOT)
+    workflow_path = _state_file(ws, "workflow_state")
+    workflow = json.loads(workflow_path.read_text(encoding="utf-8"))
+    workflow["run_integrity"] = {
+        "status": "unknown",
+        "reference_eligible": True,
+        "clean_single_shot": True,
+        "reasons": [],
+    }
+    workflow_path.write_text(json.dumps(workflow, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    before = workflow_path.read_bytes()
+
+    with pytest.raises(RuntimeStateError) as excinfo:
+        complete_stage_transaction(
+            workspace=ws,
+            repo_workdir=ROOT,
+            stage_id="doctor",
+            reason="doctor complete",
+        )
+
+    assert excinfo.value.error_code == runtime_state.E_TRANSACTION_INTEGRITY
+    assert workflow_path.read_bytes() == before
+
+
 def test_state_check_strict_fresh_workspace_returns_zero(tmp_path):
     ws = _write_workspace(tmp_path)
 

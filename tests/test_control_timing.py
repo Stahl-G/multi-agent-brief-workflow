@@ -111,6 +111,8 @@ def test_control_timing_marks_non_object_event_log_line_invalid(tmp_path):
     timing = derive_control_timing_from_path(event_log)
 
     assert timing["status"] == "invalid_event_log"
+    assert timing["run_integrity"]["status"] == "unknown"
+    assert timing["run_integrity"]["reference_eligible"] is False
     assert any("must contain an object" in warning for warning in timing["warnings"])
 
 
