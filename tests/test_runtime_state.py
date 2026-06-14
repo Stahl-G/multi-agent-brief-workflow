@@ -343,6 +343,69 @@ def test_state_check_fresh_workspace_is_not_globally_blocked(tmp_path):
     assert registry["finalize_quality_gate_report"]["validation_result"] == "not_checked"
 
 
+def test_state_check_rejects_malformed_run_integrity_without_rewrite(tmp_path):
+    ws = _write_workspace(tmp_path)
+    initialize_runtime_state(workspace=ws, repo_workdir=ROOT)
+    workflow_path = _state_file(ws, "workflow_state")
+    workflow = json.loads(workflow_path.read_text(encoding="utf-8"))
+    workflow["run_integrity"] = "bad"
+    workflow_path.write_text(json.dumps(workflow, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    before = workflow_path.read_bytes()
+
+    with pytest.raises(RuntimeStateError) as excinfo:
+        check_runtime_state(workspace=ws, repo_workdir=ROOT)
+
+    assert excinfo.value.error_code == runtime_state.E_TRANSACTION_INTEGRITY
+    assert workflow_path.read_bytes() == before
+
+
+def test_state_show_rejects_invalid_run_integrity_status_without_rewrite(tmp_path):
+    ws = _write_workspace(tmp_path)
+    initialize_runtime_state(workspace=ws, repo_workdir=ROOT)
+    workflow_path = _state_file(ws, "workflow_state")
+    workflow = json.loads(workflow_path.read_text(encoding="utf-8"))
+    workflow["run_integrity"] = {
+        "status": "unknown",
+        "reference_eligible": True,
+        "clean_single_shot": True,
+        "reasons": [],
+    }
+    workflow_path.write_text(json.dumps(workflow, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    before = workflow_path.read_bytes()
+
+    with pytest.raises(RuntimeStateError) as excinfo:
+        show_runtime_state(workspace=ws)
+
+    assert excinfo.value.error_code == runtime_state.E_TRANSACTION_INTEGRITY
+    assert workflow_path.read_bytes() == before
+
+
+def test_stage_complete_rejects_invalid_run_integrity_status_without_rewrite(tmp_path):
+    ws = _write_workspace(tmp_path)
+    initialize_runtime_state(workspace=ws, repo_workdir=ROOT)
+    workflow_path = _state_file(ws, "workflow_state")
+    workflow = json.loads(workflow_path.read_text(encoding="utf-8"))
+    workflow["run_integrity"] = {
+        "status": "unknown",
+        "reference_eligible": True,
+        "clean_single_shot": True,
+        "reasons": [],
+    }
+    workflow_path.write_text(json.dumps(workflow, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    before = workflow_path.read_bytes()
+
+    with pytest.raises(RuntimeStateError) as excinfo:
+        complete_stage_transaction(
+            workspace=ws,
+            repo_workdir=ROOT,
+            stage_id="doctor",
+            reason="doctor complete",
+        )
+
+    assert excinfo.value.error_code == runtime_state.E_TRANSACTION_INTEGRITY
+    assert workflow_path.read_bytes() == before
+
+
 def test_state_check_strict_fresh_workspace_returns_zero(tmp_path):
     ws = _write_workspace(tmp_path)
 
@@ -1885,12 +1948,38 @@ def test_run_archive_records_sha256_for_every_file(tmp_path):
         "clean_single_shot": True,
         "reasons": [],
     }
+    assert manifest["timing"]["schema_version"] == "mabw.control_timing.v1"
+    assert manifest["timing"]["source"] == "event_log"
+    assert manifest["timing"]["precision"] == "control_trace_bucket"
+    assert manifest["timing"]["status"] in {"available", "partial", "incomplete", "contaminated", "unknown"}
     assert manifest["files"]
     for record in manifest["files"]:
         path = archive / record["archive_path"]
         assert path.exists()
         assert record["sha256"] == runtime_state._sha256_file(path)
         assert record["size_bytes"] == path.stat().st_size
+
+
+def test_run_archive_manifest_marks_malformed_run_integrity_unknown(tmp_path):
+    ws = _write_workspace(tmp_path)
+    state = _complete_finalized_workspace(ws)
+    finalize_report = json.loads((_intermediate(ws) / "finalize_report.json").read_text(encoding="utf-8"))
+    workflow = dict(state["workflow_state"])
+    workflow["run_integrity"] = "bad"
+    run_id = f"{state['manifest']['run_id']}-malformed"
+
+    archive = archive_finalized_run(
+        workspace=ws,
+        run_id=run_id,
+        manifest=state["manifest"],
+        workflow=workflow,
+        artifact_registry=state["artifact_registry"],
+        finalize_report=finalize_report,
+    )
+    manifest = archive["manifest"]
+
+    assert manifest["run_integrity"]["status"] == "unknown"
+    assert manifest["run_integrity"]["reference_eligible"] is False
 
 
 def test_finalize_complete_archive_is_idempotent_when_content_matches(tmp_path):

@@ -59,6 +59,10 @@ def test_status_command_is_read_only_for_existing_runtime_state(tmp_path, capsys
     assert payload["workflow"]["current_stage"] == "doctor"
     assert payload["workflow"]["run_integrity"]["status"] == "clean"
     assert payload["workflow"]["run_integrity"]["reference_eligible"] is True
+    assert payload["timing"]["schema_version"] == "mabw.control_timing.v1"
+    assert payload["timing"]["source"] == "event_log"
+    assert payload["timing"]["precision"] == "control_trace_bucket"
+    assert payload["timing"]["status"] == "unknown"
     assert payload["artifacts"]["expected_count"] == 1
     assert payload["events"]["event_count"] == before_event_count
     assert "stage-complete" not in payload["suggested_next_command"]
@@ -94,6 +98,27 @@ def test_status_command_reports_contaminated_run_integrity(tmp_path, capsys):
     assert rc == 0
     out = capsys.readouterr().out
     assert "[status] run_integrity: contaminated reference_eligible=False" in out
+    assert "[status] timing: contaminated; elapsed buckets are not clean evidence" in out
+
+
+def test_status_command_reports_malformed_run_integrity_as_unknown(tmp_path, capsys):
+    ws = _minimal_workspace(tmp_path / "ws")
+    initialize_runtime_state(workspace=ws, runtime="claude", actor="cli")
+    paths = runtime_state_paths(ws)
+    workflow = json.loads(paths["workflow_state"].read_text(encoding="utf-8"))
+    workflow["run_integrity"] = "bad"
+    paths["workflow_state"].write_text(json.dumps(workflow, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+    rc = main(["status", "--workspace", str(ws), "--json"])
+
+    assert rc == 0
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["workflow"]["run_integrity"]["status"] == "unknown"
+    assert payload["workflow"]["run_integrity"]["reference_eligible"] is False
+    assert payload["workflow"]["run_integrity"]["reasons"][0]["reason_code"] == "run_integrity_malformed"
+    assert payload["timing"]["status"] == "unknown"
+    assert payload["timing"]["run_integrity"]["reference_eligible"] is False
+    assert "run_integrity_unknown" in payload["timing"]["warnings"]
 
 
 def test_status_command_does_not_initialize_missing_runtime_state(tmp_path, capsys):
@@ -111,6 +136,62 @@ def test_status_command_does_not_initialize_missing_runtime_state(tmp_path, caps
         assert not path.exists()
 
 
+def test_status_timing_is_unknown_when_workflow_state_missing_even_with_event_log(tmp_path, capsys):
+    ws = _minimal_workspace(tmp_path / "ws")
+    paths = runtime_state_paths(ws)
+    paths["event_log"].parent.mkdir(parents=True, exist_ok=True)
+    paths["event_log"].write_text(
+        "\n".join(
+            [
+                json.dumps(
+                    {
+                        "schema_version": "multi-agent-brief-event-log/v1",
+                        "event_id": "e0",
+                        "run_id": "run-test",
+                        "created_at": "2026-06-14T00:00:00Z",
+                        "event_type": "run_initialized",
+                        "actor": "cli",
+                        "stage_id": None,
+                        "artifact_id": None,
+                        "decision": None,
+                        "reason": "",
+                        "metadata": {},
+                    },
+                    sort_keys=True,
+                ),
+                json.dumps(
+                    {
+                        "schema_version": "multi-agent-brief-event-log/v1",
+                        "event_id": "e1",
+                        "run_id": "run-test",
+                        "created_at": "2026-06-14T00:01:00Z",
+                        "event_type": "decision_recorded",
+                        "actor": "cli",
+                        "stage_id": "doctor",
+                        "artifact_id": None,
+                        "decision": "continue",
+                        "reason": "complete",
+                        "metadata": {"transaction_id": "tx-e1"},
+                    },
+                    sort_keys=True,
+                ),
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    rc = main(["status", "--workspace", str(ws), "--json"])
+
+    assert rc == 0
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["workflow"]["present"] is False
+    assert payload["timing"]["status"] == "unknown"
+    assert payload["timing"]["run_integrity"]["status"] == "unknown"
+    assert payload["timing"]["run_integrity"]["reference_eligible"] is False
+    assert "run_integrity_unknown" in payload["timing"]["warnings"]
+
+
 def test_status_command_reports_corrupt_event_log_without_writing(tmp_path, capsys):
     ws = _minimal_workspace(tmp_path / "ws")
     event_log = ws / "output" / "intermediate" / "event_log.jsonl"
@@ -124,6 +205,7 @@ def test_status_command_reports_corrupt_event_log_without_writing(tmp_path, caps
     assert rc == 0
     payload = json.loads(capsys.readouterr().out)
     assert payload["events"]["corrupt_count"] == 1
+    assert payload["timing"]["status"] == "invalid_event_log"
     assert "event_log contains unreadable records" in payload["stale_or_unknown"]
     assert event_log.read_bytes() == before
     assert event_log.stat().st_mtime_ns == before_mtime

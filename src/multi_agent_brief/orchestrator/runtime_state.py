@@ -47,6 +47,15 @@ from multi_agent_brief.orchestrator.run_archive import (
     archive_finalized_run,
     preflight_finalized_run_archive,
 )
+from multi_agent_brief.orchestrator.run_integrity import (
+    RUN_INTEGRITY_CLEAN,
+    RUN_INTEGRITY_CONTAMINATED,
+    clean_run_integrity as _clean_run_integrity,
+    contamination_event_metadata as _run_integrity_contamination_event_metadata,
+    contaminate_run_integrity_with_event_flag as _contaminate_run_integrity_with_event_flag,
+    normalize_run_integrity as _normalize_run_integrity,
+    workflow_with_run_integrity as _workflow_with_run_integrity,
+)
 from multi_agent_brief.outputs.reader_final_gate import (
     combine_reader_final_gate_results,
     detect_reader_residue,
@@ -121,9 +130,6 @@ STAGE_READY = "ready"
 STAGE_COMPLETE = "complete"
 STAGE_BLOCKED = "blocked"
 STAGE_SKIPPED = "skipped"
-
-RUN_INTEGRITY_CLEAN = "clean"
-RUN_INTEGRITY_CONTAMINATED = "contaminated"
 
 ARTIFACT_EXPECTED = "expected"
 ARTIFACT_MISSING = "missing"
@@ -296,6 +302,17 @@ def _wrap_archive_error(exc: RunArchiveError) -> RuntimeStateError:
         details=exc.details,
         error_code=exc.error_code or E_RUN_ARCHIVE_FAILED,
     )
+
+
+def _checked_workflow_with_run_integrity(workflow: dict[str, Any], *, path: Path) -> dict[str, Any]:
+    try:
+        return _workflow_with_run_integrity(workflow)
+    except ValueError as exc:
+        raise RuntimeStateError(
+            "workflow_state.run_integrity is malformed.",
+            details={"path": str(path), "reason": str(exc)},
+            error_code=E_TRANSACTION_INTEGRITY,
+        ) from exc
 
 
 def _workflow_is_finalized(workflow: dict[str, Any] | None) -> bool:
@@ -486,6 +503,12 @@ def _read_event_log_records(path: Path) -> list[dict[str, Any]]:
     return records
 
 
+def read_event_log_records_strict(path: str | Path) -> list[dict[str, Any]]:
+    """Read event log records with the runtime transaction-integrity checks."""
+
+    return _read_event_log_records(Path(path))
+
+
 def _preflight_transaction_files(paths: dict[str, Path]) -> list[dict[str, Any]]:
     paths["runtime_manifest"].parent.mkdir(parents=True, exist_ok=True)
     for key in ("runtime_manifest", "workflow_state"):
@@ -619,39 +642,6 @@ def _initial_stage_statuses(stages: list[dict[str, Any]], *, now: str) -> dict[s
     return statuses
 
 
-def _clean_run_integrity() -> dict[str, Any]:
-    return {
-        "status": RUN_INTEGRITY_CLEAN,
-        "reference_eligible": True,
-        "clean_single_shot": True,
-        "reasons": [],
-    }
-
-
-def _normalize_run_integrity(value: Any) -> dict[str, Any]:
-    if not isinstance(value, dict):
-        return _clean_run_integrity()
-    status = str(value.get("status") or RUN_INTEGRITY_CLEAN)
-    if status != RUN_INTEGRITY_CONTAMINATED:
-        status = RUN_INTEGRITY_CLEAN
-    reasons = value.get("reasons")
-    if not isinstance(reasons, list):
-        reasons = []
-    normalized_reasons = [item for item in reasons if isinstance(item, dict)]
-    return {
-        "status": status,
-        "reference_eligible": False if status == RUN_INTEGRITY_CONTAMINATED else bool(value.get("reference_eligible", True)),
-        "clean_single_shot": False if status == RUN_INTEGRITY_CONTAMINATED else bool(value.get("clean_single_shot", True)),
-        "reasons": normalized_reasons,
-    }
-
-
-def _workflow_with_run_integrity(workflow: dict[str, Any]) -> dict[str, Any]:
-    updated = dict(workflow)
-    updated["run_integrity"] = _normalize_run_integrity(updated.get("run_integrity"))
-    return updated
-
-
 def _contaminate_run_integrity(
     workflow: dict[str, Any],
     *,
@@ -674,67 +664,6 @@ def _contaminate_run_integrity(
         metadata=metadata,
     )
     return contaminated
-
-
-def _contaminate_run_integrity_with_event_flag(
-    workflow: dict[str, Any],
-    *,
-    reason_code: str,
-    message: str,
-    created_at: str,
-    event_type: str | None = None,
-    stage_id: str | None = None,
-    artifact_id: str | None = None,
-    metadata: dict[str, Any] | None = None,
-) -> tuple[dict[str, Any], bool]:
-    updated = _workflow_with_run_integrity(workflow)
-    integrity = _normalize_run_integrity(updated.get("run_integrity"))
-    reason: dict[str, Any] = {
-        "reason_code": reason_code,
-        "message": message,
-        "created_at": created_at,
-    }
-    if event_type:
-        reason["event_type"] = event_type
-    if stage_id:
-        reason["stage_id"] = stage_id
-    if artifact_id:
-        reason["artifact_id"] = artifact_id
-    if metadata:
-        reason["metadata"] = metadata
-    existing = integrity.get("reasons") if isinstance(integrity.get("reasons"), list) else []
-    already_present = any(
-        isinstance(item, dict)
-        and item.get("reason_code") == reason_code
-        and item.get("message") == message
-        and item.get("stage_id") == stage_id
-        and item.get("artifact_id") == artifact_id
-        for item in existing
-    )
-    if already_present:
-        return workflow, False
-    existing = [*existing, reason]
-    integrity.update({
-        "status": RUN_INTEGRITY_CONTAMINATED,
-        "reference_eligible": False,
-        "clean_single_shot": False,
-        "reasons": existing,
-    })
-    updated["run_integrity"] = integrity
-    updated["updated_at"] = created_at
-    return updated, not already_present
-
-
-def _run_integrity_contamination_event_metadata(reason: dict[str, Any]) -> dict[str, Any]:
-    return {
-        "reason_code": reason.get("reason_code"),
-        "message": reason.get("message"),
-        "reference_eligible": False,
-        "clean_single_shot": False,
-        "stage_id": reason.get("stage_id"),
-        "artifact_id": reason.get("artifact_id"),
-        "details": reason.get("metadata") if isinstance(reason.get("metadata"), dict) else {},
-    }
 
 
 def _persist_run_contamination(
@@ -1038,7 +967,10 @@ def initialize_runtime_state(
                     "schema_version": old_workflow.get("schema_version"),
                 },
             )
-        workflow = _workflow_with_run_integrity(old_workflow)
+        workflow = _checked_workflow_with_run_integrity(
+            old_workflow,
+            path=paths["workflow_state"],
+        )
         workflow["updated_at"] = now
         workflow["run_id"] = run_id
     else:
@@ -1137,7 +1069,10 @@ def _load_manifest_and_workflow(workspace: str | Path) -> tuple[Path, dict[str, 
             "workflow_state.json has an unsupported schema.",
             details={"path": str(paths["workflow_state"]), "schema_version": workflow.get("schema_version")},
         )
-    workflow = _workflow_with_run_integrity(workflow)
+    workflow = _checked_workflow_with_run_integrity(
+        workflow,
+        path=paths["workflow_state"],
+    )
     if workflow.get("run_id") is not None:
         workflow["run_id"] = _validate_runtime_run_id(
             workflow.get("run_id"),

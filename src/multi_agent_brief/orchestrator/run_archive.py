@@ -10,6 +10,9 @@ import uuid
 from pathlib import Path
 from typing import Any
 
+from multi_agent_brief.orchestrator.run_integrity import classify_run_integrity
+from multi_agent_brief.orchestrator.timing import derive_control_timing_from_path
+
 
 RUN_ARCHIVE_SCHEMA = "mabw.run_archive.v1"
 E_RUN_ARCHIVE_CONFLICT = "E_RUN_ARCHIVE_CONFLICT"
@@ -67,7 +70,8 @@ def archive_finalized_run(
         "source": "finalize-complete",
         "runtime_manifest_run_id": manifest.get("run_id"),
         "workflow_current_stage": workflow.get("current_stage"),
-        "run_integrity": _run_integrity_for_manifest(workflow.get("run_integrity")),
+        "run_integrity": _run_integrity_for_manifest(workflow),
+        "timing": _timing_for_manifest(ws, workflow),
         "event_log_semantics": "copied_before_current_archive_event",
         "files": files,
     }
@@ -131,7 +135,8 @@ def preflight_finalized_run_archive(
         "run_id": run_id,
         "runtime_manifest_run_id": manifest.get("run_id"),
         "workflow_current_stage": workflow.get("current_stage"),
-        "run_integrity": _run_integrity_for_manifest(workflow.get("run_integrity")),
+        "run_integrity": _run_integrity_for_manifest(workflow),
+        "timing": _timing_for_manifest(ws, workflow),
     }
 
 
@@ -392,23 +397,27 @@ def _write_manifest(path: Path, manifest: dict[str, Any]) -> None:
     path.write_text(text, encoding="utf-8")
 
 
-def _run_integrity_for_manifest(value: Any) -> dict[str, Any]:
-    if not isinstance(value, dict):
-        return {
-            "status": "clean",
-            "reference_eligible": True,
-            "clean_single_shot": True,
-            "reasons": [],
-        }
-    status = str(value.get("status") or "clean")
-    if status != "contaminated":
-        status = "clean"
-    reasons = value.get("reasons") if isinstance(value.get("reasons"), list) else []
+def _run_integrity_for_manifest(workflow: dict[str, Any]) -> dict[str, Any]:
+    return classify_run_integrity(
+        workflow.get("run_integrity"),
+        missing="run_integrity" not in workflow,
+    )
+
+
+def _timing_for_manifest(workspace: Path, workflow: dict[str, Any]) -> dict[str, Any]:
+    timing = derive_control_timing_from_path(
+        workspace / "output" / "intermediate" / "event_log.jsonl",
+        workflow_state=workflow,
+        expected_run_id=workflow.get("run_id") if isinstance(workflow.get("run_id"), str) else None,
+    )
     return {
-        "status": status,
-        "reference_eligible": False if status == "contaminated" else bool(value.get("reference_eligible", True)),
-        "clean_single_shot": False if status == "contaminated" else bool(value.get("clean_single_shot", True)),
-        "reasons": [item for item in reasons if isinstance(item, dict)],
+        "schema_version": timing.get("schema_version"),
+        "kind": timing.get("kind"),
+        "source": timing.get("source"),
+        "precision": timing.get("precision"),
+        "status": timing.get("status"),
+        "total_elapsed_seconds": timing.get("total_elapsed_seconds"),
+        "warnings": timing.get("warnings") or [],
     }
 
 

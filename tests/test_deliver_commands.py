@@ -160,6 +160,23 @@ def test_deliver_json_returns_typed_error_for_corrupt_workflow_state(tmp_path: P
     assert "workflow_state.json is unreadable" in payload["message"]
 
 
+def test_deliver_json_reports_malformed_run_integrity_as_unknown(tmp_path: Path, capsys) -> None:
+    ws = _workspace(tmp_path)
+    _write_bundle(ws)
+    paths = runtime_state_paths(ws)
+    workflow = json.loads(paths["workflow_state"].read_text(encoding="utf-8"))
+    workflow["run_integrity"] = "bad"
+    paths["workflow_state"].write_text(json.dumps(workflow, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+    rc = main(["deliver", "--workspace", str(ws), "--target", "local", "--json"])
+
+    assert rc == 0
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["run_integrity"]["status"] == "unknown"
+    assert payload["run_integrity"]["reference_eligible"] is False
+    assert payload["run_integrity"]["reasons"][0]["reason_code"] == "run_integrity_malformed"
+
+
 def test_deliver_missing_bundle_returns_typed_error(tmp_path: Path, capsys) -> None:
     ws = _workspace(tmp_path)
 
