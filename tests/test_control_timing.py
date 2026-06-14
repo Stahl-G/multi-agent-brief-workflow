@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from multi_agent_brief.orchestrator.timing import derive_control_timing
+from multi_agent_brief.orchestrator.timing import derive_control_timing, derive_control_timing_from_path
 
 
 def _event(event_id: str, event_type: str, created_at: str, **extra):
@@ -100,6 +100,16 @@ def test_control_timing_ignores_non_transaction_decision_events():
     assert timing["status"] == "incomplete"
     assert any(stage["stage_id"] == "doctor" and stage["status"] == "incomplete" for stage in timing["stages"])
     assert "completion_events_missing" in timing["warnings"]
+
+
+def test_control_timing_marks_non_object_event_log_line_invalid(tmp_path):
+    event_log = tmp_path / "event_log.jsonl"
+    event_log.write_text("[]\n", encoding="utf-8")
+
+    timing = derive_control_timing_from_path(event_log)
+
+    assert timing["status"] == "invalid_event_log"
+    assert any("must be a JSON object" in warning for warning in timing["warnings"])
 
 
 def test_control_timing_missing_completion_for_completed_stage_is_incomplete():

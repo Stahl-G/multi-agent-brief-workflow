@@ -10,7 +10,7 @@ import uuid
 from pathlib import Path
 from typing import Any
 
-from multi_agent_brief.orchestrator.run_integrity import normalize_run_integrity
+from multi_agent_brief.orchestrator.run_integrity import classify_run_integrity
 from multi_agent_brief.orchestrator.timing import derive_control_timing_from_path
 
 
@@ -70,7 +70,7 @@ def archive_finalized_run(
         "source": "finalize-complete",
         "runtime_manifest_run_id": manifest.get("run_id"),
         "workflow_current_stage": workflow.get("current_stage"),
-        "run_integrity": _run_integrity_for_manifest(workflow.get("run_integrity")),
+        "run_integrity": _run_integrity_for_manifest(workflow),
         "timing": _timing_for_manifest(ws, workflow),
         "event_log_semantics": "copied_before_current_archive_event",
         "files": files,
@@ -135,7 +135,7 @@ def preflight_finalized_run_archive(
         "run_id": run_id,
         "runtime_manifest_run_id": manifest.get("run_id"),
         "workflow_current_stage": workflow.get("current_stage"),
-        "run_integrity": _run_integrity_for_manifest(workflow.get("run_integrity")),
+        "run_integrity": _run_integrity_for_manifest(workflow),
         "timing": _timing_for_manifest(ws, workflow),
     }
 
@@ -397,8 +397,11 @@ def _write_manifest(path: Path, manifest: dict[str, Any]) -> None:
     path.write_text(text, encoding="utf-8")
 
 
-def _run_integrity_for_manifest(value: Any) -> dict[str, Any]:
-    return normalize_run_integrity(value)
+def _run_integrity_for_manifest(workflow: dict[str, Any]) -> dict[str, Any]:
+    return classify_run_integrity(
+        workflow.get("run_integrity"),
+        missing="run_integrity" not in workflow,
+    )
 
 
 def _timing_for_manifest(workspace: Path, workflow: dict[str, Any]) -> dict[str, Any]:

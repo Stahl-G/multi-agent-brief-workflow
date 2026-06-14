@@ -7,6 +7,7 @@ from typing import Any
 
 RUN_INTEGRITY_CLEAN = "clean"
 RUN_INTEGRITY_CONTAMINATED = "contaminated"
+RUN_INTEGRITY_UNKNOWN = "unknown"
 PERSISTED_RUN_INTEGRITY_STATUSES = {RUN_INTEGRITY_CLEAN, RUN_INTEGRITY_CONTAMINATED}
 
 
@@ -44,6 +45,31 @@ def normalize_run_integrity(value: Any) -> dict[str, Any]:
         "clean_single_shot": False if status == RUN_INTEGRITY_CONTAMINATED else bool(value.get("clean_single_shot", True)),
         "reasons": normalized_reasons,
     }
+
+
+def classify_run_integrity(value: Any, *, missing: bool = False) -> dict[str, Any]:
+    """Return a read-side run-integrity projection.
+
+    Missing legacy ``run_integrity`` fields can be treated as clean for
+    backcompat. Malformed persisted values are not reference-clean evidence and
+    are classified as derived ``unknown`` without writing that status back to
+    workflow_state.json.
+    """
+
+    if missing:
+        return clean_run_integrity()
+    if not isinstance(value, dict):
+        return unknown_run_integrity(
+            reason_code="run_integrity_malformed",
+            message="workflow_state.run_integrity is missing or not an object.",
+        )
+    status = value.get("status")
+    if status not in PERSISTED_RUN_INTEGRITY_STATUSES:
+        return unknown_run_integrity(
+            reason_code="run_integrity_invalid_status",
+            message="workflow_state.run_integrity.status is invalid.",
+        )
+    return normalize_run_integrity(value)
 
 
 def workflow_with_run_integrity(workflow: dict[str, Any]) -> dict[str, Any]:
@@ -119,11 +145,11 @@ def contamination_event_metadata(reason: dict[str, Any]) -> dict[str, Any]:
 
 
 def is_reference_eligible(value: Any) -> bool:
-    return bool(normalize_run_integrity(value).get("reference_eligible"))
+    return bool(classify_run_integrity(value).get("reference_eligible"))
 
 
 def is_clean_single_shot(value: Any) -> bool:
-    return bool(normalize_run_integrity(value).get("clean_single_shot"))
+    return bool(classify_run_integrity(value).get("clean_single_shot"))
 
 
 def unknown_run_integrity(*, reason_code: str, message: str) -> dict[str, Any]:

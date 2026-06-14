@@ -20,7 +20,7 @@ from multi_agent_brief.orchestrator.runtime_state import (
     runtime_state_paths,
 )
 from multi_agent_brief.orchestrator.run_integrity import (
-    normalize_run_integrity,
+    classify_run_integrity,
     unknown_run_integrity,
 )
 from multi_agent_brief.outputs.reader_final_gate import (
@@ -533,7 +533,10 @@ def _delivery_run_integrity(workspace: Path) -> dict[str, Any]:
             "workflow_state.json must contain an object; cannot verify run integrity.",
             error_code=E_DELIVERY_EVENT_FAILED,
         )
-    return normalize_run_integrity(workflow.get("run_integrity"))
+    return classify_run_integrity(
+        workflow.get("run_integrity"),
+        missing="run_integrity" not in workflow,
+    )
 
 
 def _print_run_integrity_warning(payload: dict[str, Any]) -> None:

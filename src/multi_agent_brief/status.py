@@ -6,7 +6,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-from multi_agent_brief.orchestrator.run_integrity import normalize_run_integrity
+from multi_agent_brief.orchestrator.run_integrity import classify_run_integrity
 from multi_agent_brief.orchestrator.timing import derive_control_timing_from_path
 
 
@@ -218,12 +218,15 @@ def _workflow_summary(result: dict[str, Any]) -> dict[str, Any]:
         "blocked": payload.get("blocked"),
         "blocking_reason": payload.get("blocking_reason"),
         "next_allowed_decisions": payload.get("next_allowed_decisions") or [],
-        "run_integrity": _run_integrity_summary(payload.get("run_integrity")),
+        "run_integrity": _run_integrity_summary(payload),
     }
 
 
-def _run_integrity_summary(value: Any) -> dict[str, Any]:
-    return normalize_run_integrity(value)
+def _run_integrity_summary(workflow: dict[str, Any]) -> dict[str, Any]:
+    return classify_run_integrity(
+        workflow.get("run_integrity"),
+        missing="run_integrity" not in workflow,
+    )
 
 
 def _artifact_summary(result: dict[str, Any]) -> dict[str, Any]:

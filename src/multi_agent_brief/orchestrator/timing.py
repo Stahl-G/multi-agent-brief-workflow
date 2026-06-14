@@ -11,7 +11,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from multi_agent_brief.orchestrator.run_integrity import normalize_run_integrity
+from multi_agent_brief.orchestrator.run_integrity import classify_run_integrity
 
 
 CONTROL_TIMING_SCHEMA = "mabw.control_timing.v1"
@@ -32,9 +32,13 @@ def derive_control_timing(
     """Return a deterministic timing projection from control events."""
 
     workflow = workflow_state if isinstance(workflow_state, dict) else {}
-    integrity = normalize_run_integrity(
-        run_integrity if isinstance(run_integrity, dict) else workflow.get("run_integrity")
-    )
+    if isinstance(run_integrity, dict):
+        integrity = classify_run_integrity(run_integrity)
+    else:
+        integrity = classify_run_integrity(
+            workflow.get("run_integrity"),
+            missing="run_integrity" not in workflow,
+        )
     stages = [
         stage_id
         for stage_id in (stage_order or _stage_order_from_workflow(workflow) or _stage_order_from_events(event_records))
@@ -138,6 +142,9 @@ def derive_control_timing(
     if integrity.get("status") == "contaminated":
         status = "contaminated"
         warnings.append("run_integrity_contaminated")
+    elif integrity.get("status") == "unknown":
+        status = "unknown"
+        warnings.append("run_integrity_unknown")
     elif any_incomplete:
         status = "incomplete"
     elif any_unknown:
@@ -166,13 +173,16 @@ def derive_control_timing_from_path(
     path = Path(event_log_path)
     try:
         records = _read_event_records(path)
-    except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
-        fallback_integrity = run_integrity if isinstance(run_integrity, dict) else None
-        if fallback_integrity is None and isinstance(workflow_state, dict):
-            fallback_integrity = workflow_state.get("run_integrity")
-        integrity = normalize_run_integrity(
-            fallback_integrity
-        )
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError, ValueError) as exc:
+        if isinstance(run_integrity, dict):
+            integrity = classify_run_integrity(run_integrity)
+        elif isinstance(workflow_state, dict):
+            integrity = classify_run_integrity(
+                workflow_state.get("run_integrity"),
+                missing="run_integrity" not in workflow_state,
+            )
+        else:
+            integrity = classify_run_integrity(None, missing=True)
         return _timing_payload(
             status="invalid_event_log",
             stages=[],
@@ -219,12 +229,13 @@ def _read_event_records(path: Path) -> list[dict[str, Any]]:
     if not path.exists():
         return []
     records: list[dict[str, Any]] = []
-    for line in path.read_text(encoding="utf-8").splitlines():
+    for line_number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), start=1):
         if not line.strip():
             continue
         payload = json.loads(line)
-        if isinstance(payload, dict):
-            records.append(payload)
+        if not isinstance(payload, dict):
+            raise ValueError(f"event_log line {line_number} must be a JSON object")
+        records.append(payload)
     return records
 
 

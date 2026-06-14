@@ -1897,6 +1897,28 @@ def test_run_archive_records_sha256_for_every_file(tmp_path):
         assert record["size_bytes"] == path.stat().st_size
 
 
+def test_run_archive_manifest_marks_malformed_run_integrity_unknown(tmp_path):
+    ws = _write_workspace(tmp_path)
+    state = _complete_finalized_workspace(ws)
+    finalize_report = json.loads((_intermediate(ws) / "finalize_report.json").read_text(encoding="utf-8"))
+    workflow = dict(state["workflow_state"])
+    workflow["run_integrity"] = "bad"
+    run_id = f"{state['manifest']['run_id']}-malformed"
+
+    archive = archive_finalized_run(
+        workspace=ws,
+        run_id=run_id,
+        manifest=state["manifest"],
+        workflow=workflow,
+        artifact_registry=state["artifact_registry"],
+        finalize_report=finalize_report,
+    )
+    manifest = archive["manifest"]
+
+    assert manifest["run_integrity"]["status"] == "unknown"
+    assert manifest["run_integrity"]["reference_eligible"] is False
+
+
 def test_finalize_complete_archive_is_idempotent_when_content_matches(tmp_path):
     ws = _write_workspace(tmp_path)
     state = _complete_finalized_workspace(ws)

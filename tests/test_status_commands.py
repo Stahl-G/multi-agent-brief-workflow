@@ -101,6 +101,26 @@ def test_status_command_reports_contaminated_run_integrity(tmp_path, capsys):
     assert "[status] timing: contaminated; elapsed buckets are not clean evidence" in out
 
 
+def test_status_command_reports_malformed_run_integrity_as_unknown(tmp_path, capsys):
+    ws = _minimal_workspace(tmp_path / "ws")
+    initialize_runtime_state(workspace=ws, runtime="claude", actor="cli")
+    paths = runtime_state_paths(ws)
+    workflow = json.loads(paths["workflow_state"].read_text(encoding="utf-8"))
+    workflow["run_integrity"] = "bad"
+    paths["workflow_state"].write_text(json.dumps(workflow, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+    rc = main(["status", "--workspace", str(ws), "--json"])
+
+    assert rc == 0
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["workflow"]["run_integrity"]["status"] == "unknown"
+    assert payload["workflow"]["run_integrity"]["reference_eligible"] is False
+    assert payload["workflow"]["run_integrity"]["reasons"][0]["reason_code"] == "run_integrity_malformed"
+    assert payload["timing"]["status"] == "unknown"
+    assert payload["timing"]["run_integrity"]["reference_eligible"] is False
+    assert "run_integrity_unknown" in payload["timing"]["warnings"]
+
+
 def test_status_command_does_not_initialize_missing_runtime_state(tmp_path, capsys):
     ws = _minimal_workspace(tmp_path / "ws")
     paths = runtime_state_paths(ws)
