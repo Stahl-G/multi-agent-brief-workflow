@@ -30,7 +30,7 @@ https://www.python.org/downloads/windows/
 ## Clone And Setup
 
 ```powershell
-git clone https://github.com/your-username/multi-agent-brief-workflow.git
+git clone https://github.com/Stahl-G/multi-agent-brief-workflow.git
 cd multi-agent-brief-workflow
 .\scripts\setup.ps1
 .\.venv\Scripts\Activate.ps1
@@ -46,7 +46,25 @@ multi-agent-brief version
 - 验证 `python -m multi_agent_brief.cli.main version`
 - 验证 `.venv\Scripts\multi-agent-brief.exe version`
 
-## Run Demo
+如果 PowerShell 执行策略拦截脚本，也可以只对 setup 脚本临时绕过：
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\setup.ps1
+```
+
+## Create Your First Brief
+
+真实使用路径不是 demo，而是先收集需求、创建工作区，再生成 runtime handoff：
+
+```powershell
+multi-agent-brief onboard
+multi-agent-brief init .\mabw-workspace --from-onboarding onboarding.json
+multi-agent-brief run --workspace .\mabw-workspace
+```
+
+## Optional: Inspect The Demo
+
+demo 用于查看合成材料上的控制面和证据链，不是使用产品前的必经步骤。
 
 ```powershell
 multi-agent-brief init --demo
@@ -64,13 +82,23 @@ multi-agent-brief claude install --repo-workdir .
 # Generic chat clients should use multi-agent-brief run --workspace <workspace>.
 ```
 
-## Init Workspace
+## Init Workspace Directly
 
 ```powershell
 multi-agent-brief init my-workspace
 ```
 
 Answer the interactive onboarding questions. For non-interactive agent runs, generate `onboarding.json` first and use `multi-agent-brief init my-workspace --from-onboarding onboarding.json`.
+
+## Advanced: Experimental Installer
+
+Windows 用户安装器也可用：
+
+```powershell
+irm https://raw.githubusercontent.com/Stahl-G/multi-agent-brief-workflow/main/scripts/install.ps1 | iex
+```
+
+但它当前在 support matrix 中仍是 Experimental CLI-only installer asset。README 首页推荐的默认路径仍是 source clone + `scripts/setup.ps1`。
 
 ## Run Tests
 

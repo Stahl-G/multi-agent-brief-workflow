@@ -17,12 +17,34 @@ The core claim is deliberately narrow: **traceability, not semantic proof yet.**
 
 ## 🚀 Get Started
 
-**Install From Source**
+**Install From Source — macOS / Linux**
 
 ```bash
 git clone https://github.com/Stahl-G/multi-agent-brief-workflow.git
 cd multi-agent-brief-workflow
 bash scripts/setup.sh
+```
+
+**Install From Source — Windows PowerShell**
+
+Windows does not require WSL or Git Bash. PowerShell is the recommended Windows path.
+
+```powershell
+winget install Python.Python.3.12
+
+git clone https://github.com/Stahl-G/multi-agent-brief-workflow.git
+cd multi-agent-brief-workflow
+
+.\scripts\setup.ps1
+.\.venv\Scripts\Activate.ps1
+
+multi-agent-brief version
+```
+
+If PowerShell blocks script execution:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\setup.ps1
 ```
 
 **Create Your First Brief**
@@ -41,6 +63,8 @@ bash scripts/demo-deep-dive.sh
 ```
 
 The demo is for reviewers and visitors who want to inspect the evidence chain on synthetic materials. Real use starts with onboarding and a workspace created for your own brief.
+
+Advanced Windows installer: `irm https://raw.githubusercontent.com/Stahl-G/multi-agent-brief-workflow/main/scripts/install.ps1 | iex` exists, but is currently an Experimental CLI-only installer asset. The default path is source clone plus `scripts/setup.ps1`.
 
 1,000+ deterministic tests run in CI with zero LLM calls.
 

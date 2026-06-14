@@ -88,6 +88,37 @@ Use these standards for every repository change, especially before opening, upda
 
 For architecture orientation before roadmap-driven work, read `docs/agent-dev-guide.zh-CN.md`, `docs/agent-dev-prompt.zh-CN.md`, `docs/architecture-status.md`, `docs/MIGRATION.md`, `docs/orchestrator-contracts.md`, and `docs/support-matrix.md`.
 
+### Core Charters
+
+For the full charter, read `docs/charter/README.md`. Use this short form when
+planning or implementing changes:
+
+1. Smart agents have no authority; authoritative actions are deterministic;
+   nothing takes effect without human approval when it changes future runs; every
+   approved effect leaves a record.
+2. If a rule can be enforced by schema, validator, gate, transaction, event log,
+   or test, do not leave it as prompt guidance or memory.
+3. Each control-plane field has exactly one authoritative writer. Python writes
+   state, ledgers, events, hashes, gates, and deterministic projections. Agents
+   draft content. Humans approve preferences and delivery.
+4. A source is not semantic support, and traceability is not proof. Source plans,
+   candidates, search summaries, and model summaries are discovery material, not
+   evidence.
+5. Frozen artifacts are append-only. Any post-freeze change must become a new
+   revision, new artifact, event, supersede/revert, or run-integrity
+   contamination record.
+6. Conflicts are resolved by declared precedence, not by model persuasion:
+   contracts and deterministic gates beat style preferences; current-run repair
+   beats cross-run taste memory; control duties cannot be skipped by prompt,
+   handoff, or temporary user request.
+7. Speed must come from reused frozen evidence, less repeated inference, better
+   onboarding, or safe parallelism. Never make the workflow faster by removing
+   ledgers, gates, approvals, events, snapshots, archives, or human delivery.
+8. Public claims must not exceed artifacts. If it is unmeasured, say
+   `NOT MEASURED`; if it only traces, say traceability rather than proof.
+9. Private facts must not justify public mechanisms. Public fixtures and demos
+   must be reproducible from public-safe or synthetic material.
+
 ### Implementation Plan Checklist
 
 Before implementing a feature or writing a code plan, answer these questions explicitly. This keeps runtime context, workflow artifacts, contracts, provenance, and reader-facing output from being mixed together.

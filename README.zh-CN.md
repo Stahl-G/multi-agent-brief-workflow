@@ -110,12 +110,34 @@ N 公司宣布其示例州工厂一期产线于本周投产，规划年产能 2G
 
 ## 快速开始
 
-**从源码安装**
+**从源码安装 — macOS / Linux**
 
 ```bash
 git clone https://github.com/Stahl-G/multi-agent-brief-workflow.git
 cd multi-agent-brief-workflow
 bash scripts/setup.sh
+```
+
+**从源码安装 — Windows PowerShell**
+
+Windows 不需要 WSL 或 Git Bash；PowerShell 是推荐路径。
+
+```powershell
+winget install Python.Python.3.12
+
+git clone https://github.com/Stahl-G/multi-agent-brief-workflow.git
+cd multi-agent-brief-workflow
+
+.\scripts\setup.ps1
+.\.venv\Scripts\Activate.ps1
+
+multi-agent-brief version
+```
+
+如果 PowerShell 执行策略拦截脚本：
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\setup.ps1
 ```
 
 **创建你的第一份简报工作区**
@@ -134,6 +156,8 @@ bash scripts/demo-deep-dive.sh
 ```
 
 demo 是给 reviewer 和 GitHub 访客检查合成材料上的证据链，不是使用产品前的必经步骤。
+
+高级 Windows 安装器：`irm https://raw.githubusercontent.com/Stahl-G/multi-agent-brief-workflow/main/scripts/install.ps1 | iex` 已存在，但当前在 support matrix 中仍是 Experimental CLI-only installer asset。默认主路径是 source clone + `scripts/setup.ps1`。
 
 如果你使用 Claude Code writer 路径，再安装 writer 入口：
 
@@ -205,7 +229,7 @@ MABW 适合把一个行业从“一次性调研”转成“长期、可追踪、
 
 ### Claude Code（五动词主路径）
 
-如果你已经完成上面的 demo，只需要激活虚拟环境并安装 writer 入口：
+从源码安装完成后，激活虚拟环境并安装 writer 入口：
 
 ```bash
 source .venv/bin/activate
