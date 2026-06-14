@@ -1780,7 +1780,7 @@ def show_runtime_state(*, workspace: str | Path) -> dict[str, Any]:
         "artifact_registry": registry,
         "event_count": event_count,
     }
-    state["fact_layer_import"] = summarize_fact_layer_import(manifest, workflow)
+    state["fact_layer_import"] = summarize_fact_layer_import(manifest, workflow, workspace=ws)
     return state
 
 

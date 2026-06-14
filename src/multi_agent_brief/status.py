@@ -75,6 +75,7 @@ def build_workspace_status(workspace: str | Path) -> dict[str, Any]:
     payload["fact_layer_import"] = summarize_fact_layer_import(
         manifest_payload if isinstance(manifest_payload, dict) else None,
         workflow_payload if isinstance(workflow_payload, dict) else None,
+        workspace=ws,
     )
     payload["timing"] = derive_control_timing_from_path(
         ws / INTERMEDIATE_DIR / "event_log.jsonl",

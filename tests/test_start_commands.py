@@ -1,6 +1,7 @@
 """Tests for multi-agent-brief start / handoff launcher."""
 from __future__ import annotations
 
+import hashlib
 import json
 from pathlib import Path
 
@@ -26,6 +27,10 @@ from multi_agent_brief.provenance.contract import PROVENANCE_STATE_FILES
 
 
 ROOT = Path(__file__).resolve().parent.parent
+
+
+def _sha256_file(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
 def _write_workspace(tmp_path: Path) -> Path:
@@ -103,6 +108,22 @@ def _mark_fact_layer_imported(ws: Path) -> None:
         + "\n",
         encoding="utf-8",
     )
+    imported_files = []
+    for artifact_id, path in (
+        ("durable_source_evidence_or_source_pack", source_dir / "source-001.md"),
+        ("input_classification", output_dir / "input_classification.json"),
+        ("candidate_claims", intermediate / "candidate_claims.json"),
+        ("screened_candidates", intermediate / "screened_candidates.json"),
+        ("claim_ledger", intermediate / "claim_ledger.json"),
+    ):
+        rel_path = path.relative_to(ws).as_posix()
+        imported_files.append({
+            "artifact_id": artifact_id,
+            "archive_path": f"fact_layer/{rel_path}",
+            "workspace_path": rel_path,
+            "sha256": _sha256_file(path),
+            "size_bytes": path.stat().st_size,
+        })
     manifest = json.loads(paths["runtime_manifest"].read_text(encoding="utf-8"))
     workflow = json.loads(paths["workflow_state"].read_text(encoding="utf-8"))
     fact_layer_sha256 = "c" * 64
@@ -122,7 +143,8 @@ def _mark_fact_layer_imported(ws: Path) -> None:
         "source_archive_manifest": f"output/runs/{source_run_id}/manifest.json",
         "source_archive_manifest_sha256": "d" * 64,
         "fact_layer_sha256": fact_layer_sha256,
-        "imported_file_count": 5,
+        "imported_file_count": len(imported_files),
+        "imported_files": imported_files,
         "satisfied_stage_ids": satisfied_stage_ids,
     }
     statuses = dict(workflow.get("stage_statuses") or {})
@@ -587,6 +609,32 @@ def test_run_fast_rerun_recipe_uses_imported_fact_layer_handoff(tmp_path):
     assert "Do not synthesize or backfill upstream stage-complete" in text
     assert "Then record the pre-analyst successful completions" not in text
     assert not (ws / "output" / "brief.md").exists()
+
+
+def test_run_fast_rerun_recipe_rejects_missing_imported_file_before_handoff(tmp_path, capsys):
+    ws = _write_workspace(tmp_path)
+    initialize_runtime_state(workspace=ws, runtime="claude", repo_workdir=ROOT, recipe="fast-rerun")
+    _mark_fact_layer_imported(ws)
+    (ws / "output" / "intermediate" / "claim_ledger.json").unlink()
+
+    rc = main([
+        "run",
+        "--workspace", str(ws),
+        "--runtime", "claude",
+        "--recipe", "fast-rerun",
+        "--skip-doctor",
+        "--venv", str(tmp_path / ".venv" / "bin" / "activate"),
+    ])
+
+    assert rc == 1
+    out = capsys.readouterr().out
+    assert "E_FAST_RERUN_IMPORT_REQUIRED" in out
+    assert "Imported fact-layer file is missing: output/intermediate/claim_ledger.json" in out
+    assert not (ws / "output" / "intermediate" / "agent_handoff.json").exists()
+    assert not (ws / "output" / "intermediate" / "agent_handoff.md").exists()
+    event_log = ws / "output" / "intermediate" / "event_log.jsonl"
+    events = [json.loads(line) for line in event_log.read_text(encoding="utf-8").splitlines()]
+    assert not any(event.get("event_type") == "handoff_written" for event in events)
 
 
 def test_build_handoff_fast_rerun_requires_import_manifest(tmp_path):

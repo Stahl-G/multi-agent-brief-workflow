@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 from pathlib import Path
 
@@ -10,6 +11,10 @@ from multi_agent_brief.orchestrator.runtime_state import (
     initialize_runtime_state,
     runtime_state_paths,
 )
+
+
+def _sha256_file(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
 def _minimal_workspace(path: Path) -> Path:
@@ -22,6 +27,54 @@ def _minimal_workspace(path: Path) -> Path:
 
 def _mark_fact_layer_imported(ws: Path) -> None:
     paths = runtime_state_paths(ws)
+    source_dir = ws / "input" / "sources"
+    source_dir.mkdir(parents=True, exist_ok=True)
+    (source_dir / "source-001.md").write_text("# Source\n\nExample evidence.\n", encoding="utf-8")
+    output_dir = ws / "output"
+    output_dir.mkdir(parents=True, exist_ok=True)
+    (output_dir / "input_classification.json").write_text(
+        json.dumps({
+            "evidence": [{"path": "input/sources/source-001.md", "name": "source-001.md"}],
+            "feedback": [],
+            "instruction": [],
+            "context": [],
+            "skipped": [],
+        })
+        + "\n",
+        encoding="utf-8",
+    )
+    intermediate = ws / "output" / "intermediate"
+    intermediate.mkdir(parents=True, exist_ok=True)
+    (intermediate / "candidate_claims.json").write_text("[]\n", encoding="utf-8")
+    (intermediate / "screened_candidates.json").write_text("[]\n", encoding="utf-8")
+    (intermediate / "claim_ledger.json").write_text(
+        json.dumps([
+            {
+                "claim_id": "CL-001",
+                "statement": "ExampleCo opened a demo facility.",
+                "source_id": "SRC-001",
+                "evidence_text": "Example evidence.",
+            }
+        ])
+        + "\n",
+        encoding="utf-8",
+    )
+    imported_files = []
+    for artifact_id, path in (
+        ("durable_source_evidence_or_source_pack", source_dir / "source-001.md"),
+        ("input_classification", output_dir / "input_classification.json"),
+        ("candidate_claims", intermediate / "candidate_claims.json"),
+        ("screened_candidates", intermediate / "screened_candidates.json"),
+        ("claim_ledger", intermediate / "claim_ledger.json"),
+    ):
+        rel_path = path.relative_to(ws).as_posix()
+        imported_files.append({
+            "artifact_id": artifact_id,
+            "archive_path": f"fact_layer/{rel_path}",
+            "workspace_path": rel_path,
+            "sha256": _sha256_file(path),
+            "size_bytes": path.stat().st_size,
+        })
     manifest = json.loads(paths["runtime_manifest"].read_text(encoding="utf-8"))
     workflow = json.loads(paths["workflow_state"].read_text(encoding="utf-8"))
     fact_layer_sha256 = "a" * 64
@@ -32,7 +85,8 @@ def _mark_fact_layer_imported(ws: Path) -> None:
         "source_archive_manifest": "output/runs/mabw-20260614T000000Z-source/manifest.json",
         "source_archive_manifest_sha256": "b" * 64,
         "fact_layer_sha256": fact_layer_sha256,
-        "imported_file_count": 5,
+        "imported_file_count": len(imported_files),
+        "imported_files": imported_files,
         "satisfied_stage_ids": [
             "doctor",
             "source-discovery",
@@ -164,6 +218,22 @@ def test_status_command_reports_fact_layer_import_summary(tmp_path, capsys):
     assert summary["next_stage"] == "analyst"
     assert all(stage["display_status"] == "complete via import" for stage in summary["imported_stages"])
     assert payload["suggested_next_command"] == f"multi-agent-brief run --workspace {ws} --recipe fast-rerun --skip-doctor"
+
+
+def test_status_command_reports_invalid_fact_layer_import_when_file_missing(tmp_path, capsys):
+    ws = _minimal_workspace(tmp_path / "ws")
+    initialize_runtime_state(workspace=ws, runtime="claude", actor="cli")
+    _mark_fact_layer_imported(ws)
+    (ws / "output" / "intermediate" / "claim_ledger.json").unlink()
+
+    rc = main(["status", "--workspace", str(ws), "--json"])
+
+    assert rc == 0
+    payload = json.loads(capsys.readouterr().out)
+    summary = payload["fact_layer_import"]
+    assert summary["status"] == "invalid"
+    assert "Imported fact-layer file is missing: output/intermediate/claim_ledger.json." in summary["errors"]
+    assert payload["suggested_next_command"] != f"multi-agent-brief run --workspace {ws} --recipe fast-rerun --skip-doctor"
 
 
 def test_status_command_human_output_reports_fact_layer_import(tmp_path, capsys):

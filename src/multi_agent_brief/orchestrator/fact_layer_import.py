@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 from pathlib import Path
 from typing import Any
@@ -24,6 +25,8 @@ IMPORT_SATISFIED_STAGE_IDS = (
 def summarize_fact_layer_import(
     manifest: dict[str, Any] | None,
     workflow: dict[str, Any] | None = None,
+    *,
+    workspace: str | Path | None = None,
 ) -> dict[str, Any]:
     """Return a read-only fast-rerun import projection.
 
@@ -73,6 +76,7 @@ def summarize_fact_layer_import(
         errors.append("runtime_manifest.fact_layer_import.source_archive_manifest_sha256 is required.")
     if not isinstance(imported_file_count, int) or imported_file_count <= 0:
         errors.append("runtime_manifest.fact_layer_import.imported_file_count must be a positive integer.")
+    errors.extend(_imported_file_record_errors(record, workspace=workspace))
 
     missing_satisfied = sorted(set(IMPORT_SATISFIED_STAGE_IDS) - set(satisfied_stage_ids))
     if missing_satisfied:
@@ -121,6 +125,7 @@ def load_fact_layer_import_summary(workspace: str | Path) -> dict[str, Any]:
     summary = summarize_fact_layer_import(
         manifest if isinstance(manifest, dict) else None,
         workflow if isinstance(workflow, dict) else None,
+        workspace=ws,
     )
     input_errors: list[str] = []
     for label, result in (("runtime_manifest", manifest_result), ("workflow_state", workflow_result)):
@@ -182,6 +187,86 @@ def _imported_stage_projection(record: dict[str, Any], workflow: dict[str, Any])
             }
         )
     return stages
+
+
+def _imported_file_record_errors(record: dict[str, Any], *, workspace: str | Path | None) -> list[str]:
+    files = record.get("imported_files")
+    expected_count = record.get("imported_file_count")
+    errors: list[str] = []
+    if not isinstance(files, list) or not files:
+        return ["runtime_manifest.fact_layer_import.imported_files must be a non-empty list."]
+    if isinstance(expected_count, int) and expected_count != len(files):
+        errors.append(
+            "runtime_manifest.fact_layer_import.imported_file_count does not match imported_files length."
+        )
+
+    ws = Path(workspace).expanduser().resolve() if workspace is not None else None
+    seen_workspace_paths: set[str] = set()
+    for index, item in enumerate(files):
+        if not isinstance(item, dict):
+            errors.append(f"runtime_manifest.fact_layer_import.imported_files[{index}] must be an object.")
+            continue
+        workspace_path = str(item.get("workspace_path") or "")
+        sha256 = str(item.get("sha256") or "")
+        size_bytes = item.get("size_bytes")
+        if not workspace_path:
+            errors.append(f"runtime_manifest.fact_layer_import.imported_files[{index}].workspace_path is required.")
+            continue
+        if _path_text_is_unsafe(workspace_path):
+            errors.append(
+                f"runtime_manifest.fact_layer_import.imported_files[{index}].workspace_path must be workspace-relative."
+            )
+            continue
+        if workspace_path in seen_workspace_paths:
+            errors.append(
+                f"runtime_manifest.fact_layer_import.imported_files contains duplicate workspace_path: {workspace_path}."
+            )
+        seen_workspace_paths.add(workspace_path)
+        if not sha256:
+            errors.append(f"runtime_manifest.fact_layer_import.imported_files[{index}].sha256 is required.")
+        if not isinstance(size_bytes, int) or size_bytes < 0:
+            errors.append(
+                f"runtime_manifest.fact_layer_import.imported_files[{index}].size_bytes must be a non-negative integer."
+            )
+        if ws is None:
+            continue
+        target = (ws / workspace_path).resolve()
+        try:
+            target.relative_to(ws)
+        except ValueError:
+            errors.append(
+                f"runtime_manifest.fact_layer_import.imported_files[{index}].workspace_path escapes workspace."
+            )
+            continue
+        if not target.exists() or not target.is_file():
+            errors.append(f"Imported fact-layer file is missing: {workspace_path}.")
+            continue
+        if isinstance(size_bytes, int) and target.stat().st_size != size_bytes:
+            errors.append(f"Imported fact-layer file size mismatch: {workspace_path}.")
+        if sha256:
+            actual_sha256 = _sha256_file(target)
+            if actual_sha256 != sha256:
+                errors.append(f"Imported fact-layer file hash mismatch: {workspace_path}.")
+    return errors
+
+
+def _path_text_is_unsafe(path_text: str) -> bool:
+    path = Path(path_text)
+    return (
+        not path_text
+        or path_text.startswith("/")
+        or path.is_absolute()
+        or any(part in {"", ".", ".."} for part in path.parts)
+        or (len(path.parts) > 0 and ":" in path.parts[0])
+    )
+
+
+def _sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
 
 
 def _format_import_required_message(summary: dict[str, Any]) -> str:
