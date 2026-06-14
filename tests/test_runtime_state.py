@@ -2499,6 +2499,80 @@ def test_import_fact_layer_transaction_rejects_source_candidates_fact_layer_arti
     assert not _state_file(target_ws, "runtime_manifest").exists()
 
 
+def test_import_fact_layer_transaction_rejects_unknown_delivery_artifact(tmp_path):
+    source_root = tmp_path / "source"
+    target_root = tmp_path / "target"
+    source_root.mkdir()
+    target_root.mkdir()
+    source_ws = _write_workspace(source_root)
+    target_ws = _write_workspace(target_root)
+    _write_fact_layer_inputs(source_ws)
+    finalized = _complete_finalized_workspace(source_ws)
+    archive_root = source_ws / "output" / "runs" / finalized["manifest"]["run_id"]
+    archive_manifest = archive_root / "manifest.json"
+    delivery_brief = archive_root / "delivery" / "brief.md"
+    assert delivery_brief.exists()
+    manifest = json.loads(archive_manifest.read_text(encoding="utf-8"))
+    manifest["fact_layer"]["artifacts"].append({
+        "artifact_id": "delivery_brief",
+        "fact_role": "fact_layer_artifact",
+        "archive_path": "delivery/brief.md",
+        "original_path": "output/delivery/brief.md",
+        "sha256": runtime_state._sha256_file(delivery_brief),
+        "size_bytes": delivery_brief.stat().st_size,
+    })
+    archive_manifest.write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8")
+
+    with pytest.raises(RuntimeStateError) as excinfo:
+        import_fact_layer_transaction(
+            workspace=target_ws,
+            archive=archive_manifest,
+            repo_workdir=ROOT,
+        )
+
+    assert excinfo.value.error_code == runtime_state.E_FACT_LAYER_IMPORT_INVALID
+    assert "unsupported artifact_id" in str(excinfo.value)
+    assert not (target_ws / "output" / "delivery" / "brief.md").exists()
+    assert not _state_file(target_ws, "runtime_manifest").exists()
+
+
+def test_import_fact_layer_transaction_rejects_source_pack_file_outside_sources(tmp_path):
+    source_root = tmp_path / "source"
+    target_root = tmp_path / "target"
+    source_root.mkdir()
+    target_root.mkdir()
+    source_ws = _write_workspace(source_root)
+    target_ws = _write_workspace(target_root)
+    _write_fact_layer_inputs(source_ws)
+    finalized = _complete_finalized_workspace(source_ws)
+    archive_root = source_ws / "output" / "runs" / finalized["manifest"]["run_id"]
+    archive_manifest = archive_root / "manifest.json"
+    delivery_brief = archive_root / "delivery" / "brief.md"
+    manifest = json.loads(archive_manifest.read_text(encoding="utf-8"))
+    for artifact in manifest["fact_layer"]["artifacts"]:
+        if artifact.get("artifact_id") == "durable_source_evidence_or_source_pack":
+            artifact["files"].append({
+                "archive_path": "delivery/brief.md",
+                "original_path": "output/delivery/brief.md",
+                "sha256": runtime_state._sha256_file(delivery_brief),
+                "size_bytes": delivery_brief.stat().st_size,
+            })
+            artifact["file_count"] = len(artifact["files"])
+    archive_manifest.write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8")
+
+    with pytest.raises(RuntimeStateError) as excinfo:
+        import_fact_layer_transaction(
+            workspace=target_ws,
+            archive=archive_manifest,
+            repo_workdir=ROOT,
+        )
+
+    assert excinfo.value.error_code == runtime_state.E_FACT_LAYER_IMPORT_INVALID
+    assert "input/sources" in str(excinfo.value)
+    assert not (target_ws / "output" / "delivery" / "brief.md").exists()
+    assert not _state_file(target_ws, "runtime_manifest").exists()
+
+
 def test_import_fact_layer_transaction_rejects_source_candidates_inside_source_pack(tmp_path):
     source_root = tmp_path / "source"
     target_root = tmp_path / "target"
@@ -2605,6 +2679,34 @@ def test_import_fact_layer_transaction_rejects_duplicate_workspace_target(tmp_pa
     assert excinfo.value.error_code == runtime_state.E_FACT_LAYER_IMPORT_INVALID
     assert "duplicate import targets" in str(excinfo.value)
     assert excinfo.value.details["duplicate_targets"][0]["workspace_path"] == "input/sources/source-001.md"
+    assert not _state_file(target_ws, "runtime_manifest").exists()
+
+
+def test_import_fact_layer_transaction_rejects_stale_downstream_output(tmp_path):
+    source_root = tmp_path / "source"
+    target_root = tmp_path / "target"
+    source_root.mkdir()
+    target_root.mkdir()
+    source_ws = _write_workspace(source_root)
+    target_ws = _write_workspace(target_root)
+    _write_fact_layer_inputs(source_ws)
+    finalized = _complete_finalized_workspace(source_ws)
+    archive_manifest = source_ws / "output" / "runs" / finalized["manifest"]["run_id"] / "manifest.json"
+    stale_delivery = target_ws / "output" / "delivery" / "brief.md"
+    stale_delivery.parent.mkdir(parents=True, exist_ok=True)
+    stale_delivery.write_text("stale delivery must not survive import\n", encoding="utf-8")
+    before = stale_delivery.read_bytes()
+
+    with pytest.raises(RuntimeStateError) as excinfo:
+        import_fact_layer_transaction(
+            workspace=target_ws,
+            archive=archive_manifest,
+            repo_workdir=ROOT,
+        )
+
+    assert excinfo.value.error_code == runtime_state.E_FACT_LAYER_IMPORT_INVALID
+    assert "existing source/output leftovers" in str(excinfo.value)
+    assert stale_delivery.read_bytes() == before
     assert not _state_file(target_ws, "runtime_manifest").exists()
 
 

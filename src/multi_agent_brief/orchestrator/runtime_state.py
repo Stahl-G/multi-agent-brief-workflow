@@ -88,6 +88,13 @@ FACT_LAYER_IMPORT_REQUIRED_ARTIFACT_IDS = (
     "claim_ledger",
 )
 FACT_LAYER_IMPORT_FORBIDDEN_ARTIFACT_IDS = {"source_candidates", "source_plan"}
+FACT_LAYER_IMPORT_SOURCE_PACK_ARTIFACT_ID = "durable_source_evidence_or_source_pack"
+FACT_LAYER_IMPORT_SINGLETON_PATHS = {
+    "input_classification": "output/input_classification.json",
+    "candidate_claims": "output/intermediate/candidate_claims.json",
+    "screened_candidates": "output/intermediate/screened_candidates.json",
+    "claim_ledger": "output/intermediate/claim_ledger.json",
+}
 
 EVENT_TYPES = {
     "run_initialized",
@@ -423,12 +430,83 @@ def _reject_source_plan_fact_layer_record(*, artifact_id: str, archive_path: str
             )
 
 
+def _archive_fact_layer_path_for(original_path: str) -> str:
+    return f"fact_layer/{original_path}"
+
+
+def _validate_fact_layer_import_record_scope(
+    *,
+    artifact_id: str,
+    archive_path: str,
+    original_path: str,
+    nested_in_source_pack: bool,
+) -> None:
+    allowed_ids = {FACT_LAYER_IMPORT_SOURCE_PACK_ARTIFACT_ID, *FACT_LAYER_IMPORT_SINGLETON_PATHS}
+    if artifact_id not in allowed_ids:
+        raise RuntimeStateError(
+            "Run archive fact_layer contains an unsupported artifact_id for import.",
+            details={"artifact_id": artifact_id},
+            error_code=E_FACT_LAYER_IMPORT_INVALID,
+        )
+
+    if artifact_id == FACT_LAYER_IMPORT_SOURCE_PACK_ARTIFACT_ID:
+        if not nested_in_source_pack:
+            raise RuntimeStateError(
+                "Durable source evidence must be imported from the source pack file list.",
+                details={"artifact_id": artifact_id},
+                error_code=E_FACT_LAYER_IMPORT_INVALID,
+            )
+        if not original_path.startswith("input/sources/"):
+            raise RuntimeStateError(
+                "Durable source evidence imports must target input/sources/.",
+                details={"artifact_id": artifact_id, "original_path": original_path},
+                error_code=E_FACT_LAYER_IMPORT_INVALID,
+            )
+        if not archive_path.startswith("fact_layer/input/sources/"):
+            raise RuntimeStateError(
+                "Durable source evidence archive paths must stay under fact_layer/input/sources/.",
+                details={"artifact_id": artifact_id, "archive_path": archive_path},
+                error_code=E_FACT_LAYER_IMPORT_INVALID,
+            )
+        return
+
+    expected_original_path = FACT_LAYER_IMPORT_SINGLETON_PATHS[artifact_id]
+    if nested_in_source_pack:
+        raise RuntimeStateError(
+            "Singleton fact layer artifacts cannot be imported from a files list.",
+            details={"artifact_id": artifact_id},
+            error_code=E_FACT_LAYER_IMPORT_INVALID,
+        )
+    if original_path != expected_original_path:
+        raise RuntimeStateError(
+            "Singleton fact layer artifact targets do not match the import contract.",
+            details={
+                "artifact_id": artifact_id,
+                "expected_original_path": expected_original_path,
+                "actual_original_path": original_path,
+            },
+            error_code=E_FACT_LAYER_IMPORT_INVALID,
+        )
+    expected_archive_path = _archive_fact_layer_path_for(expected_original_path)
+    if archive_path != expected_archive_path:
+        raise RuntimeStateError(
+            "Singleton fact layer archive paths do not match the import contract.",
+            details={
+                "artifact_id": artifact_id,
+                "expected_archive_path": expected_archive_path,
+                "actual_archive_path": archive_path,
+            },
+            error_code=E_FACT_LAYER_IMPORT_INVALID,
+        )
+
+
 def _require_fact_layer_file_record(
     *,
     workspace: Path,
     archive_root: Path,
     record: dict[str, Any],
     artifact_id: str,
+    nested_in_source_pack: bool = False,
 ) -> dict[str, Any]:
     archive_path = str(record.get("archive_path") or "")
     original_path = str(record.get("original_path") or "")
@@ -445,6 +523,12 @@ def _require_fact_layer_file_record(
             details={"artifact_id": artifact_id, "record": record},
             error_code=E_FACT_LAYER_IMPORT_INVALID,
         )
+    _validate_fact_layer_import_record_scope(
+        artifact_id=artifact_id,
+        archive_path=archive_path,
+        original_path=original_path,
+        nested_in_source_pack=nested_in_source_pack,
+    )
     source = _source_archive_path(archive_root, archive_path)
     target = _target_workspace_path(workspace, original_path)
     if not source.exists() or not source.is_file():
@@ -582,6 +666,12 @@ def _read_fact_layer_import_plan(
         seen_ids.add(artifact_id)
         files = artifact.get("files")
         if isinstance(files, list):
+            if artifact_id != FACT_LAYER_IMPORT_SOURCE_PACK_ARTIFACT_ID:
+                raise RuntimeStateError(
+                    "Only durable source evidence can be imported from a files list.",
+                    details={"artifact_id": artifact_id},
+                    error_code=E_FACT_LAYER_IMPORT_INVALID,
+                )
             if not files:
                 raise RuntimeStateError(
                     "Run archive fact_layer source pack is empty.",
@@ -601,6 +691,7 @@ def _read_fact_layer_import_plan(
                         archive_root=archive_root,
                         record=file_record,
                         artifact_id=artifact_id,
+                        nested_in_source_pack=True,
                     )
                 )
         else:
@@ -610,6 +701,7 @@ def _read_fact_layer_import_plan(
                     archive_root=archive_root,
                     record=artifact,
                     artifact_id=artifact_id,
+                    nested_in_source_pack=False,
                 )
             )
 
@@ -708,6 +800,32 @@ def _reject_existing_fact_layer_import_targets(import_files: list[dict[str, Any]
         )
 
 
+def _reject_existing_fact_layer_import_leftovers(workspace: Path, import_files: list[dict[str, Any]]) -> None:
+    allowed_targets = {record["target_path"].resolve() for record in import_files}
+    leftovers: list[str] = []
+
+    for root in (workspace / "input" / "sources", workspace / "output"):
+        if not root.exists():
+            continue
+        for path in sorted(root.rglob("*")):
+            if not path.is_file():
+                continue
+            resolved = path.resolve()
+            if resolved not in allowed_targets:
+                leftovers.append(_workspace_relative(workspace, path))
+
+    source_candidates = workspace / "source_candidates.yaml"
+    if source_candidates.exists() and source_candidates.is_file():
+        leftovers.append("source_candidates.yaml")
+
+    if leftovers:
+        raise RuntimeStateError(
+            "Fact layer import requires a clean target workspace without existing source/output leftovers.",
+            details={"existing_leftovers": leftovers},
+            error_code=E_FACT_LAYER_IMPORT_INVALID,
+        )
+
+
 def _reject_duplicate_fact_layer_import_targets(import_files: list[dict[str, Any]]) -> None:
     seen_targets: dict[str, str] = {}
     duplicates: list[dict[str, str]] = []
@@ -764,6 +882,7 @@ def import_fact_layer_transaction(
         )
 
     import_plan = _read_fact_layer_import_plan(workspace=ws, archive=archive)
+    _reject_existing_fact_layer_import_leftovers(ws, import_plan["import_files"])
     _reject_existing_fact_layer_import_targets(import_plan["import_files"])
     state_snapshots = _snapshot_state_files(paths, ("runtime_manifest", "workflow_state", "artifact_registry", "event_log"))
     target_snapshots = _snapshot_file_paths([record["target_path"] for record in import_plan["import_files"]])
