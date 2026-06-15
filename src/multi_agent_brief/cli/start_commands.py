@@ -25,6 +25,7 @@ from multi_agent_brief.orchestrator.runtime_state import (
     load_artifact_contracts,
     load_stage_specs,
 )
+from multi_agent_brief.contracts.role_topology import ROLE_TOPOLOGY_VALUES
 from multi_agent_brief.orchestrator.fact_layer_import import require_fast_rerun_handoff_ready
 from multi_agent_brief.audience_memory import AUDIENCE_MEMORY_FILES
 from multi_agent_brief.controls.contract import CONTROL_SWITCHBOARD_FILES
@@ -590,6 +591,15 @@ def _build_stage_completion_protocol(repo: Path) -> dict[str, Any]:
                     "format": "",
                 })
 
+        topology_satisfaction = _protocol_topology_satisfaction(
+            stage.get("topology_satisfaction") or {},
+            artifact_by_id,
+        )
+        independent_topologies = [
+            topology
+            for topology in _ordered_role_topologies()
+            if topology not in topology_satisfaction
+        ] if topology_satisfaction else []
         stage_protocol.append({
             "stage_id": stage_id,
             "owner": str(stage.get("owner") or ""),
@@ -597,6 +607,8 @@ def _build_stage_completion_protocol(repo: Path) -> dict[str, Any]:
             "required_input_artifacts": required_inputs,
             "context_inputs": context_inputs,
             "required_output_artifacts": required_outputs,
+            "topology_satisfaction": topology_satisfaction,
+            "independent_completion_topologies": independent_topologies,
             "allowed_decisions": [str(item) for item in (stage.get("allowed_decisions") or [])],
             "forbidden_actions": list(DEFAULT_STAGE_FORBIDDEN_ACTIONS),
             "completion_condition": (
@@ -611,6 +623,41 @@ def _build_stage_completion_protocol(repo: Path) -> dict[str, Any]:
         "rules": list(STAGE_COMPLETION_PROTOCOL_RULES),
         "stages": stage_protocol,
     }
+
+
+def _ordered_role_topologies() -> list[str]:
+    preferred = ["default", "strict", "human_assisted"]
+    return [
+        item for item in preferred if item in ROLE_TOPOLOGY_VALUES
+    ] + sorted(str(item) for item in ROLE_TOPOLOGY_VALUES if item not in preferred)
+
+
+def _protocol_topology_satisfaction(
+    rules: dict[str, Any],
+    artifact_by_id: dict[str, dict[str, Any]],
+) -> dict[str, dict[str, Any]]:
+    result: dict[str, dict[str, Any]] = {}
+    for topology, rule in sorted(rules.items()):
+        if not isinstance(rule, dict):
+            continue
+        required_artifacts: list[dict[str, Any]] = []
+        for artifact_id in rule.get("required_artifacts") or []:
+            artifact_key = str(artifact_id)
+            artifact = artifact_by_id.get(artifact_key)
+            if artifact:
+                required_artifacts.append(_protocol_artifact_ref(artifact_key, artifact))
+            else:
+                required_artifacts.append({
+                    "artifact_id": artifact_key,
+                    "path": artifact_key,
+                    "required": True,
+                    "format": "",
+                })
+        result[str(topology)] = {
+            "satisfied_by": str(rule.get("satisfied_by") or ""),
+            "required_artifacts": required_artifacts,
+        }
+    return result
 
 
 def _protocol_artifact_ref(artifact_id: str, artifact: dict[str, Any]) -> dict[str, Any]:
@@ -635,12 +682,33 @@ def _render_stage_completion_protocol_prompt(protocol: dict[str, Any]) -> str:
         inputs = _protocol_paths(stage.get("required_input_artifacts") or [])
         outputs = _protocol_paths(stage.get("required_output_artifacts") or [])
         context = ", ".join(stage.get("context_inputs") or []) or "none"
+        topology_satisfaction = stage.get("topology_satisfaction") or {}
+        independent_topologies = ", ".join(stage.get("independent_completion_topologies") or []) or "none"
         lines.append(f"- {stage_id}:")
         lines.append(f"  required input artifacts: {inputs}")
         lines.append(f"  context inputs: {context}")
-        lines.append(f"  MUST produce: {outputs}")
+        if topology_satisfaction:
+            lines.append(f"  topology satisfaction: {_render_topology_satisfaction(topology_satisfaction)}")
+            lines.append(f"  independent completion topologies: {independent_topologies}")
+            lines.append(f"  independent MUST produce ({independent_topologies}): {outputs}")
+        else:
+            lines.append(f"  MUST produce: {outputs}")
         lines.append("  forbidden: no prose-only completion, no upstream mutation, no invented evidence, no skipped completion transaction.")
     return "\n".join(lines)
+
+
+def _render_topology_satisfaction(rules: dict[str, Any]) -> str:
+    parts: list[str] = []
+    for topology in _ordered_role_topologies():
+        rule = rules.get(topology)
+        if not isinstance(rule, dict):
+            continue
+        artifacts = _protocol_paths(rule.get("required_artifacts") or [])
+        parts.append(
+            f"{topology}: satisfied by {rule.get('satisfied_by') or 'unknown'} "
+            f"when {artifacts} exist"
+        )
+    return "; ".join(parts) if parts else "none"
 
 
 def _protocol_paths(items: list[dict[str, Any]]) -> str:
@@ -815,7 +883,24 @@ def write_handoff_artifacts(handoff: AgentHandoff, workspace: Path) -> tuple[Pat
                 md_content.append(f"  - `{item.get('artifact_id')}` at `{item.get('path')}`")
         else:
             md_content.append("  - none")
-        md_content.append("- Required output artifacts:")
+        topology_satisfaction = stage.get("topology_satisfaction") or {}
+        if topology_satisfaction:
+            md_content.append("- Topology satisfaction:")
+            for topology in _ordered_role_topologies():
+                rule = topology_satisfaction.get(topology)
+                if not isinstance(rule, dict):
+                    continue
+                artifacts = _protocol_paths(rule.get("required_artifacts") or [])
+                md_content.append(
+                    f"  - `{topology}`: satisfied by `{rule.get('satisfied_by')}` when {artifacts} exist"
+                )
+            md_content.append(
+                "- Independent completion topologies: "
+                + (", ".join(stage.get("independent_completion_topologies") or []) or "none")
+            )
+            md_content.append("- Required output artifacts for independent completion:")
+        else:
+            md_content.append("- Required output artifacts:")
         outputs = stage.get("required_output_artifacts") or []
         if outputs:
             for item in outputs:

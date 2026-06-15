@@ -200,6 +200,24 @@ def _assert_orchestrator_contract_handoff(data: dict[str, object]) -> None:
             "format": "json",
         }
     ]
+    screener_protocol = protocol_stages["screener"]
+    assert screener_protocol["topology_satisfaction"]["default"]["satisfied_by"] == "scout"
+    assert screener_protocol["topology_satisfaction"]["default"]["required_artifacts"] == [
+        {
+            "artifact_id": "candidate_claims",
+            "path": "output/intermediate/candidate_claims.json",
+            "required": True,
+            "format": "json",
+        },
+        {
+            "artifact_id": "screened_candidates",
+            "path": "output/intermediate/screened_candidates.json",
+            "required": True,
+            "format": "json",
+        },
+    ]
+    assert screener_protocol["topology_satisfaction"]["human_assisted"]["satisfied_by"] == "scout"
+    assert screener_protocol["independent_completion_topologies"] == ["strict"]
     assert protocol_stages["analyst"]["required_input_artifacts"] == [
         {
             "artifact_id": "claim_ledger",
@@ -266,6 +284,14 @@ def _assert_orchestrator_contract_handoff(data: dict[str, object]) -> None:
     assert "next_allowed_decisions" in text
     assert "Stage completion protocol" in text
     assert "MUST produce" in text
+    assert "topology satisfaction: default: satisfied by scout" in text
+    assert "independent MUST produce (strict): screened_candidates at output/intermediate/screened_candidates.json" in text
+    assert (
+        "- screener:\n"
+        "  required input artifacts: candidate_claims at output/intermediate/candidate_claims.json\n"
+        "  context inputs: none\n"
+        "  MUST produce: screened_candidates at output/intermediate/screened_candidates.json"
+    ) not in str(data.get("prompt", ""))
     assert "I completed the stage" in text
     assert "source_candidates.yaml is a source plan only, not source evidence" in text
     assert "URL, source title/name, published date or retrieved_at" in text
