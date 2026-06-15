@@ -258,7 +258,7 @@ def build_hermes_cron_plan(
         "For low-cost frequent polling, convert the daily job to a wakeAgent/script gate in Hermes after the source pattern stabilizes.",
     ]
     return HermesCronPlan(
-        version="v0.8.1",
+        version="v0.8.2",
         workspace=str(workspace_path),
         project_name=summary["name"],
         cadences=resolved_cadences,
@@ -334,7 +334,7 @@ def render_hermes_cron_markdown(plan: HermesCronPlan) -> str:
 _SKILL_MD_TEMPLATE = '''---
 name: multi-agent-brief-hermes
 description: Use this skill to run Multi-Agent Brief Workflow workspaces inside Hermes using Hermes delegate_task subagents, source cache, cron scheduling, and final rendering tools.
-version: 0.8.1
+version: 0.8.2
 author: multi-agent-brief-workflow
 license: MIT
 platforms:
@@ -678,13 +678,14 @@ Inputs:
 - output/intermediate/claim_ledger.json
 
 Write:
-- output/intermediate/audited_brief.md
+- output/intermediate/audited_brief.md as the Analyst working draft
 
 Write a management-ready brief in the workspace language.
 Use Claim Ledger evidence for factual statements.
 Preserve valid [src:<claim_id>] citations that use real Claim Ledger IDs.
 Include source dates where useful.
 Return a section summary and any source limitations.
+Do not write analyst_draft_snapshot.md; Python freezes that control artifact during analyst stage-complete.
 """,
     toolsets=["file", "terminal"]
 )
@@ -697,8 +698,11 @@ delegate_task(
     goal="Polish the audited MABW brief",
     context="""
 Workspace: <workspace>
-Input: output/intermediate/audited_brief.md
-Write: output/intermediate/audited_brief.md
+Inputs:
+- output/intermediate/analyst_draft_snapshot.md
+- output/intermediate/audited_brief.md
+Write:
+- output/intermediate/audited_brief.md as the Editor-owned final auditable brief
 
 Improve readability, structure, and executive tone.
 Preserve factual scope, uncertainty, and valid [src:<claim_id>] citations that use real Claim Ledger IDs.
@@ -772,7 +776,7 @@ def render_hermes_setup_success(
     repo: str | Path,
     venv: str | Path,
     workspace: str | Path,
-    version: str = "v0.8.1",
+    version: str = "v0.8.2",
     doctor_status: str = "passed",
 ) -> str:
     return f"""Project is cloned and ready.
@@ -946,12 +950,13 @@ As the Hermes Orchestrator main agent, execute:
 15. After claim_ledger.json exists, delegate analyst child:
    Goal: "Draft the audited MABW brief"
    Inputs: user.md and output/intermediate/claim_ledger.json
-   Write: output/intermediate/audited_brief.md
+   Write: output/intermediate/audited_brief.md as the Analyst working draft
    toolsets: ["file", "terminal"]
 
-16. After audited_brief.md exists, delegate editor / Delivery Editor child:
+16. After analyst stage-complete freezes analyst_draft_snapshot.md, delegate editor / Delivery Editor child:
    Goal: "Polish the audited MABW brief without adding facts"
-   Input and output: output/intermediate/audited_brief.md
+   Inputs: output/intermediate/analyst_draft_snapshot.md and output/intermediate/audited_brief.md
+   Write: output/intermediate/audited_brief.md as the Editor-owned final auditable brief
    toolsets: ["file", "terminal"]
 
 17. After editor completes, delegate auditor child:
