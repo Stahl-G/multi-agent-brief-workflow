@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 
 from multi_agent_brief.experiments.experiment_080 import (
+    validate_assessment,
     validate_case_dir,
     validate_case_manifest,
     validate_frozen_fact_layer,
@@ -112,6 +113,28 @@ def _valid_scorecard() -> dict:
         ],
         "regression": {},
         "notes": [],
+    }
+
+
+def _valid_assessment() -> dict:
+    return {
+        "schema_version": "mabw.experiment_080.assessment.v1",
+        "experiment_id": "MABW-080",
+        "case_id": "solar_public_001",
+        "condition": "memory",
+        "run_id": "mabw-20260614T000000Z-test",
+        "assessed_at": "2026-06-16T00:00:00Z",
+        "assessed_by": "masked-human-reviewer",
+        "guidance_scores": [
+            {
+                "entry_id": "AG-0001",
+                "relevant": True,
+                "manifestation_score": 2,
+                "overapplication": False,
+                "assessment_method": "human",
+                "evidence_excerpt": "The brief starts with the business implication.",
+            }
+        ],
     }
 
 
@@ -369,6 +392,48 @@ def test_experiment_080_overapplication_true_requires_score_three():
     diagnostics = validate_scorecard(scorecard)
 
     assert "overapplication_score_mismatch" in _codes(diagnostics)
+
+
+def test_experiment_080_valid_assessment_passes():
+    diagnostics = validate_assessment(_valid_assessment())
+
+    assert diagnostics == []
+
+
+def test_experiment_080_assessment_rejects_old_agent_assisted_method():
+    assessment = _valid_assessment()
+    assessment["guidance_scores"][0]["assessment_method"] = "agent_assisted"
+
+    diagnostics = validate_assessment(assessment)
+
+    assert "invalid_assessment_method" in _codes(diagnostics)
+
+
+def test_experiment_080_assessment_requires_non_empty_guidance_scores():
+    assessment = _valid_assessment()
+    assessment["guidance_scores"] = []
+
+    diagnostics = validate_assessment(assessment)
+
+    assert "empty_guidance_scores" in _codes(diagnostics)
+
+
+def test_experiment_080_assessment_rejects_duplicate_guidance_score_entry_ids():
+    assessment = _valid_assessment()
+    assessment["guidance_scores"].append(dict(assessment["guidance_scores"][0]))
+
+    diagnostics = validate_assessment(assessment)
+
+    assert "duplicate_guidance_score_entry_id" in _codes(diagnostics)
+
+
+def test_experiment_080_assessment_must_not_set_validity_class():
+    assessment = _valid_assessment()
+    assessment["validity_class"] = "A_controlled"
+
+    diagnostics = validate_assessment(assessment)
+
+    assert "assessment_must_not_set_validity_class" in _codes(diagnostics)
 
 
 def test_experiment_080_valid_run_record_passes():
