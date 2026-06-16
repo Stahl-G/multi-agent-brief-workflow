@@ -1152,6 +1152,75 @@ def test_experiments_080_import_assessment_rejects_missing_guidance_entry(tmp_pa
     assert not output_path.exists()
 
 
+def test_experiments_080_import_assessment_rejects_missing_scorecard_guidance_binding(tmp_path, capsys):
+    _, scorecard_path = _write_scorecard_draft_from_fixture(tmp_path, capsys)
+    scorecard = json.loads(scorecard_path.read_text(encoding="utf-8"))
+    del scorecard["guidance_assessment"]
+    _write_json(scorecard_path, scorecard)
+    assessment_path = tmp_path / "assessment.json"
+    output_path = tmp_path / "assessed.scorecard.json"
+    _write_json(assessment_path, _assessment_payload(method="human", entry_id="AG-9999"))
+
+    rc = main(_assessment_args(scorecard_path, assessment_path, output_path))
+
+    assert rc == 1
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["details"]["code"] == "E_EXPERIMENT_080_ASSESSMENT_GUIDANCE_MISMATCH"
+    assert not output_path.exists()
+
+
+def test_experiments_080_import_assessment_rejects_empty_scorecard_guidance_binding(tmp_path, capsys):
+    _, scorecard_path = _write_scorecard_draft_from_fixture(tmp_path, capsys)
+    scorecard = json.loads(scorecard_path.read_text(encoding="utf-8"))
+    scorecard["guidance_assessment"]["guidance_entry_ids"] = []
+    _write_json(scorecard_path, scorecard)
+    assessment_path = tmp_path / "assessment.json"
+    output_path = tmp_path / "assessed.scorecard.json"
+    _write_json(assessment_path, _assessment_payload(method="human"))
+
+    rc = main(_assessment_args(scorecard_path, assessment_path, output_path))
+
+    assert rc == 1
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["details"]["code"] == "E_EXPERIMENT_080_ASSESSMENT_GUIDANCE_MISMATCH"
+    assert not output_path.exists()
+
+
+def test_experiments_080_import_assessment_rejects_duplicate_scorecard_guidance_binding(tmp_path, capsys):
+    _, scorecard_path = _write_scorecard_draft_from_fixture(tmp_path, capsys)
+    scorecard = json.loads(scorecard_path.read_text(encoding="utf-8"))
+    scorecard["guidance_assessment"]["guidance_entry_ids"] = ["AG-0001", "AG-0001"]
+    _write_json(scorecard_path, scorecard)
+    assessment_path = tmp_path / "assessment.json"
+    output_path = tmp_path / "assessed.scorecard.json"
+    _write_json(assessment_path, _assessment_payload(method="human"))
+
+    rc = main(_assessment_args(scorecard_path, assessment_path, output_path))
+
+    assert rc == 1
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["details"]["code"] == "E_EXPERIMENT_080_ASSESSMENT_GUIDANCE_MISMATCH"
+    assert payload["details"]["duplicate_entry_ids"] == ["AG-0001"]
+    assert not output_path.exists()
+
+
+def test_experiments_080_import_assessment_rejects_already_assessed_scorecard(tmp_path, capsys):
+    _, scorecard_path = _write_scorecard_draft_from_fixture(tmp_path, capsys)
+    scorecard = json.loads(scorecard_path.read_text(encoding="utf-8"))
+    scorecard["guidance_assessment"]["status"] = "assessed"
+    _write_json(scorecard_path, scorecard)
+    assessment_path = tmp_path / "assessment.json"
+    output_path = tmp_path / "assessed.scorecard.json"
+    _write_json(assessment_path, _assessment_payload(method="human"))
+
+    rc = main(_assessment_args(scorecard_path, assessment_path, output_path))
+
+    assert rc == 1
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["details"]["code"] == "E_EXPERIMENT_080_ASSESSMENT_GUIDANCE_MISMATCH"
+    assert not output_path.exists()
+
+
 def test_experiments_080_import_assessment_rejects_different_existing_output(tmp_path, capsys):
     _, scorecard_path = _write_scorecard_draft_from_fixture(tmp_path, capsys)
     assessment_path = tmp_path / "assessment.json"

@@ -95,9 +95,14 @@ def _valid_scorecard() -> dict:
         "control_integrity": {
             "terminal_workflow": True,
             "run_integrity_clean": True,
+            "reference_eligible": True,
             "artifact_registry_valid": True,
             "quality_gates_passed": True,
             "archive_present": True,
+            "archive_schema_valid": True,
+            "finalize_complete": True,
+            "finalize_report_pass": True,
+            "timing_available": True,
         },
         "frozen_fact_layer": {"matches_case": True, "mismatches": []},
         "reader_clean": {"pass": True},
@@ -334,6 +339,29 @@ def test_experiment_080_a_controlled_rejects_string_false_requirement_values():
     codes = _codes(diagnostics)
     assert "invalid_a_controlled_requirement_type" in codes
     assert "a_controlled_requirements_not_met" in codes
+
+
+def test_experiment_080_a_controlled_rejects_missing_required_control_key():
+    for key in (
+        "terminal_workflow",
+        "run_integrity_clean",
+        "reference_eligible",
+        "artifact_registry_valid",
+        "quality_gates_passed",
+        "archive_present",
+        "archive_schema_valid",
+        "finalize_complete",
+        "finalize_report_pass",
+        "timing_available",
+    ):
+        scorecard = _valid_scorecard()
+        del scorecard["control_integrity"][key]
+
+        diagnostics = validate_scorecard(scorecard)
+
+        codes = _codes(diagnostics)
+        assert "invalid_a_controlled_requirement_type" in codes
+        assert "a_controlled_requirements_not_met" in codes
 
 
 def test_experiment_080_scorecard_requires_non_empty_guidance_scores():

@@ -49,6 +49,18 @@ ALLOWED_GUIDANCE_SOURCES = {"improvement_ledger", "manual", "prompt_only"}
 ALLOWED_ASSESSMENT_METHODS = {"human", "llm_assisted_human_review", "llm_only"}
 A_CONTROLLED_ASSESSMENT_METHODS = {"human", "llm_assisted_human_review"}
 ALLOWED_SCORECARD_ASSESSMENT_STATUSES = {"assessed", "needs_assessment"}
+A_CONTROLLED_REQUIRED_CONTROL_KEYS = (
+    "terminal_workflow",
+    "run_integrity_clean",
+    "reference_eligible",
+    "artifact_registry_valid",
+    "quality_gates_passed",
+    "archive_present",
+    "archive_schema_valid",
+    "finalize_complete",
+    "finalize_report_pass",
+    "timing_available",
+)
 
 REQUIRED_FACT_ARTIFACT_IDS = {
     "durable_source_evidence_or_source_pack",
@@ -1042,19 +1054,7 @@ def _scorecard_validity_class(
         return "invalid_contaminated"
     if not fact_layer_matches:
         return "invalid_fact_layer_mismatch"
-    required_control_keys = (
-        "terminal_workflow",
-        "run_integrity_clean",
-        "reference_eligible",
-        "artifact_registry_valid",
-        "quality_gates_passed",
-        "archive_present",
-        "archive_schema_valid",
-        "finalize_complete",
-        "finalize_report_pass",
-        "timing_available",
-    )
-    if any(control_integrity.get(key) is not True for key in required_control_keys):
+    if any(control_integrity.get(key) is not True for key in A_CONTROLLED_REQUIRED_CONTROL_KEYS):
         return "invalid_incomplete"
     if reader_clean.get("pass") is not True:
         return "invalid_incomplete"
@@ -1095,15 +1095,10 @@ def _assessment_guidance_scores_for_scorecard(
         if isinstance(scorecard_payload.get("guidance_assessment"), dict)
         else {}
     )
-    required_ids = guidance_assessment.get("guidance_entry_ids")
-    required = {
-        entry_id
-        for entry_id in required_ids
-        if isinstance(entry_id, str)
-    } if isinstance(required_ids, list) else set()
+    required = _required_guidance_entry_ids_for_assessment(guidance_assessment)
     scores = assessment.get("guidance_scores") if isinstance(assessment.get("guidance_scores"), list) else []
     score_ids = {score.get("entry_id") for score in scores if isinstance(score, dict)}
-    unknown = sorted(entry_id for entry_id in score_ids if isinstance(entry_id, str) and required and entry_id not in required)
+    unknown = sorted(entry_id for entry_id in score_ids if isinstance(entry_id, str) and entry_id not in required)
     missing = sorted(required - {entry_id for entry_id in score_ids if isinstance(entry_id, str)})
     if unknown or missing:
         _raise_experiment_error(
@@ -1116,6 +1111,39 @@ def _assessment_guidance_scores_for_scorecard(
         [deepcopy(score) for score in scores if isinstance(score, dict)],
         key=lambda score: str(score.get("entry_id") or ""),
     )
+
+
+def _required_guidance_entry_ids_for_assessment(guidance_assessment: dict[str, Any]) -> set[str]:
+    if guidance_assessment.get("status") != "needs_assessment":
+        _raise_experiment_error(
+            "E_EXPERIMENT_080_ASSESSMENT_GUIDANCE_MISMATCH",
+            "scorecard.guidance_assessment.status must be needs_assessment before assessment import.",
+            guidance_assessment_status=guidance_assessment.get("status"),
+        )
+    entry_ids = guidance_assessment.get("guidance_entry_ids")
+    if not isinstance(entry_ids, list) or not entry_ids:
+        _raise_experiment_error(
+            "E_EXPERIMENT_080_ASSESSMENT_GUIDANCE_MISMATCH",
+            "scorecard.guidance_assessment.guidance_entry_ids must be a non-empty list before assessment import.",
+        )
+    required: set[str] = set()
+    invalid: list[Any] = []
+    duplicates: list[str] = []
+    for entry_id in entry_ids:
+        if not isinstance(entry_id, str) or not _GUIDANCE_ENTRY_ID_RE.match(entry_id):
+            invalid.append(entry_id)
+            continue
+        if entry_id in required:
+            duplicates.append(entry_id)
+        required.add(entry_id)
+    if invalid or duplicates:
+        _raise_experiment_error(
+            "E_EXPERIMENT_080_ASSESSMENT_GUIDANCE_MISMATCH",
+            "scorecard.guidance_assessment.guidance_entry_ids must contain unique AG-0001 style ids.",
+            invalid_entry_ids=invalid,
+            duplicate_entry_ids=sorted(set(duplicates)),
+        )
+    return required
 
 
 def _scorecard_with_imported_assessment(
@@ -1143,11 +1171,7 @@ def _scorecard_with_imported_assessment(
             for score in guidance_scores
             if isinstance(score.get("assessment_method"), str)
         }),
-        "guidance_entry_ids": existing_guidance_assessment.get("guidance_entry_ids") or [
-            score.get("entry_id")
-            for score in guidance_scores
-            if isinstance(score.get("entry_id"), str)
-        ],
+        "guidance_entry_ids": existing_guidance_assessment.get("guidance_entry_ids"),
     }
     if "notes" in assessment:
         imported_assessment["assessment_notes_present"] = isinstance(assessment.get("notes"), list)
@@ -1180,19 +1204,7 @@ def _scorecard_validity_class_with_assessment(
         return "invalid_contaminated"
     if fact_layer.get("matches_case") is not True:
         return "invalid_fact_layer_mismatch"
-    required_control_keys = (
-        "terminal_workflow",
-        "run_integrity_clean",
-        "reference_eligible",
-        "artifact_registry_valid",
-        "quality_gates_passed",
-        "archive_present",
-        "archive_schema_valid",
-        "finalize_complete",
-        "finalize_report_pass",
-        "timing_available",
-    )
-    if any(control_integrity.get(key) is not True for key in required_control_keys):
+    if any(control_integrity.get(key) is not True for key in A_CONTROLLED_REQUIRED_CONTROL_KEYS):
         return "invalid_incomplete"
     if reader_clean.get("pass") is not True:
         return "invalid_incomplete"
@@ -2036,11 +2048,10 @@ def _validate_a_controlled_scorecard(
     diagnostics: list[Experiment080Diagnostic],
 ) -> None:
     required_values = {
-        "control_integrity.terminal_workflow": control.get("terminal_workflow"),
-        "control_integrity.run_integrity_clean": control.get("run_integrity_clean"),
-        "control_integrity.artifact_registry_valid": control.get("artifact_registry_valid"),
-        "control_integrity.quality_gates_passed": control.get("quality_gates_passed"),
-        "control_integrity.archive_present": control.get("archive_present"),
+        **{
+            f"control_integrity.{key}": control.get(key)
+            for key in A_CONTROLLED_REQUIRED_CONTROL_KEYS
+        },
         "frozen_fact_layer.matches_case": fact_layer.get("matches_case"),
         "reader_clean.pass": reader_clean.get("pass"),
     }
