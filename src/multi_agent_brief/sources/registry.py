@@ -1,6 +1,7 @@
 """Source registry: loads config, instantiates providers, collects sources."""
 from __future__ import annotations
 
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 from typing import Any
 
@@ -23,7 +24,10 @@ from multi_agent_brief.sources.mineru_provider import MineruProvider
 from multi_agent_brief.sources.opencli_provider import OpenCliProvider
 from multi_agent_brief.sources.filing_resolver import FilingResolverProvider
 from multi_agent_brief.sources.local_signal import LocalSignalProvider
-from multi_agent_brief.sources.normalizer import normalize_source_item, dedupe_sources, filter_by_recency
+from multi_agent_brief.sources.join import (
+    SourceProviderBatch,
+    join_source_provider_batches,
+)
 
 
 # Provider registry
@@ -42,6 +46,17 @@ PROVIDER_CLASSES: dict[str, type[SourceProvider]] = {
     "filing_resolver": FilingResolverProvider,
     "local_signal": LocalSignalProvider,
 }
+
+PARALLEL_SAFE_PROVIDER_NAMES = frozenset(
+    {
+        "manual",
+        "rss",
+        "api",
+        "filings",
+        "cached_package",
+        "local_signal",
+    }
+)
 
 
 def load_sources_config(path: str | Path) -> SourceConfig:
@@ -99,8 +114,14 @@ def get_providers(source_config: SourceConfig) -> dict[str, SourceProvider]:
 def collect_all_sources(
     source_config: SourceConfig,
     query: SourceQuery | None = None,
+    *,
+    parallel: bool = False,
 ) -> tuple[list[SourceItem], list[dict[str, str]]]:
     """Collect sources from all enabled providers, normalize, and dedupe.
+
+    `parallel=True` is opt-in.  Only known parallel-safe providers are scheduled
+    in a thread pool; unsafe providers are still collected serially and included
+    in the same deterministic join.
 
     Returns:
         Tuple of (deduplicated source items, list of error dicts with keys
@@ -110,18 +131,28 @@ def collect_all_sources(
         query = SourceQuery()
 
     providers = get_providers(source_config)
-    all_items: list[SourceItem] = []
-    errors: list[dict[str, str]] = []
+    batches: list[SourceProviderBatch] = []
+    provider_priorities: dict[str, int] = {}
+    for idx, name in enumerate(source_config.enabled_providers):
+        provider_priorities.setdefault(name, idx)
 
     # Surface unknown providers as errors
     for name in source_config.enabled_providers:
         if name not in PROVIDER_CLASSES:
-            errors.append({
-                "provider": name,
-                "error_type": "UnknownProvider",
-                "message": f"Unknown provider '{name}' is not registered. "
-                f"Available: {', '.join(sorted(PROVIDER_CLASSES))}",
-            })
+            batches.append(
+                SourceProviderBatch(
+                    provider=name,
+                    provider_priority=provider_priorities[name],
+                    errors=[
+                        {
+                            "provider": name,
+                            "error_type": "UnknownProvider",
+                            "message": f"Unknown provider '{name}' is not registered. "
+                            f"Available: {', '.join(sorted(PROVIDER_CLASSES))}",
+                        }
+                    ],
+                )
+            )
 
     # Resolve relative manual source paths against config_dir
     manual_config = _resolve_manual_paths(source_config.manual, source_config.config_dir)
@@ -146,71 +177,117 @@ def collect_all_sources(
         "local_signal": source_config.local_signal,
     }
 
-    for name, provider in providers.items():
-        config = config_map.get(name, {})
-        try:
-            validation_errors = provider.validate_config(config)
-        except Exception as exc:
-            errors.append({
-                "provider": name,
-                "error_type": "ConfigValidationError",
-                "message": f"validation error: {exc}",
-            })
-            continue
-        if validation_errors:
-            for ve in validation_errors:
-                errors.append({
-                    "provider": name,
-                    "error_type": "ConfigValidationError",
-                    "message": ve,
-                })
-            continue
-        try:
-            items = provider.collect(query, config)
-            all_items.extend(items)
-        except Exception as exc:
-            # Provider failures are non-fatal, but record the error
-            errors.append({
-                "provider": name,
-                "error_type": type(exc).__name__,
-                "message": str(exc)[:200],
-            })
-
-    # Normalize, separate error/placeholder items from usable (B10)
-    usable: list[SourceItem] = []
-    for item in all_items:
-        item = normalize_source_item(item)
-        if _is_error_or_placeholder(item):
-            errors.append({
-                "provider": item.source_type.replace("_error", ""),
-                "error_type": item.metadata.get("error_type", "PlaceholderSource"),
-                "message": f"Source '{item.source_name}' is not usable: {item.content[:120]}",
-            })
-        else:
-            usable.append(item)
+    provider_jobs = [
+        (
+            name,
+            provider,
+            config_map.get(name, {}),
+            provider_priorities.get(name, len(provider_priorities)),
+        )
+        for name, provider in providers.items()
+    ]
+    if parallel:
+        batches.extend(_collect_provider_batches_with_barriers(provider_jobs, query))
+    else:
+        for job in provider_jobs:
+            batches.append(_collect_provider_batch(*job, query=query))
 
     recency = query.recency_days
     report_date = query.metadata.get("report_date", "")
-    filtered = filter_by_recency(usable, recency, report_date=report_date)
+    return join_source_provider_batches(
+        batches,
+        recency_days=recency,
+        report_date=report_date,
+    )
 
-    return dedupe_sources(filtered), errors
+
+def _provider_is_parallel_safe(name: str, provider: SourceProvider) -> bool:
+    explicit = getattr(provider, "parallel_safe", None)
+    if explicit is not None:
+        return explicit is True
+    return name in PARALLEL_SAFE_PROVIDER_NAMES
 
 
-def _is_error_or_placeholder(item: SourceItem) -> bool:
-    """Return True if this SourceItem is an error or placeholder, not usable content."""
-    if item.metadata.get("error_type"):
-        return True
-    if item.metadata.get("requires_fetch"):
-        return True
-    if item.metadata.get("ingestion_status") == "placeholder":
-        return True
-    if item.metadata.get("filtered_reason"):
-        return True
-    if item.metadata.get("low_quality"):
-        return True
-    if item.source_type.endswith("_error"):
-        return True
-    return False
+def _collect_provider_batches_with_barriers(
+    jobs: list[tuple[str, SourceProvider, dict[str, Any], int]],
+    query: SourceQuery,
+) -> list[SourceProviderBatch]:
+    batches: list[SourceProviderBatch] = []
+    pending_parallel: list[tuple[str, SourceProvider, dict[str, Any], int]] = []
+
+    def flush_pending_parallel() -> None:
+        if pending_parallel:
+            batches.extend(_collect_provider_batches_parallel(pending_parallel, query))
+            pending_parallel.clear()
+
+    for job in jobs:
+        name, provider, _config, _priority = job
+        if _provider_is_parallel_safe(name, provider):
+            pending_parallel.append(job)
+            continue
+        flush_pending_parallel()
+        batches.append(_collect_provider_batch(*job, query=query))
+    flush_pending_parallel()
+    return batches
+
+
+def _collect_provider_batches_parallel(
+    jobs: list[tuple[str, SourceProvider, dict[str, Any], int]],
+    query: SourceQuery,
+) -> list[SourceProviderBatch]:
+    if not jobs:
+        return []
+    max_workers = min(len(jobs), 8)
+    batches: list[SourceProviderBatch] = []
+    with ThreadPoolExecutor(max_workers=max_workers, thread_name_prefix="mabw-source") as executor:
+        futures = [
+            executor.submit(_collect_provider_batch, name, provider, config, priority, query=query)
+            for name, provider, config, priority in jobs
+        ]
+        for future in as_completed(futures):
+            batches.append(future.result())
+    return batches
+
+
+def _collect_provider_batch(
+    name: str,
+    provider: SourceProvider,
+    config: dict[str, Any],
+    provider_priority: int,
+    *,
+    query: SourceQuery,
+) -> SourceProviderBatch:
+    batch = SourceProviderBatch(
+        provider=name,
+        provider_priority=provider_priority,
+    )
+    try:
+        validation_errors = provider.validate_config(config)
+    except Exception as exc:
+        batch.errors.append({
+            "provider": name,
+            "error_type": "ConfigValidationError",
+            "message": f"validation error: {exc}",
+        })
+        return batch
+    if validation_errors:
+        for ve in validation_errors:
+            batch.errors.append({
+                "provider": name,
+                "error_type": "ConfigValidationError",
+                "message": ve,
+            })
+        return batch
+    try:
+        batch.items.extend(provider.collect(query, config))
+    except Exception as exc:
+        # Provider failures are non-fatal, but record the error
+        batch.errors.append({
+            "provider": name,
+            "error_type": type(exc).__name__,
+            "message": str(exc)[:200],
+        })
+    return batch
 
 
 def validate_all_providers(source_config: SourceConfig) -> list[str]:
