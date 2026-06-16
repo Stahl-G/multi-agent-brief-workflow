@@ -2721,6 +2721,38 @@ def _repair_event_metadata(active_repair: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _source_stage_for_repair_route(route: dict[str, Any]) -> str:
+    source = route.get("source") if isinstance(route.get("source"), dict) else {}
+    stage_id = str(source.get("stage_id") or "")
+    if stage_id:
+        return stage_id
+    kind = str(source.get("kind") or "")
+    if kind == "auditor_quality_gate_report":
+        return "auditor"
+    if kind == "finalize_quality_gate_report":
+        return "finalize"
+    if kind == "audit_report":
+        return "auditor"
+    return ""
+
+
+def _repair_artifact_baseline(registry: dict[str, Any]) -> dict[str, dict[str, Any]]:
+    records = registry.get("artifacts")
+    if not isinstance(records, dict):
+        return {}
+    baseline: dict[str, dict[str, Any]] = {}
+    for artifact_id, record in records.items():
+        if not isinstance(record, dict):
+            continue
+        baseline[str(artifact_id)] = {
+            "path": record.get("path"),
+            "status": record.get("status"),
+            "validation_result": record.get("validation_result"),
+            "sha256": record.get("sha256"),
+        }
+    return baseline
+
+
 def _workflow_with_active_repair(
     *,
     workflow: dict[str, Any],
@@ -2776,6 +2808,12 @@ def start_repair_transaction(
             error_code=E_TRANSACTION_INTEGRITY,
         )
     ws, paths, manifest, workflow = _load_manifest_and_workflow(ws)
+    if _workflow_is_finalized(workflow) or workflow.get("current_stage") is None:
+        raise RuntimeStateError(
+            "Cannot start repair for a finalized workflow; create a new run or use an explicit supersede/revision path.",
+            details={"current_stage": workflow.get("current_stage")},
+            error_code=E_ILLEGAL_TRANSITION,
+        )
     if isinstance(workflow.get("active_repair"), dict):
         raise RuntimeStateError(
             "A repair transaction is already active.",
@@ -2803,8 +2841,28 @@ def start_repair_transaction(
 
     repo = resolve_repo_workdir(repo_workdir, workspace=ws)
     stages = load_stage_specs(repo)
+    artifacts = load_artifact_contracts(repo)
     transaction_id = uuid.uuid4().hex
     now = utc_now()
+    route_stage = _source_stage_for_repair_route(route)
+    current_stage = str(workflow.get("current_stage") or "")
+    if route_stage and route_stage != current_stage:
+        raise RuntimeStateError(
+            "Repair route source stage does not match the current workflow stage.",
+            details={
+                "route_stage_id": route_stage,
+                "current_stage": current_stage,
+                "source": route.get("source") or {},
+            },
+            error_code=E_ILLEGAL_TRANSITION,
+        )
+    baseline_registry = _build_artifact_registry(
+        workspace=ws,
+        run_id=str(manifest["run_id"]),
+        artifacts=artifacts,
+        workflow=workflow,
+        updated_at=now,
+    )
     active_repair = {
         "schema_version": "mabw.active_repair.v1",
         "transaction_id": transaction_id,
@@ -2816,6 +2874,7 @@ def start_repair_transaction(
         "must_rerun_from": route.get("must_rerun_from") or "",
         "reason": route.get("reason") or "",
         "started_at": now,
+        "artifact_baseline": _repair_artifact_baseline(baseline_registry),
     }
     next_workflow = _workflow_with_active_repair(
         workflow=workflow,
@@ -2883,31 +2942,39 @@ def _artifact_allowed(path: str, patterns: list[str]) -> bool:
 
 def _repair_changed_artifact_reasons(
     *,
-    old_registry: dict[str, Any] | None,
+    baseline_records: dict[str, Any],
     registry: dict[str, Any],
     allowed_artifacts: list[str],
     blocked_direct_edits: list[str],
-) -> list[str]:
-    old_records = (old_registry or {}).get("artifacts")
+) -> tuple[list[str], bool]:
     new_records = registry.get("artifacts")
-    if not isinstance(old_records, dict) or not isinstance(new_records, dict):
-        return ["Repair completion requires a valid artifact_registry.json before and after repair."]
+    if not isinstance(baseline_records, dict) or not isinstance(new_records, dict):
+        return ["Repair completion requires a valid artifact baseline and artifact_registry.json."], False
 
     reasons: list[str] = []
-    for artifact_id, old_record_raw in old_records.items():
-        if not isinstance(old_record_raw, dict):
-            continue
-        old_sha = str(old_record_raw.get("sha256") or "")
-        if not old_sha:
-            continue
+    allowed_changed = False
+    for artifact_id in sorted({*baseline_records.keys(), *new_records.keys()}):
+        old_record_raw = baseline_records.get(artifact_id) or {}
         new_record = new_records.get(artifact_id) or {}
+        if not isinstance(old_record_raw, dict):
+            old_record_raw = {}
         if not isinstance(new_record, dict):
             new_record = {}
-        new_sha = str(new_record.get("sha256") or "")
         path = str(new_record.get("path") or old_record_raw.get("path") or artifact_id)
-        if old_sha == new_sha:
+        old_state = (
+            old_record_raw.get("status"),
+            old_record_raw.get("validation_result"),
+            old_record_raw.get("sha256"),
+        )
+        new_state = (
+            new_record.get("status"),
+            new_record.get("validation_result"),
+            new_record.get("sha256"),
+        )
+        if old_state == new_state:
             continue
         if _artifact_allowed(path, allowed_artifacts):
+            allowed_changed = True
             continue
         if _artifact_allowed(path, blocked_direct_edits):
             reasons.append(
@@ -2917,7 +2984,7 @@ def _repair_changed_artifact_reasons(
             reasons.append(
                 f"Repair changed non-allowed frozen artifact: {path}."
             )
-    return reasons
+    return reasons, allowed_changed
 
 
 def _workflow_after_repair_completion(
@@ -3017,6 +3084,12 @@ def complete_repair_transaction(
             error_code=E_TRANSACTION_INTEGRITY,
         )
     ws, paths, manifest, workflow = _load_manifest_and_workflow(ws)
+    if _workflow_is_finalized(workflow) or workflow.get("current_stage") is None:
+        raise RuntimeStateError(
+            "Cannot complete repair for a finalized workflow; create a new run or use an explicit supersede/revision path.",
+            details={"current_stage": workflow.get("current_stage")},
+            error_code=E_ILLEGAL_TRANSITION,
+        )
     active_repair = workflow.get("active_repair")
     if not isinstance(active_repair, dict):
         raise RuntimeStateError(
@@ -3092,8 +3165,15 @@ def complete_repair_transaction(
         workflow=workflow,
         updated_at=now,
     )
-    changed_reasons = _repair_changed_artifact_reasons(
-        old_registry=old_registry,
+    baseline_records = active_repair.get("artifact_baseline")
+    if not isinstance(baseline_records, dict):
+        raise RuntimeStateError(
+            "Active repair is missing its artifact baseline.",
+            details={"active_repair": active_repair},
+            error_code=E_TRANSACTION_INTEGRITY,
+        )
+    changed_reasons, allowed_changed = _repair_changed_artifact_reasons(
+        baseline_records=baseline_records,
         registry=registry_for_change_check,
         allowed_artifacts=allowed_artifacts,
         blocked_direct_edits=blocked_direct_edits,
@@ -3104,6 +3184,12 @@ def complete_repair_transaction(
             reasons=changed_reasons,
             error_code=E_TRANSACTION_INTEGRITY,
             details={"stage_id": owner, "allowed_artifacts": allowed_artifacts},
+        )
+    if not allowed_changed:
+        raise RuntimeStateError(
+            "Repair completion did not modify any allowed artifact.",
+            details={"stage_id": owner, "allowed_artifacts": allowed_artifacts},
+            error_code=E_TRANSACTION_INTEGRITY,
         )
 
     next_workflow = _workflow_after_repair_completion(
