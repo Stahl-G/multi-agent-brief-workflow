@@ -106,6 +106,14 @@ def register(subparsers: argparse._SubParsersAction) -> None:
         choices=("cli", "orchestrator", "runtime", "system"),
         help="Actor recorded in event_log.jsonl.",
     )
+    stage_complete_parser.add_argument(
+        "--runtime",
+        help="Runtime that completed the stage, recorded as provenance only.",
+    )
+    stage_complete_parser.add_argument(
+        "--model",
+        help="Model used for the stage when known, recorded as provenance only.",
+    )
     stage_complete_parser.add_argument("--json", action="store_true", help="Emit machine-readable JSON.")
 
     freeze_claim_ledger_parser = actions.add_parser(
@@ -140,6 +148,14 @@ def register(subparsers: argparse._SubParsersAction) -> None:
         default="orchestrator",
         choices=("cli", "orchestrator", "runtime", "system"),
         help="Actor recorded in event_log.jsonl.",
+    )
+    finalize_complete_parser.add_argument(
+        "--runtime",
+        help="Runtime that completed the finalize stage, recorded as provenance only.",
+    )
+    finalize_complete_parser.add_argument(
+        "--model",
+        help="Model used for finalize when known, recorded as provenance only.",
     )
     finalize_complete_parser.add_argument("--json", action="store_true", help="Emit machine-readable JSON.")
 
@@ -224,6 +240,8 @@ def handle(args: argparse.Namespace) -> int:
                 reason=args.reason,
                 repo_workdir=getattr(args, "repo_workdir", None),
                 actor=args.actor,
+                runtime=getattr(args, "runtime", None),
+                model=getattr(args, "model", None),
             )
             if getattr(args, "json", False):
                 print(json.dumps(state, ensure_ascii=False, indent=2, sort_keys=True))
@@ -254,6 +272,8 @@ def handle(args: argparse.Namespace) -> int:
                 reason=args.reason,
                 repo_workdir=getattr(args, "repo_workdir", None),
                 actor=args.actor,
+                runtime=getattr(args, "runtime", None),
+                model=getattr(args, "model", None),
             )
             if getattr(args, "json", False):
                 print(json.dumps(state, ensure_ascii=False, indent=2, sort_keys=True))

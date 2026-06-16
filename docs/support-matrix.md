@@ -24,6 +24,7 @@ validation unless that is stated separately.
 | Role topology selector (`policy.role_topology`: `default`, `strict`, `human_assisted`) with topology-satisfied stages recorded in workflow state and event log | Supported |
 | Runtime handoff (`agent_handoff.md` + `agent_handoff.json`) | Supported |
 | Runtime state control files (`runtime_manifest.json`, `workflow_state.json`, `artifact_registry.json`, `event_log.jsonl`) | Supported |
+| Stage runtime/model provenance on completion transactions | Supported |
 | Audience profile runtime surface (`audience_profile.md` + `audience_profile_snapshot.md`) | Supported |
 | Improvement Ledger / Memory (`improvement/ledger.jsonl`, `improvement/memory.md`, `improvement_memory_snapshot.md`) | Supported |
 | Orchestrator control switchboard (`orchestrator_control_switchboard.json`, optional `control_selections.json`) | Supported |
@@ -76,6 +77,11 @@ The default topology lets Scout write both `candidate_claims.json` and
 paths still require the Claim Ledger, auditable draft, stage-scoped gate
 reports, audit report, event log, archive, and human-triggered delivery. This is
 not a speed-improvement claim.
+
+Stage runtime/model provenance is recorded when completion transactions are
+called with explicit runtime/model values. It is audit metadata in workflow
+state and event log records only; it does not prove output quality, support
+strength, or model performance.
 
 Claim Ledger freeze is a deterministic control transaction. Claim Ledger agents
 write `claim_drafts.json` without claim IDs; Python assigns deterministic

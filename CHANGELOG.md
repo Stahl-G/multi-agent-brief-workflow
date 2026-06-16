@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Stage runtime/model provenance**: `state stage-complete` and `state finalize-complete` can record explicit runtime/model values in workflow state and event log metadata as audit provenance only.
+
+### Boundaries
+
+- Stage runtime/model provenance is not an output-quality claim, model-performance measurement, or semantic support signal.
+
 ## [0.8.3] — 2026-06-16
 
 ### Added

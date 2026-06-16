@@ -1285,6 +1285,52 @@ def test_stage_complete_records_transaction_event_and_advances(tmp_path):
     assert decision_events[0]["decision"] == "continue"
 
 
+def test_stage_complete_records_runtime_model_provenance_from_cli(tmp_path, capsys):
+    ws = _write_workspace(tmp_path)
+    initialize_runtime_state(workspace=ws, repo_workdir=ROOT)
+
+    rc = main([
+        "state",
+        "stage-complete",
+        "--workspace",
+        str(ws),
+        "--repo-workdir",
+        str(ROOT),
+        "--stage",
+        "doctor",
+        "--reason",
+        "doctor passed",
+        "--runtime",
+        "claude",
+        "--model",
+        "claude-sonnet-4",
+        "--json",
+    ])
+
+    assert rc == 0
+    payload = json.loads(capsys.readouterr().out)
+    provenance = payload["transaction"]["runtime_provenance"]
+    assert provenance == {
+        "schema_version": "mabw.stage_runtime_provenance.v1",
+        "source": "stage_completion_args",
+        "recorded_by_actor": "orchestrator",
+        "provenance_only": True,
+        "quality_claim": False,
+        "runtime": "claude",
+        "model": "claude-sonnet-4",
+    }
+    workflow = json.loads(_state_file(ws, "workflow_state").read_text(encoding="utf-8"))
+    assert workflow["stage_statuses"]["doctor"]["metadata"]["runtime_provenance"] == provenance
+    assert workflow["last_completion_transaction"]["runtime_provenance"] == provenance
+    transaction_id = workflow["last_completion_transaction"]["transaction_id"]
+    decision_event = next(
+        event for event in _event_records(ws)
+        if event["event_type"] == "decision_recorded"
+        and (event.get("metadata") or {}).get("transaction_id") == transaction_id
+    )
+    assert decision_event["metadata"]["runtime_provenance"] == provenance
+
+
 def test_stage_complete_duplicate_rejects_without_duplicate_event(tmp_path):
     ws = _write_workspace(tmp_path)
     initialize_runtime_state(workspace=ws, repo_workdir=ROOT)
@@ -2993,6 +3039,8 @@ def test_auditor_stage_complete_records_ledger_and_audit_report_sha(tmp_path):
         repo_workdir=ROOT,
         stage_id="auditor",
         reason="auditor and gates passed",
+        runtime="hermes",
+        model="claude-haiku",
     )
 
     registry = state["artifact_registry"]["artifacts"]
@@ -3001,6 +3049,9 @@ def test_auditor_stage_complete_records_ledger_and_audit_report_sha(tmp_path):
     assert metadata["upstream_artifact_sha256"]["claim_ledger"] == registry["claim_ledger"]["sha256"]
     assert metadata["upstream_artifact_sha256"]["audited_brief"] == registry["audited_brief"]["sha256"]
     assert metadata["produced_artifact_sha256"]["audit_report"] == registry["audit_report"]["sha256"]
+    assert metadata["runtime_provenance"]["runtime"] == "hermes"
+    assert metadata["runtime_provenance"]["model"] == "claude-haiku"
+    assert metadata["runtime_provenance"]["quality_claim"] is False
 
 
 def test_state_check_preserves_auditor_binding_metadata_for_finalize(tmp_path):
@@ -3106,6 +3157,8 @@ def test_finalize_complete_records_terminal_transaction(tmp_path):
         workspace=ws,
         repo_workdir=ROOT,
         reason="reader artifacts finalized and clean",
+        runtime="manual",
+        model="human-reviewed",
     )
 
     workflow = state["workflow_state"]
@@ -3113,11 +3166,48 @@ def test_finalize_complete_records_terminal_transaction(tmp_path):
     assert workflow["current_stage"] is None
     assert workflow["stage_statuses"]["finalize"]["status"] == "complete"
     assert workflow["last_decision"]["decision"] == "finalize"
+    provenance = workflow["stage_statuses"]["finalize"]["metadata"]["runtime_provenance"]
+    assert provenance["runtime"] == "manual"
+    assert provenance["model"] == "human-reviewed"
+    assert provenance["provenance_only"] is True
     assert any(
         event["event_type"] == "decision_recorded"
         and (event.get("metadata") or {}).get("transaction_id") == transaction_id
+        and (event.get("metadata") or {}).get("runtime_provenance") == provenance
         for event in _event_records(ws)
     )
+
+
+def test_finalize_complete_cli_records_runtime_model_provenance(tmp_path, capsys):
+    ws = _write_workspace(tmp_path)
+    initialize_runtime_state(workspace=ws, repo_workdir=ROOT)
+    _advance_to_finalize(ws)
+    _write_quality_gate_report(ws, stage_id="finalize")
+    _write_finalize_report(ws)
+
+    rc = main([
+        "state",
+        "finalize-complete",
+        "--workspace",
+        str(ws),
+        "--repo-workdir",
+        str(ROOT),
+        "--reason",
+        "reader artifacts finalized and clean",
+        "--runtime",
+        "codex",
+        "--model",
+        "gpt-5-codex",
+        "--json",
+    ])
+
+    assert rc == 0
+    payload = json.loads(capsys.readouterr().out)
+    provenance = payload["workflow_state"]["stage_statuses"]["finalize"]["metadata"]["runtime_provenance"]
+    assert provenance["runtime"] == "codex"
+    assert provenance["model"] == "gpt-5-codex"
+    assert provenance["provenance_only"] is True
+    assert provenance["quality_claim"] is False
 
 
 def test_run_integrity_contamination_event_is_sticky_on_state_check(tmp_path):
