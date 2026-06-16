@@ -246,8 +246,33 @@ def test_generated_assets_scope_claim_freeze_to_claim_ledger_runtime_protocol(ma
         render_claude_agent("auditor", manifest["roles"]["auditor"], manifest),
         render_opencode_agent("auditor", manifest["roles"]["auditor"], manifest),
     ])
-    assert "claim_drafts.json" not in analyst_auditor
+    assert "Do not read claim_drafts.json" in analyst_auditor
     assert "freeze-claim-ledger" not in analyst_auditor
+
+
+def test_generated_analyst_and_auditor_use_frozen_ledger_contract(manifest):
+    analyst_rendered = "\n".join([
+        render_codex_agent("analyst", manifest["roles"]["analyst"], manifest),
+        render_claude_agent("analyst", manifest["roles"]["analyst"], manifest),
+        render_opencode_agent("analyst", manifest["roles"]["analyst"], manifest),
+    ])
+    auditor_rendered = "\n".join([
+        render_codex_agent("auditor", manifest["roles"]["auditor"], manifest),
+        render_claude_agent("auditor", manifest["roles"]["auditor"], manifest),
+        render_opencode_agent("auditor", manifest["roles"]["auditor"], manifest),
+    ])
+
+    assert "Read frozen claim_ledger.json" in analyst_rendered
+    assert "Read only frozen claim_ledger.json as the Claim Ledger input" in analyst_rendered
+    assert "Do not read claim_drafts.json" in analyst_rendered
+    assert "Do not create, edit, rewrite, or repair claim_ledger.json" in analyst_rendered
+
+    assert "Check overstatement" in auditor_rendered
+    assert "support-strength calibration" in auditor_rendered
+    assert "evidence_relation" in auditor_rendered
+    assert "confidence mismatch" in auditor_rendered
+    assert "Do not read claim_drafts.json" in auditor_rendered
+    assert "Do not create, edit, rewrite, or repair claim_ledger.json" in auditor_rendered
 
 
 def test_generated_orchestrator_separates_runtime_and_repo_development_modes(manifest):

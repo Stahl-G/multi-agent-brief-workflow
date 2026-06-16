@@ -324,14 +324,15 @@ roles:
     tool_profile: edit_safe
     description: Drafts the Analyst working brief from Claim Ledger entries; Python
       freezes that draft into analyst_draft_snapshot at analyst stage-complete.
-    trigger: Use after the claim-ledger subagent or validator has produced claim_ledger.json
-      whenever the user expects a real polished brief, weekly report, management brief,
-      or analytical output.
+    trigger: Use after the Claim Ledger freeze transaction has produced
+      claim_ledger.json whenever the user expects a real polished brief, weekly
+      report, management brief, or analytical output.
     responsibilities:
-    - Read claim_ledger.json and user.md to understand context and available evidence.
+    - Read frozen claim_ledger.json and user.md to understand context and available
+      evidence.
     - Read output/input_classification.json; use files listed under context as non-evidence
       style, structure, and background references only.
-    - Draft management-ready sections using only Claim Ledger material.
+    - Draft management-ready sections using only frozen Claim Ledger material.
     - Write output/intermediate/audited_brief.md as the Analyst working draft;
       Python freezes it into output/intermediate/analyst_draft_snapshot.md during
       analyst stage-complete.
@@ -341,11 +342,14 @@ roles:
     - Preserve uncertainty and source limitations.
     - Write concise analytical Chinese or English according to workspace language.
     - Keep all added facts within Claim Ledger support.
-    - Use claim_ledger.json and approved analysis artifacts as the evidence base.
+    - Use frozen claim_ledger.json and approved analysis artifacts as the evidence base.
     - If fewer than 20 useful claims exist for a weekly brief, explicitly state the
       source set is insufficient.
     hard_rules:
     - Keep facts, numbers, and causality within Claim Ledger support.
+    - Read only frozen claim_ledger.json as the Claim Ledger input. Do not read
+      claim_drafts.json; it is a pre-freeze writer artifact, not Analyst evidence.
+    - Do not create, edit, rewrite, or repair claim_ledger.json.
     - Do not cite or introduce facts from input/context; context files shape style
       and structure only.
     - Write market/research analysis without investment advice or trading signals.
@@ -366,6 +370,16 @@ roles:
     - Review output/intermediate/audited_brief.md against claim_ledger.json and
       config.yaml.
     - Check unsupported facts — every important statement must have a real [src:<claim_id>] citation.
+    - Check overstatement — brief wording must not be broader, stronger, more
+      causal, more current, or more quantified than the cited Claim Ledger entry
+      and evidence support.
+    - Check support-strength calibration — wording must match each cited claim's
+      claim_type, confidence, evidence_relation, limitations, source date, and
+      metadata caveats.
+    - Check confidence mismatch — low-confidence or indirect evidence must not be
+      presented as definitive, causal, current, or high-certainty.
+    - Check limitation leakage — source limitations and applicability caveats in
+      the ledger must not disappear from reader-facing conclusions.
     - Check missing citations — claims in ledger not cited in brief.
     - Check orphan citations — real [src:<claim_id>] citations in the brief not found in the ledger.
     - Check stale sources — sources older than configured reporting window.
@@ -401,6 +415,9 @@ roles:
     hard_rules:
     - Preserve audit gates while fixing failures.
     - Treat model judgment as analysis, not source evidence.
+    - Do not read claim_drafts.json; audit the frozen claim_ledger.json consumed
+      by Analyst and Editor.
+    - Do not create, edit, rewrite, or repair claim_ledger.json.
     - Report audit readiness only. Formatter, finalize, and deterministic gates
       decide delivery completion.
   editor:

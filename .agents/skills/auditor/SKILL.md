@@ -32,7 +32,18 @@ Use after editor has completed audited_brief.md.
 ## Work
 
 - Check source support, orphan citations, unsupported numbers, missing dates, stale framing, advice language, process residue, and delivery readiness.
+- Check overstatement: brief wording must not be broader, stronger, more causal,
+  more current, or more quantified than the cited Claim Ledger entry and evidence support.
+- Check support-strength calibration: wording must match each cited claim's
+  claim_type, confidence, evidence_relation, limitations, source date, and metadata caveats.
+- Check confidence mismatch: low-confidence or indirect evidence must not be
+  presented as definitive, causal, current, or high-certainty.
+- Check limitation leakage: source limitations and applicability caveats in the
+  ledger must not disappear from reader-facing conclusions.
 - Run deterministic audit tools when available.
+- Do not read `output/intermediate/claim_drafts.json`; audit the frozen
+  `output/intermediate/claim_ledger.json` consumed by Analyst and Editor.
+- Do not create, edit, rewrite, or repair `output/intermediate/claim_ledger.json`.
 - Do not read or reuse a prior `output/intermediate/audit_report.json` unless
   the Orchestrator explicitly routes an auditor-repair task. The current
   `audit_report.json` is this stage's output, not input.

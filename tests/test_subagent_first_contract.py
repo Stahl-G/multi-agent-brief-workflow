@@ -139,6 +139,49 @@ def test_claude_generate_brief_runs_claim_ledger_freeze_transaction():
     assert "Write `$ARGUMENTS/output/intermediate/claim_ledger.json`" not in claim_ledger_section
 
 
+def test_analyst_prompts_use_frozen_ledger_only():
+    prompt_paths = [
+        "configs/agent_roles.yaml",
+        ".agents/skills/analyst/SKILL.md",
+        ".agents/hermes-skills/multi-agent-brief-hermes/references/delegate-task-sequence.md",
+        ".claude/commands/generate-brief.md",
+        ".claude/agents/analyst.md",
+        ".codex/agents/analyst.toml",
+        ".opencode/agents/brief-analyst.md",
+    ]
+    for path in prompt_paths:
+        text = _read(path)
+        assert "claim_drafts.json" in text, f"claim_drafts boundary missing in {path}"
+        assert "Do not read" in text, f"claim_drafts read prohibition missing in {path}"
+        assert "frozen" in text.lower(), f"frozen ledger wording missing in {path}"
+        assert "Do not create, edit, rewrite, or repair" in text, (
+            f"ledger mutation prohibition missing in {path}"
+        )
+
+
+def test_auditor_prompts_check_overstatement_and_support_calibration():
+    prompt_paths = [
+        "configs/agent_roles.yaml",
+        ".agents/skills/auditor/SKILL.md",
+        ".agents/hermes-skills/multi-agent-brief-hermes/references/delegate-task-sequence.md",
+        ".claude/commands/generate-brief.md",
+        ".claude/agents/auditor.md",
+        ".codex/agents/auditor.toml",
+        ".opencode/agents/brief-auditor.md",
+    ]
+    for path in prompt_paths:
+        text = _read(path)
+        assert "overstatement" in text, f"overstatement check missing in {path}"
+        assert "support-strength calibration" in text, f"support calibration missing in {path}"
+        assert "confidence mismatch" in text, f"confidence mismatch missing in {path}"
+        assert "Do not read" in text and "claim_drafts.json" in text, (
+            f"claim_drafts read prohibition missing in {path}"
+        )
+        assert "Do not create, edit, rewrite, or repair" in text, (
+            f"ledger mutation prohibition missing in {path}"
+        )
+
+
 def test_claude_generate_brief_requires_source_discovery_transaction_for_all_profiles():
     text = _read(".claude/commands/generate-brief.md")
     source_section = text.split("**Source discovery transaction (all source profiles):**", 1)[1].split(

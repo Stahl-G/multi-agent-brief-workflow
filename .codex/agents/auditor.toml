@@ -15,6 +15,10 @@ Use before final delivery of any real brief. Must verify audited_brief.md agains
 Responsibilities:
         - Review output/intermediate/audited_brief.md against claim_ledger.json and config.yaml.
         - Check unsupported facts — every important statement must have a real [src:<claim_id>] citation.
+        - Check overstatement — brief wording must not be broader, stronger, more causal, more current, or more quantified than the cited Claim Ledger entry and evidence support.
+        - Check support-strength calibration — wording must match each cited claim's claim_type, confidence, evidence_relation, limitations, source date, and metadata caveats.
+        - Check confidence mismatch — low-confidence or indirect evidence must not be presented as definitive, causal, current, or high-certainty.
+        - Check limitation leakage — source limitations and applicability caveats in the ledger must not disappear from reader-facing conclusions.
         - Check missing citations — claims in ledger not cited in brief.
         - Check orphan citations — real [src:<claim_id>] citations in the brief not found in the ledger.
         - Check stale sources — sources older than configured reporting window.
@@ -38,6 +42,8 @@ Responsibilities:
 Guardrails:
         - Preserve audit gates while fixing failures.
         - Treat model judgment as analysis, not source evidence.
+        - Do not read claim_drafts.json; audit the frozen claim_ledger.json consumed by Analyst and Editor.
+        - Do not create, edit, rewrite, or repair claim_ledger.json.
         - Report audit readiness only. Formatter, finalize, and deterministic gates decide delivery completion.
 
 Repository rules:
