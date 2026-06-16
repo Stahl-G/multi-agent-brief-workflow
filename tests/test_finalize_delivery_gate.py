@@ -165,6 +165,23 @@ def _write_audit_control_chain(intermediate: Path) -> None:
     )
 
 
+def _write_runtime_manifest(output_dir: Path, *, run_id: str = "mabw-run-test") -> None:
+    manifest_path = output_dir / "intermediate" / "runtime_manifest.json"
+    manifest_path.parent.mkdir(parents=True, exist_ok=True)
+    manifest_path.write_text(
+        json.dumps(
+            {
+                "schema_version": "multi-agent-brief-runtime-manifest/v1",
+                "run_id": run_id,
+            },
+            ensure_ascii=False,
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+
 def _passing_audit_payload(**overrides) -> dict:
     payload = {
         "audit_status": "pass",
@@ -281,7 +298,7 @@ def test_finalize_regenerates_reader_outputs_from_audited_brief(tmp_path: Path):
     ]
 
 
-def test_finalize_cli_strips_src_markers_after_subagent_rewrite(tmp_path: Path):
+def test_finalize_cli_strips_src_markers_after_subagent_rewrite(tmp_path: Path, capsys):
     """CLI finalization prevents audited [src:...] markers from leaking to final files."""
     workspace = tmp_path / "workspace"
     input_dir = workspace / "input"
@@ -310,11 +327,13 @@ def test_finalize_cli_strips_src_markers_after_subagent_rewrite(tmp_path: Path):
     audited_path.write_text("# Brief\n\n- Claim [src:CLAIM_123456]\n", encoding="utf-8")
 
     assert main(["finalize", "--config", str(workspace / "config.yaml")]) == 0
+    captured = capsys.readouterr()
 
     assert "[src:" in audited_path.read_text(encoding="utf-8")
     assert "[src:" not in (output_dir / "brief.md").read_text(encoding="utf-8")
     assert "[src:" not in (output_dir / "上能电气_电力设备周报_2026-06-06.md").read_text(encoding="utf-8")
     assert (output_dir / "delivery" / "brief.md").exists()
+    assert "[finalize] Delivery snapshot:" in captured.out
     assert (intermediate / "finalize_report.json").exists()
 
 
@@ -1134,6 +1153,7 @@ def test_finalize_delivery_bundle_contains_appended_sources_without_audit_files(
     output_dir = tmp_path / "output"
     intermediate = output_dir / "intermediate"
     intermediate.mkdir(parents=True)
+    _write_runtime_manifest(output_dir, run_id="mabw-run-delivery")
     (intermediate / "audited_brief.md").write_text(
         "# Brief\n\nExampleCo opened a public demo facility. [src:SYN_CLAIM_001]\n",
         encoding="utf-8",
@@ -1170,7 +1190,104 @@ def test_finalize_delivery_bundle_contains_appended_sources_without_audit_files(
         str(delivery_docx): _sha256_file(delivery_docx),
     }
     assert result.delivery_artifact_sha256 == report["delivery_artifact_sha256"]
+    snapshot_dir = output_dir / "delivery-history" / "mabw-run-delivery"
+    snapshot_markdown = snapshot_dir / "brief.md"
+    snapshot_docx = snapshot_dir / "ExampleCo_2026-06-12.docx"
+    assert result.delivery_latest_dir == str(delivery_dir)
+    assert report["delivery_latest_dir"] == str(delivery_dir)
+    assert result.delivery_snapshot_dir == str(snapshot_dir)
+    assert report["delivery_snapshot_dir"] == str(snapshot_dir)
+    assert snapshot_markdown.exists()
+    assert snapshot_docx.exists()
+    assert not (snapshot_dir / "source_appendix.md").exists()
+    assert not (snapshot_dir / "claim_ledger.json").exists()
+    assert report["delivery_snapshot_artifacts"] == [str(snapshot_markdown), str(snapshot_docx)]
+    assert report["delivery_snapshot_artifact_sha256"] == {
+        str(snapshot_markdown): _sha256_file(snapshot_markdown),
+        str(snapshot_docx): _sha256_file(snapshot_docx),
+    }
+    assert report["delivery_snapshot_semantics"] == "convenience_copy_not_immutable_archive"
     assert report["reader_clean"]["status"] == "pass"
+
+
+def test_finalize_delivery_snapshot_falls_back_to_timestamp_without_runtime_manifest(tmp_path: Path):
+    output_dir = tmp_path / "output"
+    intermediate = output_dir / "intermediate"
+    intermediate.mkdir(parents=True)
+    (intermediate / "audited_brief.md").write_text("# Brief\n\nReader-safe text.\n", encoding="utf-8")
+
+    result = finalize_reader_outputs(
+        output_dir=output_dir,
+        project_name="ExampleCo Brief",
+        output_formats=["markdown"],
+        output_named_outputs=False,
+    )
+
+    snapshot_dir = Path(result.delivery_snapshot_dir)
+    assert snapshot_dir.parent == output_dir / "delivery-history"
+    assert snapshot_dir.name
+    assert snapshot_dir.name != "mabw-run-test"
+    assert (snapshot_dir / "brief.md").read_text(encoding="utf-8") == (
+        output_dir / "delivery" / "brief.md"
+    ).read_text(encoding="utf-8")
+
+
+def test_finalize_delivery_snapshot_does_not_silently_overwrite_same_run_id(tmp_path: Path):
+    output_dir = tmp_path / "output"
+    intermediate = output_dir / "intermediate"
+    intermediate.mkdir(parents=True)
+    _write_runtime_manifest(output_dir, run_id="mabw-run-repeat")
+    audited = intermediate / "audited_brief.md"
+    audited.write_text("# Brief\n\nFirst reader-safe text.\n", encoding="utf-8")
+
+    first = finalize_reader_outputs(
+        output_dir=output_dir,
+        project_name="ExampleCo Brief",
+        output_formats=["markdown"],
+        output_named_outputs=False,
+    )
+    first_snapshot = Path(first.delivery_snapshot_dir)
+    first_text = (first_snapshot / "brief.md").read_text(encoding="utf-8")
+
+    audited.write_text("# Brief\n\nSecond reader-safe text.\n", encoding="utf-8")
+    second = finalize_reader_outputs(
+        output_dir=output_dir,
+        project_name="ExampleCo Brief",
+        output_formats=["markdown"],
+        output_named_outputs=False,
+    )
+    second_snapshot = Path(second.delivery_snapshot_dir)
+
+    assert first_snapshot == output_dir / "delivery-history" / "mabw-run-repeat"
+    assert second_snapshot == output_dir / "delivery-history" / "mabw-run-repeat-2"
+    assert (first_snapshot / "brief.md").read_text(encoding="utf-8") == first_text
+    assert (second_snapshot / "brief.md").read_text(encoding="utf-8") == (
+        output_dir / "delivery" / "brief.md"
+    ).read_text(encoding="utf-8")
+    assert "Second reader-safe text" in (output_dir / "delivery" / "brief.md").read_text(encoding="utf-8")
+
+
+def test_finalize_delivery_snapshot_failure_writes_failed_report(tmp_path: Path):
+    output_dir = tmp_path / "output"
+    intermediate = output_dir / "intermediate"
+    intermediate.mkdir(parents=True)
+    (intermediate / "audited_brief.md").write_text("# Brief\n\nReader-safe text.\n", encoding="utf-8")
+    (output_dir / "delivery-history").write_text("not a directory", encoding="utf-8")
+
+    with pytest.raises(RuntimeError, match="Delivery snapshot creation failed"):
+        finalize_reader_outputs(
+            output_dir=output_dir,
+            project_name="ExampleCo Brief",
+            output_formats=["markdown"],
+            output_named_outputs=False,
+        )
+
+    report = json.loads((intermediate / "finalize_report.json").read_text(encoding="utf-8"))
+    assert report["status"] == "fail"
+    assert report["delivery_artifacts"] == [str(output_dir / "delivery" / "brief.md")]
+    assert report["delivery_snapshot_dir"] == ""
+    assert report["delivery_snapshot_artifacts"] == []
+    assert "FileExistsError" in report["delivery_snapshot_error"]
 
 
 def test_finalize_removes_internal_claim_ledger_coverage_section(tmp_path: Path):

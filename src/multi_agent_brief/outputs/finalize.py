@@ -5,6 +5,7 @@ import re
 import shutil
 import hashlib
 from dataclasses import dataclass, asdict, field
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -56,8 +57,14 @@ class FinalizeResult:
     source_appendix_claim_map: dict[str, dict[str, str]] = field(default_factory=dict)
     delivery_markdown: str = ""
     delivery_docx: str = ""
+    delivery_latest_dir: str = ""
     delivery_artifacts: list[str] = field(default_factory=list)
     delivery_artifact_sha256: dict[str, str] = field(default_factory=dict)
+    delivery_snapshot_dir: str = ""
+    delivery_snapshot_artifacts: list[str] = field(default_factory=list)
+    delivery_snapshot_artifact_sha256: dict[str, str] = field(default_factory=dict)
+    delivery_snapshot_semantics: str = "convenience_copy_not_immutable_archive"
+    delivery_snapshot_error: str = ""
     reader_clean: dict[str, Any] | None = None
     audit_binding: dict[str, Any] | None = None
 
@@ -217,6 +224,7 @@ def finalize_reader_outputs(
     )
     result.delivery_markdown = delivery_bundle["delivery_markdown"]
     result.delivery_docx = delivery_bundle["delivery_docx"]
+    result.delivery_latest_dir = delivery_bundle["delivery_latest_dir"]
     result.delivery_artifacts = delivery_bundle["delivery_artifacts"]
     result.delivery_artifact_sha256 = delivery_bundle["delivery_artifact_sha256"]
 
@@ -237,7 +245,6 @@ def finalize_reader_outputs(
         ],
     )
     result.reader_clean = reader_clean
-    report_path.write_text(json.dumps(result.to_dict(), ensure_ascii=False, indent=2), encoding="utf-8")
     if result.audit_binding and result.audit_binding.get("status") == "fail":
         result.status = "fail"
         report_path.write_text(json.dumps(result.to_dict(), ensure_ascii=False, indent=2), encoding="utf-8")
@@ -261,6 +268,22 @@ def finalize_reader_outputs(
             f"{total_count or finding_count} blocking residue findings. "
             f"See {report_path}."
         )
+    try:
+        delivery_snapshot = _build_delivery_snapshot(
+            output_dir=out,
+            delivery_artifacts=[Path(path) for path in result.delivery_artifacts],
+        )
+    except Exception as exc:
+        result.status = "fail"
+        result.delivery_snapshot_error = f"{type(exc).__name__}: {exc}"
+        report_path.write_text(json.dumps(result.to_dict(), ensure_ascii=False, indent=2), encoding="utf-8")
+        raise RuntimeError(
+            f"Delivery snapshot creation failed. See {report_path}."
+        ) from exc
+    result.delivery_snapshot_dir = delivery_snapshot["delivery_snapshot_dir"]
+    result.delivery_snapshot_artifacts = delivery_snapshot["delivery_snapshot_artifacts"]
+    result.delivery_snapshot_artifact_sha256 = delivery_snapshot["delivery_snapshot_artifact_sha256"]
+    report_path.write_text(json.dumps(result.to_dict(), ensure_ascii=False, indent=2), encoding="utf-8")
     return result
 
 
@@ -302,11 +325,91 @@ def _build_delivery_bundle(
         artifacts.append(delivery_docx)
     artifact_sha256 = {artifact: _sha256_file(Path(artifact)) for artifact in artifacts}
     return {
+        "delivery_latest_dir": str(delivery_dir),
         "delivery_markdown": str(delivery_markdown),
         "delivery_docx": delivery_docx,
         "delivery_artifacts": artifacts,
         "delivery_artifact_sha256": artifact_sha256,
     }
+
+
+def _build_delivery_snapshot(
+    *,
+    output_dir: Path,
+    delivery_artifacts: list[Path],
+) -> dict[str, Any]:
+    """Copy latest reader delivery files into a convenience snapshot directory."""
+    history_root = output_dir / "delivery-history"
+    history_root.mkdir(parents=True, exist_ok=True)
+    snapshot_name = _delivery_snapshot_name(output_dir)
+    snapshot_dir = _resolve_delivery_snapshot_dir(
+        history_root=history_root,
+        snapshot_name=snapshot_name,
+        delivery_artifacts=delivery_artifacts,
+    )
+    snapshot_dir.mkdir(parents=True, exist_ok=True)
+    snapshot_artifacts: list[str] = []
+    for artifact in delivery_artifacts:
+        target = snapshot_dir / artifact.name
+        if not target.exists() or _sha256_file(target) != _sha256_file(artifact):
+            shutil.copyfile(artifact, target)
+        snapshot_artifacts.append(str(target))
+    return {
+        "delivery_snapshot_dir": str(snapshot_dir),
+        "delivery_snapshot_artifacts": snapshot_artifacts,
+        "delivery_snapshot_artifact_sha256": {
+            artifact: _sha256_file(Path(artifact)) for artifact in snapshot_artifacts
+        },
+    }
+
+
+def _delivery_snapshot_name(output_dir: Path) -> str:
+    manifest = output_dir / "intermediate" / "runtime_manifest.json"
+    if manifest.exists():
+        try:
+            payload = json.loads(manifest.read_text(encoding="utf-8"))
+            run_id = str(payload.get("run_id") or "").strip()
+            if run_id:
+                return _safe_snapshot_component(run_id)
+        except (OSError, json.JSONDecodeError):
+            pass
+    return datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+
+
+def _safe_snapshot_component(value: str) -> str:
+    cleaned = re.sub(r"[^A-Za-z0-9._-]+", "-", value).strip(".-")
+    return cleaned or datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+
+
+def _resolve_delivery_snapshot_dir(
+    *,
+    history_root: Path,
+    snapshot_name: str,
+    delivery_artifacts: list[Path],
+) -> Path:
+    candidate = history_root / snapshot_name
+    if not candidate.exists() or _snapshot_matches_delivery(candidate, delivery_artifacts):
+        return candidate
+    suffix = 2
+    while True:
+        suffixed = history_root / f"{snapshot_name}-{suffix}"
+        if not suffixed.exists() or _snapshot_matches_delivery(suffixed, delivery_artifacts):
+            return suffixed
+        suffix += 1
+
+
+def _snapshot_matches_delivery(snapshot_dir: Path, delivery_artifacts: list[Path]) -> bool:
+    if not snapshot_dir.is_dir():
+        return False
+    expected_names = {artifact.name for artifact in delivery_artifacts}
+    existing_files = {path.name for path in snapshot_dir.iterdir() if path.is_file()}
+    if existing_files != expected_names:
+        return False
+    return all(
+        (snapshot_dir / artifact.name).exists()
+        and _sha256_file(snapshot_dir / artifact.name) == _sha256_file(artifact)
+        for artifact in delivery_artifacts
+    )
 
 
 def _sha256_file(path: Path) -> str:
