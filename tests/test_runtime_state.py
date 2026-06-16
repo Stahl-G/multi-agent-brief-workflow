@@ -3146,6 +3146,36 @@ def test_state_check_preserves_auditor_binding_metadata_for_finalize(tmp_path):
     assert result.audit_binding["status"] == "pass"
 
 
+def test_finalize_complete_does_not_consume_delivery_snapshot(tmp_path):
+    ws = _write_workspace(tmp_path)
+    initialize_runtime_state(workspace=ws, repo_workdir=ROOT)
+    _advance_to_finalize(ws)
+    _write_quality_gate_report(ws, stage_id="finalize")
+    _write_finalize_report(ws)
+    snapshot_dir = ws / "output" / "delivery-history" / "mabw-runtime-state-test"
+    snapshot_dir.mkdir(parents=True)
+    snapshot_brief = snapshot_dir / "brief.md"
+    snapshot_brief.write_text("# Reader Brief\n\nClean reader text.\n", encoding="utf-8")
+    report_path = _intermediate(ws) / "finalize_report.json"
+    report = json.loads(report_path.read_text(encoding="utf-8"))
+    report["delivery_snapshot_dir"] = str(snapshot_dir)
+    report["delivery_snapshot_artifacts"] = [str(snapshot_brief)]
+    report["delivery_snapshot_artifact_sha256"] = {str(snapshot_brief): _sha256_file(snapshot_brief)}
+    report["delivery_snapshot_semantics"] = "convenience_copy_not_immutable_archive"
+    report_path.write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    assert snapshot_dir.exists()
+    shutil.rmtree(snapshot_dir)
+
+    state = complete_finalize_transaction(
+        workspace=ws,
+        repo_workdir=ROOT,
+        reason="reader artifacts finalized and clean",
+    )
+
+    assert state["workflow_state"]["stage_statuses"]["finalize"]["status"] == "complete"
+    assert not snapshot_dir.exists()
+
+
 def test_finalize_complete_requires_passing_audit_binding(tmp_path):
     ws = _write_workspace(tmp_path)
     initialize_runtime_state(workspace=ws, repo_workdir=ROOT)

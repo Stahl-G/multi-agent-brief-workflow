@@ -72,6 +72,8 @@ def handle(args: argparse.Namespace) -> int:
         print(f"[finalize] Source appendix audit copy: {result.source_appendix}")
     elif result.source_appendix_generation not in {"not_requested", "generated"}:
         print(f"[finalize] Source appendix audit copy: {result.source_appendix_generation}")
+    if result.delivery_snapshot_dir:
+        print(f"[finalize] Delivery snapshot: {result.delivery_snapshot_dir}")
     print("[finalize] Audit records remain under output/intermediate/.")
     print(
         "[finalize] Internal [src:<claim_id>] markers stripped from"

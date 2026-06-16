@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Delivery snapshot convenience copies**: `finalize` still refreshes `output/delivery/` as the latest reader surface, and now also writes reader-facing copies under `output/delivery-history/<run_id-or-timestamp>/` before the authoritative run archive is created by `state finalize-complete`.
+
 ## [0.8.4] — 2026-06-16
 
 ### Added
