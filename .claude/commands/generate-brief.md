@@ -136,11 +136,13 @@ your editorial judgment.
    - Merge supported competitive analysis through Claim Ledger citations.
 
 10. Invoke the **analyst** subagent:
-   - Read `$ARGUMENTS/output/intermediate/claim_ledger.json` and `$ARGUMENTS/user.md`.
-   - Write the Analyst working auditable brief using Claim Ledger evidence.
+   - Read the frozen `$ARGUMENTS/output/intermediate/claim_ledger.json` and `$ARGUMENTS/user.md`.
+   - Do not read `$ARGUMENTS/output/intermediate/claim_drafts.json`.
+   - Write the Analyst working auditable brief using frozen Claim Ledger evidence.
    - Preserve valid `[src:<claim_id>]` citations that use real Claim Ledger IDs.
    - Include dates for news items.
    - Write `$ARGUMENTS/output/intermediate/audited_brief.md`.
+   - Do not create, edit, rewrite, or repair `$ARGUMENTS/output/intermediate/claim_ledger.json`.
    - Do not write `$ARGUMENTS/output/intermediate/analyst_draft_snapshot.md`; Python freezes it during analyst stage-complete.
    - Check the expected artifact.
    - Run `multi-agent-brief state stage-complete --workspace $ARGUMENTS --stage analyst --reason "Auditable brief was drafted from the Claim Ledger."`.
@@ -157,8 +159,10 @@ your editorial judgment.
     - If the transaction fails, stop and report the failure. Do not invoke the next specialist.
 
 12. Invoke the **auditor** subagent:
-    - Audit `$ARGUMENTS/output/intermediate/audited_brief.md` against `$ARGUMENTS/output/intermediate/claim_ledger.json`.
-    - Check citation support, numbers, dates, advice language, and process residue.
+    - Audit `$ARGUMENTS/output/intermediate/audited_brief.md` against the frozen `$ARGUMENTS/output/intermediate/claim_ledger.json`.
+    - Do not read `$ARGUMENTS/output/intermediate/claim_drafts.json`.
+    - Check citation support, overstatement, support-strength calibration, confidence mismatch, evidence-relation mismatch, limitations, numbers, dates, advice language, and process residue.
+    - Do not create, edit, rewrite, or repair `$ARGUMENTS/output/intermediate/claim_ledger.json`.
     - Write or update `$ARGUMENTS/output/intermediate/audit_report.json`.
     - Check the expected artifact.
     - Do not invoke formatter/finalize yet. The auditor stage is complete only after the quality-gate transaction below succeeds.

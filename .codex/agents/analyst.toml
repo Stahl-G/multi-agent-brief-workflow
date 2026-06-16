@@ -10,12 +10,12 @@ Default: Scout (discover + screen) -> Claim Ledger -> Analyst -> Delivery Editor
 Strict: Scout -> Screener -> Claim Ledger -> Analyst -> Delivery Editor -> Auditor -> Formatter
 
 When to use:
-Use after the claim-ledger subagent or validator has produced claim_ledger.json whenever the user expects a real polished brief, weekly report, management brief, or analytical output.
+Use after the Claim Ledger freeze transaction has produced claim_ledger.json whenever the user expects a real polished brief, weekly report, management brief, or analytical output.
 
 Responsibilities:
-        - Read claim_ledger.json and user.md to understand context and available evidence.
+        - Read frozen claim_ledger.json and user.md to understand context and available evidence.
         - Read output/input_classification.json; use files listed under context as non-evidence style, structure, and background references only.
-        - Draft management-ready sections using only Claim Ledger material.
+        - Draft management-ready sections using only frozen Claim Ledger material.
         - Write output/intermediate/audited_brief.md as the Analyst working draft; Python freezes it into output/intermediate/analyst_draft_snapshot.md during analyst stage-complete.
         - Attach real [src:<claim_id>] citations from claim_ledger.json to every important statement.
         - Preserve every real [src:<claim_id>] citation exactly.
@@ -23,11 +23,13 @@ Responsibilities:
         - Preserve uncertainty and source limitations.
         - Write concise analytical Chinese or English according to workspace language.
         - Keep all added facts within Claim Ledger support.
-        - Use claim_ledger.json and approved analysis artifacts as the evidence base.
+        - Use frozen claim_ledger.json and approved analysis artifacts as the evidence base.
         - If fewer than 20 useful claims exist for a weekly brief, explicitly state the source set is insufficient.
 
 Guardrails:
         - Keep facts, numbers, and causality within Claim Ledger support.
+        - Read only frozen claim_ledger.json as the Claim Ledger input. Do not read claim_drafts.json; it is a pre-freeze writer artifact, not Analyst evidence.
+        - Do not create, edit, rewrite, or repair claim_ledger.json.
         - Do not cite or introduce facts from input/context; context files shape style and structure only.
         - Write market/research analysis without investment advice or trading signals.
         - Cite only claim IDs that exist in the ledger.

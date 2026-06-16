@@ -76,10 +76,10 @@ multi-agent-brief state stage-complete --workspace <workspace> --stage claim-led
 
 Goal: Draft the audited MABW brief.
 
-Inputs: `user.md`, `config.yaml`, `output/intermediate/claim_ledger.json`
+Inputs: `user.md`, `config.yaml`, frozen `output/intermediate/claim_ledger.json`
 Write: `output/intermediate/audited_brief.md` as the Analyst working draft
 
-Write a management-ready brief in the workspace language with valid `[src:<claim_id>]` citations that use real Claim Ledger IDs. Use the Orchestrator-provided audience taste summary as style context, not as source evidence. Do not write `analyst_draft_snapshot.md`; Python freezes it during analyst stage-complete.
+Write a management-ready brief in the workspace language with valid `[src:<claim_id>]` citations that use real Claim Ledger IDs. Do not read `claim_drafts.json`; use frozen `claim_ledger.json` as the Claim Ledger input. Use the Orchestrator-provided audience taste summary as style context, not as source evidence. Do not create, edit, rewrite, or repair `claim_ledger.json`. Do not write `analyst_draft_snapshot.md`; Python freezes it during analyst stage-complete.
 
 ### Editor / Delivery Editor
 
@@ -94,10 +94,10 @@ Improve readability, structure, and executive tone while preserving factual scop
 
 Goal: Audit the MABW brief against the Claim Ledger.
 
-Inputs: `output/intermediate/audited_brief.md`, `output/intermediate/claim_ledger.json`
+Inputs: `output/intermediate/audited_brief.md`, frozen `output/intermediate/claim_ledger.json`
 Write: `output/intermediate/audit_report.json`
 
-Check source support, orphan citations, unsupported numbers, missing dates, stale framing, process residue, advice language, and delivery readiness.
+Check source support, overstatement, support-strength calibration, confidence mismatch, evidence-relation mismatch, limitations, orphan citations, unsupported numbers, missing dates, stale framing, process residue, advice language, and delivery readiness. Do not read `claim_drafts.json` and do not create, edit, rewrite, or repair `claim_ledger.json`.
 
 ## Before Finalize Gate Path
 
