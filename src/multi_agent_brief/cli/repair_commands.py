@@ -17,7 +17,7 @@ from multi_agent_brief.repair.router import route_repair
 def register(subparsers: argparse._SubParsersAction) -> None:
     repair_parser = subparsers.add_parser(
         "repair",
-        help="Route deterministic repair ownership without executing repair.",
+        help="Route and execute deterministic owner-stage repair transactions.",
     )
     actions = repair_parser.add_subparsers(dest="repair_action", required=True)
     route_parser = actions.add_parser(

@@ -166,6 +166,8 @@ def _findings_from_payload(payload: dict[str, Any], *, source: str, path: str) -
     findings = payload.get("findings")
     if not isinstance(findings, list):
         return []
+    metadata = payload.get("metadata") if isinstance(payload.get("metadata"), dict) else {}
+    source_stage_id = metadata.get("gate_stage_id") or metadata.get("stage_id")
     normalized: list[dict[str, Any]] = []
     for idx, finding in enumerate(findings):
         if not isinstance(finding, dict):
@@ -174,6 +176,8 @@ def _findings_from_payload(payload: dict[str, Any], *, source: str, path: str) -
         item.setdefault("_source", source)
         item.setdefault("_source_path", path)
         item.setdefault("_source_index", idx)
+        if source_stage_id:
+            item.setdefault("_source_stage_id", source_stage_id)
         normalized.append(item)
     return normalized
 
@@ -337,6 +341,7 @@ def _route(
         "source": {
             "file": source.get("_source_path"),
             "kind": source.get("_source"),
+            "stage_id": source.get("_source_stage_id") or source.get("gate_stage_id") or source.get("stage_id"),
             "finding_id": source.get("finding_id") or source.get("id"),
             "finding_type": source.get("finding_type") or source.get("category"),
             "artifact_id": source.get("artifact_id"),

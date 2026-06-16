@@ -2464,6 +2464,39 @@ def test_repair_start_records_editor_owner_transaction(tmp_path):
     assert events[-1]["metadata"]["repair_owner"] == "editor"
 
 
+def test_repair_start_rejects_finalized_workflow_without_mutating_state(tmp_path):
+    ws = _write_workspace(tmp_path)
+    _complete_finalized_workspace(ws)
+    _write_editor_repair_gate_report(ws)
+    before_workflow = _state_file(ws, "workflow_state").read_bytes()
+    before_events = _state_file(ws, "event_log").read_bytes()
+
+    with pytest.raises(RuntimeStateError) as excinfo:
+        start_repair_transaction(workspace=ws, repo_workdir=ROOT)
+
+    assert excinfo.value.error_code == runtime_state.operations.E_ILLEGAL_TRANSITION
+    assert "finalized workflow" in str(excinfo.value)
+    assert _state_file(ws, "workflow_state").read_bytes() == before_workflow
+    assert _state_file(ws, "event_log").read_bytes() == before_events
+
+
+def test_repair_start_rejects_stale_report_from_non_current_stage(tmp_path):
+    ws = _write_workspace(tmp_path)
+    initialize_runtime_state(workspace=ws, repo_workdir=ROOT)
+    _set_current_stage(ws, "claim-ledger")
+    _write_editor_repair_gate_report(ws)
+    before_workflow = _state_file(ws, "workflow_state").read_bytes()
+    before_events = _state_file(ws, "event_log").read_bytes()
+
+    with pytest.raises(RuntimeStateError) as excinfo:
+        start_repair_transaction(workspace=ws, repo_workdir=ROOT)
+
+    assert excinfo.value.error_code == runtime_state.operations.E_ILLEGAL_TRANSITION
+    assert "source stage does not match" in str(excinfo.value)
+    assert _state_file(ws, "workflow_state").read_bytes() == before_workflow
+    assert _state_file(ws, "event_log").read_bytes() == before_events
+
+
 def test_repair_complete_refreezes_allowed_editor_artifact_and_invalidates_downstream(tmp_path):
     ws = _write_workspace(tmp_path)
     initialize_runtime_state(workspace=ws, repo_workdir=ROOT)
@@ -2547,6 +2580,78 @@ def test_repair_complete_rejects_blocked_artifact_edit(tmp_path):
 
     assert excinfo.value.error_code == runtime_state.operations.E_TRANSACTION_INTEGRITY
     assert "Blocked repair artifact changed" in str(excinfo.value)
+    workflow = json.loads(_state_file(ws, "workflow_state").read_text(encoding="utf-8"))
+    assert workflow["active_repair"]["repair_owner"] == "editor"
+
+
+def test_repair_complete_rejects_downstream_artifact_created_during_repair(tmp_path):
+    ws = _write_workspace(tmp_path)
+    initialize_runtime_state(workspace=ws, repo_workdir=ROOT)
+    _set_current_stage(ws, "analyst")
+    audited = _intermediate(ws) / "audited_brief.md"
+    audited.write_text("# Brief\n\nAnalyst draft. [src:CL-001]\n", encoding="utf-8")
+    complete_stage_transaction(
+        workspace=ws,
+        repo_workdir=ROOT,
+        stage_id="analyst",
+        reason="analyst complete",
+    )
+    audited.write_text("# Brief\n\nEditor draft needing repair. [src:CL-001]\n", encoding="utf-8")
+    complete_stage_transaction(
+        workspace=ws,
+        repo_workdir=ROOT,
+        stage_id="editor",
+        reason="editor complete",
+    )
+    _write_editor_repair_gate_report(ws)
+    start_repair_transaction(workspace=ws, repo_workdir=ROOT)
+    audited.write_text("# Brief\n\nEditor repaired draft. [src:CL-001]\n", encoding="utf-8")
+    _write_json_artifact(ws, "audit_report.json", _valid_audit_report_payload())
+
+    with pytest.raises(RuntimeStateError) as excinfo:
+        complete_repair_transaction(
+            workspace=ws,
+            repo_workdir=ROOT,
+            reason="editor repaired audited brief from deterministic route",
+        )
+
+    assert excinfo.value.error_code == runtime_state.operations.E_TRANSACTION_INTEGRITY
+    assert "output/intermediate/audit_report.json" in str(excinfo.value)
+    workflow = json.loads(_state_file(ws, "workflow_state").read_text(encoding="utf-8"))
+    assert workflow["active_repair"]["repair_owner"] == "editor"
+
+
+def test_repair_complete_rejects_noop_repair(tmp_path):
+    ws = _write_workspace(tmp_path)
+    initialize_runtime_state(workspace=ws, repo_workdir=ROOT)
+    _set_current_stage(ws, "analyst")
+    audited = _intermediate(ws) / "audited_brief.md"
+    audited.write_text("# Brief\n\nAnalyst draft. [src:CL-001]\n", encoding="utf-8")
+    complete_stage_transaction(
+        workspace=ws,
+        repo_workdir=ROOT,
+        stage_id="analyst",
+        reason="analyst complete",
+    )
+    audited.write_text("# Brief\n\nEditor draft needing repair. [src:CL-001]\n", encoding="utf-8")
+    complete_stage_transaction(
+        workspace=ws,
+        repo_workdir=ROOT,
+        stage_id="editor",
+        reason="editor complete",
+    )
+    _write_editor_repair_gate_report(ws)
+    start_repair_transaction(workspace=ws, repo_workdir=ROOT)
+
+    with pytest.raises(RuntimeStateError) as excinfo:
+        complete_repair_transaction(
+            workspace=ws,
+            repo_workdir=ROOT,
+            reason="noop repair should fail",
+        )
+
+    assert excinfo.value.error_code == runtime_state.operations.E_TRANSACTION_INTEGRITY
+    assert "did not modify any allowed artifact" in str(excinfo.value)
     workflow = json.loads(_state_file(ws, "workflow_state").read_text(encoding="utf-8"))
     assert workflow["active_repair"]["repair_owner"] == "editor"
 
