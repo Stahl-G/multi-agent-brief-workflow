@@ -314,12 +314,14 @@ def _workflow_after_completion(
     now: str,
     transaction_id: str,
     finalize: bool,
+    runtime_provenance: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     decision = "finalize" if finalize else "continue"
     next_stage = _next_stage_id(stages, stage_id)
     current_stage = None if finalize else next_stage
     statuses = dict(workflow.get("stage_statuses") or {})
-    statuses[stage_id] = _status_entry(STAGE_COMPLETE, reason, now)
+    completion_metadata = {"runtime_provenance": runtime_provenance} if runtime_provenance else None
+    statuses[stage_id] = _status_entry(STAGE_COMPLETE, reason, now, metadata=completion_metadata)
     if current_stage:
         statuses[current_stage] = _status_entry(STAGE_READY, "", now)
     updated = dict(workflow)
@@ -341,5 +343,8 @@ def _workflow_after_completion(
         "reason": reason,
         "created_at": now,
     }
+    if runtime_provenance:
+        updated["last_decision"]["runtime_provenance"] = runtime_provenance
+        updated["last_completion_transaction"]["runtime_provenance"] = runtime_provenance
     updated["next_allowed_decisions"] = _allowed_decisions_for_stage(stages, current_stage)
     return updated

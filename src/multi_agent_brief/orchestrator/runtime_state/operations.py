@@ -2134,6 +2134,26 @@ def _auditor_completion_metadata(
     }
 
 
+def _stage_runtime_provenance(
+    *,
+    runtime: str | None,
+    model: str | None,
+    actor: str,
+) -> dict[str, Any] | None:
+    data: dict[str, Any] = {
+        "schema_version": "mabw.stage_runtime_provenance.v1",
+        "source": "stage_completion_args",
+        "recorded_by_actor": actor,
+        "provenance_only": True,
+        "quality_claim": False,
+    }
+    if runtime is not None and str(runtime).strip():
+        data["runtime"] = str(runtime).strip()
+    if model is not None and str(model).strip():
+        data["model"] = str(model).strip()
+    return data if "runtime" in data or "model" in data else None
+
+
 def _topology_satisfier_aliases(*, stage_id: str, topology: str) -> set[str]:
     aliases = {stage_id}
     if topology == "human_assisted" and stage_id in {"analyst", "editor", "writer"}:
@@ -2298,6 +2318,7 @@ def _append_transaction_events(
     next_stage: str | None,
     artifact_events: list[dict[str, Any]],
     topology_events: list[dict[str, Any]] | None = None,
+    runtime_provenance: dict[str, Any] | None = None,
 ) -> None:
     try:
         for event in [*artifact_events, *(topology_events or [])]:
@@ -2313,6 +2334,9 @@ def _append_transaction_events(
                 reason=str(event.get("reason") or ""),
                 metadata=metadata,
             )
+        decision_metadata = {"next_stage": next_stage, "transaction_id": transaction_id}
+        if runtime_provenance:
+            decision_metadata["runtime_provenance"] = runtime_provenance
         append_event(
             workspace=workspace,
             run_id=run_id,
@@ -2321,7 +2345,7 @@ def _append_transaction_events(
             stage_id=stage_id,
             decision=decision,
             reason=reason,
-            metadata={"next_stage": next_stage, "transaction_id": transaction_id},
+            metadata=decision_metadata,
         )
     except RuntimeStateError as exc:
         raise RuntimeStateError(
@@ -2345,6 +2369,8 @@ def _complete_stage_transaction(
     repo_workdir: str | Path | None = None,
     actor: str = "orchestrator",
     finalize: bool = False,
+    stage_runtime: str | None = None,
+    stage_model: str | None = None,
 ) -> dict[str, Any]:
     ws = _require_workspace(workspace)
     paths = runtime_state_paths(ws)
@@ -2382,6 +2408,11 @@ def _complete_stage_transaction(
 
     transaction_id = uuid.uuid4().hex
     now = utc_now()
+    runtime_provenance = _stage_runtime_provenance(
+        runtime=stage_runtime,
+        model=stage_model,
+        actor=actor,
+    )
     run_id = str(manifest["run_id"])
     analyst_snapshot_before: dict[Path, bytes | None] | None = None
     if stage_id == "analyst":
@@ -2510,6 +2541,7 @@ def _complete_stage_transaction(
             now=now,
             transaction_id=transaction_id,
             finalize=finalize,
+            runtime_provenance=runtime_provenance,
         )
         if finalize:
             next_workflow = _finalize_run_integrity(next_workflow)
@@ -2564,10 +2596,12 @@ def _complete_stage_transaction(
         if stage_id == "auditor":
             statuses = dict(next_workflow.get("stage_statuses") or {})
             auditor_status = dict(statuses.get("auditor") or {})
-            auditor_status["metadata"] = _auditor_completion_metadata(
+            auditor_metadata = dict(auditor_status.get("metadata") or {})
+            auditor_metadata.update(_auditor_completion_metadata(
                 workspace=ws,
                 registry=registry,
-            )
+            ))
+            auditor_status["metadata"] = auditor_metadata
             statuses["auditor"] = auditor_status
             next_workflow["stage_statuses"] = statuses
         finalize_report: dict[str, Any] | None = None
@@ -2648,6 +2682,7 @@ def _complete_stage_transaction(
         next_stage=next_workflow.get("current_stage"),
         artifact_events=artifact_events,
         topology_events=topology_events,
+        runtime_provenance=runtime_provenance,
     )
 
     current_manifest = _read_json(paths["runtime_manifest"])
@@ -2697,6 +2732,8 @@ def _complete_stage_transaction(
         "stage_id": stage_id,
         "decision": "finalize" if finalize else "continue",
     }
+    if runtime_provenance:
+        state["transaction"]["runtime_provenance"] = runtime_provenance
     if archive_result is not None:
         state["run_archive"] = archive_result
     return state
@@ -3357,6 +3394,8 @@ def complete_stage_transaction(
     reason: str,
     repo_workdir: str | Path | None = None,
     actor: str = "orchestrator",
+    runtime: str | None = None,
+    model: str | None = None,
 ) -> dict[str, Any]:
     return _complete_stage_transaction(
         workspace=workspace,
@@ -3365,6 +3404,8 @@ def complete_stage_transaction(
         repo_workdir=repo_workdir,
         actor=actor,
         finalize=False,
+        stage_runtime=runtime,
+        stage_model=model,
     )
 
 
@@ -3374,6 +3415,8 @@ def complete_finalize_transaction(
     reason: str,
     repo_workdir: str | Path | None = None,
     actor: str = "orchestrator",
+    runtime: str | None = None,
+    model: str | None = None,
 ) -> dict[str, Any]:
     return _complete_stage_transaction(
         workspace=workspace,
@@ -3382,6 +3425,8 @@ def complete_finalize_transaction(
         repo_workdir=repo_workdir,
         actor=actor,
         finalize=True,
+        stage_runtime=runtime,
+        stage_model=model,
     )
 
 
