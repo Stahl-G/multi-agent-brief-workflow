@@ -2,9 +2,11 @@
 
 080 validates whether approved Improvement Memory guidance manifests under a
 frozen fact layer. Schema validators are side-effect free. ``register-run``,
-``score-run``, ``import-assessment``, and ``summarize`` write only the requested
-experiment metadata outputs and must not mutate workspace runtime state,
-archive files, case files, agent assets, or Improvement Ledger files.
+``score-run``, ``import-assessment``, ``summarize``, and ``scaffold-condition``
+write only the requested experiment metadata or deterministic scaffold outputs.
+They must not mutate archive files, case files, agent assets, or Improvement
+Ledger files; ``scaffold-condition`` may initialize a new workspace only through
+the deterministic fast-rerun import transaction.
 """
 
 from __future__ import annotations
@@ -34,6 +36,7 @@ RUN_RECORD_SCHEMA = "mabw.experiment_080.run_record.v1"
 SCORECARD_SCHEMA = "mabw.experiment_080.scorecard.v1"
 ASSESSMENT_SCHEMA = "mabw.experiment_080.assessment.v1"
 CASE_SUMMARY_SCHEMA = "mabw.experiment_080.case_summary.v1"
+SCAFFOLD_CONDITION_SCHEMA = "mabw.experiment_080.scaffold_condition.v1"
 CASE_VALIDATION_SCHEMA = "mabw.experiment_080.case_validation.v1"
 RUN_ARCHIVE_SCHEMA = "mabw.run_archive.v1"
 
@@ -77,6 +80,8 @@ SOURCE_PLAN_ARTIFACT_IDS = {
     "source_candidate_plan",
     "source_plan",
 }
+SCAFFOLD_METADATA_PATH = "experiment/080/condition.json"
+SCAFFOLD_INSTRUCTIONS_PATH = "experiment/080/operator_instructions.md"
 
 _CASE_ID_RE = re.compile(r"^[a-z][a-z0-9_-]{2,79}$")
 _RUN_ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.:-]{2,159}$")
@@ -799,6 +804,393 @@ def summarize_case(
         "written": written,
         "summary": summary,
     }
+
+
+def scaffold_condition(
+    *,
+    case_dir: str | Path,
+    condition: str,
+    workspace: str | Path,
+    archive: str | Path | None = None,
+    runtime: str = "hermes",
+    repo_workdir: str | Path | None = None,
+) -> dict[str, Any]:
+    """Create an 080 condition workspace using deterministic fast-rerun import.
+
+    This helper prepares workspace state only. It does not run subagents,
+    finalize output, register runs, score runs, or summarize experiments.
+    """
+
+    case_root = Path(case_dir).expanduser().resolve()
+    ws = Path(workspace).expanduser().resolve()
+    case_validation = validate_case_dir(case_root)
+    if not case_validation.get("ok"):
+        _raise_experiment_error(
+            "E_EXPERIMENT_080_CASE_INVALID",
+            "MABW-080 case validation failed.",
+            errors=case_validation.get("errors") or [],
+            warnings=case_validation.get("warnings") or [],
+        )
+    case_manifest = _load_json_object(case_root / "case_manifest.json", label="case_manifest")
+    frozen_fact_layer = _load_json_object(case_root / "frozen_fact_layer.json", label="frozen_fact_layer")
+    guidance_set = _load_json_object(case_root / "guidance_set.json", label="guidance_set")
+    conditions = case_manifest.get("conditions") if isinstance(case_manifest.get("conditions"), list) else []
+    if condition not in conditions:
+        _raise_experiment_error(
+            "E_EXPERIMENT_080_CONDITION_INVALID",
+            "scaffold-condition condition is not declared by case_manifest.conditions.",
+            condition=condition,
+            allowed_conditions=[item for item in conditions if item in ALLOWED_CONDITIONS],
+        )
+    archive_manifest = _resolve_scaffold_archive_manifest(
+        case_root=case_root,
+        frozen_fact_layer=frozen_fact_layer,
+        archive=archive,
+    )
+    created_shell_files = _ensure_scaffold_workspace_shell(
+        workspace=ws,
+        case_manifest=case_manifest,
+        condition=condition,
+    )
+    _reject_existing_scaffold_metadata(ws)
+
+    from multi_agent_brief.orchestrator.runtime_state import RuntimeStateError, import_fact_layer_transaction
+
+    try:
+        state = import_fact_layer_transaction(
+            workspace=ws,
+            archive=archive_manifest,
+            runtime=runtime,
+            repo_workdir=repo_workdir,
+            actor="cli",
+        )
+    except RuntimeStateError as exc:
+        _remove_created_scaffold_shell_files(created_shell_files)
+        _raise_experiment_error(
+            "E_EXPERIMENT_080_SCAFFOLD_IMPORT_FAILED",
+            str(exc),
+            runtime_error_code=getattr(exc, "error_code", ""),
+            runtime_error_details=getattr(exc, "details", {}),
+        )
+
+    metadata = _scaffold_condition_metadata(
+        case_manifest=case_manifest,
+        guidance_set=guidance_set,
+        condition=condition,
+        workspace=ws,
+        archive_manifest=archive_manifest,
+        state=state,
+    )
+    instructions = _scaffold_condition_instructions(metadata)
+    metadata_path = ws / SCAFFOLD_METADATA_PATH
+    instructions_path = ws / SCAFFOLD_INSTRUCTIONS_PATH
+    _write_scaffold_metadata_files(
+        metadata_path=metadata_path,
+        metadata=metadata,
+        instructions_path=instructions_path,
+        instructions=instructions,
+    )
+    return {
+        "ok": True,
+        "schema_version": SCAFFOLD_CONDITION_SCHEMA,
+        "experiment_id": EXPERIMENT_080_ID,
+        "case_id": metadata["case_id"],
+        "condition": metadata["condition"],
+        "workspace": str(ws),
+        "source_archive_manifest": metadata["source_archive_manifest"],
+        "metadata_path": SCAFFOLD_METADATA_PATH,
+        "operator_instructions_path": SCAFFOLD_INSTRUCTIONS_PATH,
+        "next_command": metadata["next_command"],
+        "fact_layer_import": metadata["fact_layer_import"],
+        "metadata": metadata,
+    }
+
+
+def _resolve_scaffold_archive_manifest(
+    *,
+    case_root: Path,
+    frozen_fact_layer: dict[str, Any],
+    archive: str | Path | None,
+) -> Path:
+    raw = archive if archive is not None else frozen_fact_layer.get("source_archive_path")
+    if not isinstance(raw, (str, Path)) or not str(raw).strip():
+        _raise_experiment_error(
+            "E_EXPERIMENT_080_ARCHIVE_MISSING",
+            "scaffold-condition requires --archive or frozen_fact_layer.source_archive_path.",
+        )
+    raw_path = Path(raw).expanduser()
+    candidates: list[Path]
+    if raw_path.is_absolute():
+        candidates = [raw_path]
+    else:
+        candidates = [
+            case_root / raw_path,
+            case_root.parent / raw_path,
+            Path.cwd() / raw_path,
+        ]
+    for candidate in candidates:
+        path = candidate / "manifest.json" if candidate.is_dir() else candidate
+        if path.exists() and path.is_file():
+            return path.resolve()
+    _raise_experiment_error(
+        "E_EXPERIMENT_080_ARCHIVE_MISSING",
+        "scaffold-condition could not find a run archive manifest.",
+        archive=str(raw),
+        searched=[str(candidate) for candidate in candidates],
+    )
+
+
+def _ensure_scaffold_workspace_shell(
+    *,
+    workspace: Path,
+    case_manifest: dict[str, Any],
+    condition: str,
+) -> list[Path]:
+    if workspace.exists() and not workspace.is_dir():
+        _raise_experiment_error(
+            "E_EXPERIMENT_080_WORKSPACE_INVALID",
+            "scaffold-condition workspace path exists but is not a directory.",
+            workspace=str(workspace),
+        )
+    config_path = workspace / "config.yaml"
+    if config_path.exists():
+        return []
+    if workspace.exists() and any(workspace.iterdir()):
+        _raise_experiment_error(
+            "E_EXPERIMENT_080_WORKSPACE_INVALID",
+            "scaffold-condition can only initialize an empty workspace or reuse a workspace with config.yaml.",
+            workspace=str(workspace),
+        )
+    workspace.mkdir(parents=True, exist_ok=True)
+    title = str(case_manifest.get("case_title") or case_manifest.get("case_id") or "MABW-080 case")
+    created: list[Path] = []
+    files = {
+        config_path: _scaffold_config_yaml(title=title, condition=condition),
+        workspace / "sources.yaml": "manual:\n  sources: []\n",
+        workspace / "user.md": (
+            "# MABW-080 Condition Workspace\n\n"
+            f"Case: {case_manifest.get('case_id')}\n\n"
+            f"Condition: {condition}\n\n"
+            "This workspace is scaffolded for an experiment condition. The frozen fact layer is imported "
+            "deterministically; source-discovery, Scout, Screener, and Claim Ledger stages are not rerun.\n"
+        ),
+        workspace / "audience_profile.md": (
+            "# Audience Profile\n\n"
+            "Experiment operator reviewing condition outputs under the MABW-080 harness.\n"
+        ),
+    }
+    for path, content in files.items():
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(content, encoding="utf-8")
+        created.append(path)
+    return created
+
+
+def _reject_existing_scaffold_metadata(workspace: Path) -> None:
+    existing = [
+        path.relative_to(workspace).as_posix()
+        for path in (workspace / SCAFFOLD_METADATA_PATH, workspace / SCAFFOLD_INSTRUCTIONS_PATH)
+        if path.exists()
+    ]
+    if existing:
+        _raise_experiment_error(
+            "E_EXPERIMENT_080_WORKSPACE_INVALID",
+            "scaffold-condition workspace already contains experiment scaffold metadata.",
+            workspace=str(workspace),
+            existing=existing,
+        )
+
+
+def _scaffold_config_yaml(*, title: str, condition: str) -> str:
+    escaped_title = title.replace('"', '\\"')
+    escaped_condition = condition.replace('"', '\\"')
+    return (
+        "project:\n"
+        f"  name: \"{escaped_title} / {escaped_condition}\"\n"
+        "language:\n"
+        "  interface: \"en-US\"\n"
+        "  output: \"en-US\"\n"
+        "  source_handling: \"preserve_original\"\n"
+        "input:\n"
+        "  path: \"input\"\n"
+        "output:\n"
+        "  path: \"output\"\n"
+        "report:\n"
+        f"  title: \"{escaped_title} / {escaped_condition}\"\n"
+        "  date: \"2026-06-20\"\n"
+        "  max_source_age_days: 90\n"
+        "  fail_on_stale_source: false\n"
+    )
+
+
+def _remove_created_scaffold_shell_files(paths: list[Path]) -> None:
+    for path in reversed(paths):
+        try:
+            if path.exists() and path.is_file():
+                path.unlink()
+        except OSError:
+            pass
+    for directory in sorted({path.parent for path in paths}, key=lambda item: len(item.parts), reverse=True):
+        try:
+            if directory.exists() and directory.is_dir() and not any(directory.iterdir()):
+                directory.rmdir()
+        except OSError:
+            pass
+
+
+def _scaffold_condition_metadata(
+    *,
+    case_manifest: dict[str, Any],
+    guidance_set: dict[str, Any],
+    condition: str,
+    workspace: Path,
+    archive_manifest: Path,
+    state: dict[str, Any],
+) -> dict[str, Any]:
+    manifest = state.get("manifest") if isinstance(state.get("manifest"), dict) else {}
+    workflow = state.get("workflow_state") if isinstance(state.get("workflow_state"), dict) else {}
+    fact_import = manifest.get("fact_layer_import") if isinstance(manifest.get("fact_layer_import"), dict) else {}
+    guidance_entries = _scaffold_guidance_entries(guidance_set)
+    treatment: dict[str, Any] = {
+        "condition": condition,
+        "guidance_entry_ids": [entry["entry_id"] for entry in guidance_entries],
+        "guidance_entries": guidance_entries,
+    }
+    if condition == "baseline":
+        treatment.update({
+            "improvement_memory": "disabled",
+            "prompt_only_guidance": [],
+            "operator_requirement": "Do not use Improvement Memory or prompt-only guidance for this condition.",
+        })
+    elif condition == "memory":
+        treatment.update({
+            "improvement_memory": "operator_must_prepare_approved_memory_before_run",
+            "prompt_only_guidance": [],
+            "operator_requirement": (
+                "Configure approved Improvement Memory matching guidance_entry_ids before running fast-rerun. "
+                "The runtime will freeze the memory snapshot at run start."
+            ),
+        })
+    else:
+        treatment.update({
+            "improvement_memory": "disabled",
+            "prompt_only_guidance": [entry["guidance_text"] for entry in guidance_entries],
+            "operator_requirement": (
+                "Inject the listed guidance text as prompt-only treatment. Do not create or use Improvement Memory."
+            ),
+        })
+    return {
+        "schema_version": SCAFFOLD_CONDITION_SCHEMA,
+        "experiment_id": EXPERIMENT_080_ID,
+        "case_id": str(case_manifest.get("case_id") or ""),
+        "condition": condition,
+        "workspace_path": "<redacted-workspace>",
+        "source_archive_manifest": fact_import.get("source_archive_manifest")
+        or archive_manifest.as_posix(),
+        "runtime_run_id": manifest.get("run_id"),
+        "current_stage": workflow.get("current_stage"),
+        "fact_layer_import": {
+            "schema_version": fact_import.get("schema_version"),
+            "source_run_id": fact_import.get("source_run_id"),
+            "source_archive_manifest": fact_import.get("source_archive_manifest"),
+            "fact_layer_sha256": fact_import.get("fact_layer_sha256"),
+            "satisfied_stage_ids": fact_import.get("satisfied_stage_ids", []),
+            "timing_comparability": fact_import.get("timing_comparability"),
+            "imported_file_count": fact_import.get("imported_file_count"),
+        },
+        "treatment": treatment,
+        "next_command": f"multi-agent-brief run --workspace {workspace} --recipe fast-rerun --skip-doctor",
+        "boundaries": [
+            "scaffold-condition imports a frozen fact layer and writes experiment metadata only",
+            "it does not run subagents, gates, finalize, register-run, score-run, or summarize",
+            "source-discovery, scout, screener, and claim-ledger are satisfied by import and must not be replayed",
+            "condition outputs must be registered and scored by later explicit 080 commands",
+        ],
+    }
+
+
+def _scaffold_guidance_entries(guidance_set: dict[str, Any]) -> list[dict[str, str]]:
+    entries: list[dict[str, str]] = []
+    for entry in guidance_set.get("entries", []):
+        if not isinstance(entry, dict):
+            continue
+        entry_id = entry.get("entry_id")
+        guidance_text = entry.get("guidance_text")
+        if not isinstance(entry_id, str) or not isinstance(guidance_text, str):
+            continue
+        payload = {
+            "entry_id": entry_id,
+            "source": str(entry.get("source") or ""),
+            "guidance_text": guidance_text,
+            "expected_manifestation": str(entry.get("expected_manifestation") or ""),
+        }
+        entries.append(payload)
+    return entries
+
+
+def _scaffold_condition_instructions(metadata: dict[str, Any]) -> str:
+    treatment = metadata.get("treatment") if isinstance(metadata.get("treatment"), dict) else {}
+    lines = [
+        f"# MABW-080 Condition Scaffold: {metadata.get('case_id')} / {metadata.get('condition')}",
+        "",
+        "This workspace has been prepared with deterministic fast-rerun fact-layer import.",
+        "",
+        "## What Is Already Satisfied",
+        "",
+        "- Source discovery, input governance, Scout, Screener, and Claim Ledger are satisfied by import.",
+        "- The next executable workflow stage is Analyst.",
+        "- Do not rerun source-discovery, Scout, Screener, or Claim Ledger for this condition.",
+        "",
+        "## Condition Treatment",
+        "",
+        f"- Condition: `{metadata.get('condition')}`",
+        f"- Improvement Memory: `{treatment.get('improvement_memory')}`",
+        f"- Operator requirement: {treatment.get('operator_requirement')}",
+    ]
+    prompt_guidance = treatment.get("prompt_only_guidance")
+    if isinstance(prompt_guidance, list) and prompt_guidance:
+        lines.extend(["", "Prompt-only guidance text:"])
+        lines.extend(f"- {text}" for text in prompt_guidance if isinstance(text, str))
+    lines.extend([
+        "",
+        "## Next Command",
+        "",
+        "```bash",
+        str(metadata.get("next_command") or ""),
+        "```",
+        "",
+        "This scaffold is not a completed experiment run. After runtime completion, use `register-run`, `score-run`,",
+        "`import-assessment`, and `summarize` explicitly.",
+        "",
+    ])
+    return "\n".join(lines)
+
+
+def _write_scaffold_metadata_files(
+    *,
+    metadata_path: Path,
+    metadata: dict[str, Any],
+    instructions_path: Path,
+    instructions: str,
+) -> None:
+    _write_experiment_output_idempotently(
+        metadata_path,
+        _json_bytes(metadata),
+        artifact_label="scaffold_condition",
+    )
+    _write_text_output_idempotently(
+        instructions_path,
+        instructions if instructions.endswith("\n") else f"{instructions}\n",
+        artifact_label="scaffold_instructions",
+    )
+
+
+def _write_text_output_idempotently(path: Path, text: str, *, artifact_label: str) -> bool:
+    return _write_experiment_output_idempotently(
+        path,
+        text.encode("utf-8"),
+        artifact_label=artifact_label,
+    )
 
 
 def validate_scorecard(payload: dict[str, Any]) -> list[Experiment080Diagnostic]:

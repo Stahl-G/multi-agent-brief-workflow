@@ -308,6 +308,34 @@ def _summarize_args(case_dir: Path, output: Path | None = None) -> list[str]:
     return args
 
 
+def _scaffold_args(
+    case_dir: Path,
+    workspace: Path,
+    *,
+    condition: str = "memory",
+    archive: Path | None = CLEAN_FIXTURE_MANIFEST,
+) -> list[str]:
+    args = [
+        "experiments",
+        "080",
+        "scaffold-condition",
+        "--case",
+        str(case_dir),
+        "--condition",
+        condition,
+        "--workspace",
+        str(workspace),
+        "--runtime",
+        "codex",
+        "--repo-workdir",
+        str(ROOT),
+        "--json",
+    ]
+    if archive is not None:
+        args.extend(["--archive", str(archive)])
+    return args
+
+
 def _assessment_payload(*, method: str = "human", entry_id: str = "AG-0001") -> dict:
     return {
         "schema_version": "mabw.experiment_080.assessment.v1",
@@ -498,6 +526,107 @@ def test_experiments_080_validate_case_is_read_only(tmp_path, capsys):
         for path in sorted(case_dir.glob("*.json"))
     }
     assert after == before
+
+
+def test_experiments_080_scaffold_condition_imports_fact_layer_workspace(tmp_path, capsys):
+    case_dir = tmp_path / "weekly_public_001"
+    ws = tmp_path / "baseline-workspace"
+    _write_case_from_archive(case_dir, CLEAN_FIXTURE_MANIFEST)
+
+    rc = main(_scaffold_args(case_dir, ws, condition="baseline"))
+
+    assert rc == 0
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["ok"] is True
+    assert payload["condition"] == "baseline"
+    assert payload["fact_layer_import"]["source_run_id"] == "mabw-20260614T000000Z-public0001"
+    assert (ws / "config.yaml").exists()
+    assert (ws / "input" / "sources" / "source-001.md").exists()
+    assert (ws / "output" / "intermediate" / "claim_ledger.json").exists()
+    assert not (ws / "output" / "delivery" / "brief.md").exists()
+
+    workflow = json.loads((ws / "output" / "intermediate" / "workflow_state.json").read_text(encoding="utf-8"))
+    assert workflow["current_stage"] == "analyst"
+    assert workflow["stage_statuses"]["claim-ledger"]["metadata"]["satisfied_by_import"] is True
+
+    metadata = json.loads((ws / "experiment" / "080" / "condition.json").read_text(encoding="utf-8"))
+    assert metadata["schema_version"] == "mabw.experiment_080.scaffold_condition.v1"
+    assert metadata["workspace_path"] == "<redacted-workspace>"
+    assert metadata["treatment"]["improvement_memory"] == "disabled"
+    instructions = (ws / "experiment" / "080" / "operator_instructions.md").read_text(encoding="utf-8")
+    assert "Do not rerun source-discovery, Scout, Screener, or Claim Ledger" in instructions
+    assert "multi-agent-brief run --workspace" in instructions
+    assert not (ws / "improvement" / "memory.md").exists()
+
+
+def test_experiments_080_scaffold_prompt_only_records_guidance_without_memory(tmp_path, capsys):
+    case_dir = tmp_path / "weekly_public_001"
+    ws = tmp_path / "prompt-only-workspace"
+    _write_case_from_archive(case_dir, CLEAN_FIXTURE_MANIFEST)
+    case_manifest = json.loads((case_dir / "case_manifest.json").read_text(encoding="utf-8"))
+    case_manifest["conditions"] = ["baseline", "memory", "prompt_only"]
+    case_manifest["allowed_claims"]["memory_mechanism_adds_over_prompt"] = True
+    _write_json(case_dir / "case_manifest.json", case_manifest)
+
+    rc = main(_scaffold_args(case_dir, ws, condition="prompt_only"))
+
+    assert rc == 0
+    json.loads(capsys.readouterr().out)
+    metadata = json.loads((ws / "experiment" / "080" / "condition.json").read_text(encoding="utf-8"))
+    assert metadata["condition"] == "prompt_only"
+    assert metadata["treatment"]["improvement_memory"] == "disabled"
+    assert metadata["treatment"]["prompt_only_guidance"] == [
+        "Lead with business implication before news recap."
+    ]
+    instructions = (ws / "experiment" / "080" / "operator_instructions.md").read_text(encoding="utf-8")
+    assert "Do not create or use Improvement Memory" in instructions
+    assert not (ws / "improvement" / "memory.md").exists()
+
+
+def test_experiments_080_scaffold_rejects_condition_not_declared(tmp_path, capsys):
+    case_dir = tmp_path / "weekly_public_001"
+    ws = tmp_path / "prompt-only-workspace"
+    _write_case_from_archive(case_dir, CLEAN_FIXTURE_MANIFEST)
+
+    rc = main(_scaffold_args(case_dir, ws, condition="prompt_only"))
+
+    assert rc == 1
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["details"]["code"] == "E_EXPERIMENT_080_CONDITION_INVALID"
+    assert not ws.exists()
+
+
+def test_experiments_080_scaffold_rejects_existing_runtime_state(tmp_path, capsys):
+    case_dir = tmp_path / "weekly_public_001"
+    ws = tmp_path / "workspace"
+    _write_case_from_archive(case_dir, CLEAN_FIXTURE_MANIFEST)
+    assert main(_scaffold_args(case_dir, ws, condition="baseline")) == 0
+    capsys.readouterr()
+    shutil.rmtree(ws / "experiment")
+
+    rc = main(_scaffold_args(case_dir, ws, condition="memory"))
+
+    assert rc == 1
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["details"]["code"] == "E_EXPERIMENT_080_SCAFFOLD_IMPORT_FAILED"
+    assert payload["details"]["runtime_error_code"] == "E_FACT_LAYER_IMPORT_INVALID"
+
+
+def test_experiments_080_scaffold_uses_case_archive_path(tmp_path, capsys):
+    case_dir = tmp_path / "weekly_public_001"
+    ws = tmp_path / "workspace"
+    _write_case_from_archive(case_dir, CLEAN_FIXTURE_MANIFEST)
+    run_dir = CLEAN_FIXTURE_MANIFEST.parent
+    target_run_dir = case_dir / "output" / "runs" / run_dir.name
+    target_run_dir.parent.mkdir(parents=True)
+    shutil.copytree(run_dir, target_run_dir)
+
+    rc = main(_scaffold_args(case_dir, ws, condition="memory", archive=None))
+
+    assert rc == 0
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["ok"] is True
+    assert payload["fact_layer_import"]["source_run_id"] == run_dir.name
 
 
 def test_experiments_080_register_run_writes_valid_record(tmp_path, capsys):

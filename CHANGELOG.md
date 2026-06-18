@@ -14,6 +14,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   manifestation-score counts, reader-clean rates, coverage-delta status, timing
   status, and invalid reasons. It does not judge output quality or run workflow
   stages.
+- **MABW-080 condition scaffold**: `experiments 080 scaffold-condition`
+  prepares baseline/memory/prompt-only workspaces with deterministic
+  fast-rerun fact-layer import plus operator instructions. It does not run
+  subagents, gates, finalize, registration, scoring, or summarization.
 
 ## [0.8.5] — 2026-06-16
 
