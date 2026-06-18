@@ -183,6 +183,20 @@ def _quality_gate_payload(*, status: str, stage_id: str) -> dict:
     }
 
 
+def _valid_audit_report_payload() -> str:
+    return json.dumps(
+        {
+            "audit_status": "pass",
+            "audit_score": 100,
+            "findings": [],
+            "metadata": {},
+        },
+        ensure_ascii=False,
+        indent=2,
+        sort_keys=True,
+    ) + "\n"
+
+
 def _events(ws: Path) -> list[dict[str, object]]:
     path = ws / "output" / "intermediate" / "event_log.jsonl"
     return [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines()]
@@ -507,6 +521,65 @@ def test_gates_check_writes_report_and_events_for_material_blocker(tmp_path, cap
     event_types = [event["event_type"] for event in _events(ws)]
     assert event_types.count("quality_gate_checked") == 1
     assert event_types.count("quality_gate_blocked") == 1
+
+
+def test_gates_check_repeated_same_report_preserves_stage_report_bytes(tmp_path, monkeypatch):
+    ws = _write_workspace(tmp_path)
+    _write_ledger(ws, [])
+    _write_audited_brief(
+        ws,
+        "## Executive Summary\nTargetCo update.\n\n## Detail\nRevenue was $42 million.\n",
+    )
+
+    monkeypatch.setattr(quality_gate_state, "utc_now", lambda: "2026-06-18T00:00:00+00:00")
+    first = quality_gate_state.check_quality_gates(workspace=ws, repo_workdir=ROOT)
+    assert first["quality_gate_report"]["status"] == "fail"
+    report_bytes = _auditor_report_path(ws).read_bytes()
+    legacy_bytes = _report_path(ws).read_bytes()
+    event_count = len(_events(ws))
+
+    monkeypatch.setattr(quality_gate_state, "utc_now", lambda: "2026-06-18T00:05:00+00:00")
+    second = quality_gate_state.check_quality_gates(workspace=ws, repo_workdir=ROOT)
+
+    assert second["quality_gate_report"]["status"] == "fail"
+    assert _auditor_report_path(ws).read_bytes() == report_bytes
+    assert _report_path(ws).read_bytes() == legacy_bytes
+    assert len(_events(ws)) == event_count
+
+
+def test_gates_check_rejects_changed_frozen_auditor_gate_report(tmp_path):
+    ws = _prepare_editor_gate_workspace(
+        tmp_path,
+        analyst_text="## Executive Summary\nTargetCo opened a demo facility. [src:CL-001]\n",
+        editor_text="## Executive Summary\nTargetCo opened a demo facility. [src:CL-001]\n",
+    )
+    (_intermediate(ws) / "audit_report.json").write_text(_valid_audit_report_payload(), encoding="utf-8")
+
+    quality_gate_state.check_quality_gates(
+        workspace=ws,
+        repo_workdir=ROOT,
+        report_date="2026-06-18",
+        stage_id="auditor",
+    )
+    runtime_state.complete_stage_transaction(
+        workspace=ws,
+        repo_workdir=ROOT,
+        stage_id="auditor",
+        reason="auditor and gates passed",
+    )
+    report_bytes = _auditor_report_path(ws).read_bytes()
+
+    with pytest.raises(RuntimeStateError) as excinfo:
+        quality_gate_state.check_quality_gates(
+            workspace=ws,
+            repo_workdir=ROOT,
+            report_date="2026-06-19",
+            stage_id="auditor",
+        )
+
+    assert excinfo.value.error_code == "E_TRANSACTION_INTEGRITY"
+    assert "Refusing to rewrite frozen quality gate report" in str(excinfo.value)
+    assert _auditor_report_path(ws).read_bytes() == report_bytes
 
 
 def test_gate_report_can_be_explicitly_ingested_as_audit_feedback(tmp_path, capsys):
