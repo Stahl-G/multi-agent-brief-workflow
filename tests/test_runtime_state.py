@@ -20,6 +20,7 @@ from multi_agent_brief.orchestrator.runtime_state import (
     complete_finalize_transaction,
     complete_repair_transaction,
     complete_stage_transaction,
+    enrich_claim_metadata_transaction,
     freeze_claim_ledger_transaction,
     initialize_runtime_state,
     import_fact_layer_transaction,
@@ -209,6 +210,56 @@ def _valid_screened_candidates_payload(*, status: str = "selected", reason: str 
 def _freeze_claim_ledger_fixture(ws: Path, *, duplicate: bool = False) -> None:
     _write_json_artifact(ws, "claim_drafts.json", _valid_claim_drafts_payload(duplicate=duplicate))
     freeze_claim_ledger_transaction(workspace=ws, repo_workdir=ROOT)
+
+
+def _add_imported_source_authority(
+    ws: Path,
+    *,
+    source_id: str = "SRC-001",
+    filename: str = "source-001.json",
+    metadata: dict[str, object] | None = None,
+) -> None:
+    source_path = ws / "input" / "sources" / filename
+    source_path.parent.mkdir(parents=True, exist_ok=True)
+    payload = {
+        "source_id": source_id,
+        "content": "Example evidence.",
+        **(metadata or {}),
+    }
+    source_path.write_text(
+        json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+    manifest_path = _state_file(ws, "runtime_manifest")
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    import_record = manifest.setdefault("fact_layer_import", {
+        "schema_version": "mabw.fact_layer_import.v1",
+        "imported_at": "2026-06-18T00:00:00+00:00",
+        "source_run_id": "mabw-source-run",
+        "source_archive_manifest": "output/runs/mabw-source-run/manifest.json",
+        "source_archive_manifest_sha256": "0" * 64,
+        "fact_layer_status": "complete",
+        "fact_layer_sha256": "1" * 64,
+        "satisfied_stage_ids": ["doctor", "source-discovery", "input-governance", "scout", "screener", "claim-ledger"],
+        "required_artifact_ids": [
+            "durable_source_evidence_or_source_pack",
+            "input_classification",
+            "candidate_claims",
+            "screened_candidates",
+            "claim_ledger",
+        ],
+        "imported_file_count": 0,
+        "imported_files": [],
+    })
+    import_record.setdefault("imported_files", []).append({
+        "artifact_id": "durable_source_evidence_or_source_pack",
+        "archive_path": f"fact_layer/input/sources/{filename}",
+        "workspace_path": f"input/sources/{filename}",
+        "sha256": _sha256_file(source_path),
+        "size_bytes": source_path.stat().st_size,
+    })
+    import_record["imported_file_count"] = len(import_record["imported_files"])
+    manifest_path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
 
 def _valid_audit_report_payload() -> str:
@@ -2067,6 +2118,225 @@ def test_freeze_claim_ledger_preserves_draft_provenance_metadata(tmp_path):
     assert claim["metadata"]["source_name"] == "Example Wire"
     assert claim["metadata"]["publisher"] == "Example Publisher"
     assert claim["metadata"]["topic"] == "demo market"
+
+
+def test_enrich_claim_metadata_uses_imported_source_evidence(tmp_path):
+    ws = _write_workspace(tmp_path)
+    initialize_runtime_state(workspace=ws, repo_workdir=ROOT)
+    _set_current_stage(ws, "claim-ledger")
+    _add_imported_source_authority(
+        ws,
+        metadata={
+            "published_at": "2026-06-01",
+            "retrieved_at": "2026-06-16T00:00:00Z",
+            "title": "ExampleCo Demo Facility",
+            "name": "Example Wire",
+            "publisher": "Example Publisher",
+            "topic": "demo market",
+        },
+    )
+    _add_imported_source_authority(ws, source_id="SRC-002", filename="source-002.json")
+    _write_json_artifact(ws, "claim_drafts.json", _valid_claim_drafts_payload())
+    freeze_claim_ledger_transaction(workspace=ws, repo_workdir=ROOT)
+
+    state = enrich_claim_metadata_transaction(workspace=ws, repo_workdir=ROOT)
+
+    ledger_path = _intermediate(ws) / "claim_ledger.json"
+    ledger = json.loads(ledger_path.read_text(encoding="utf-8"))
+    claim = ledger[0]
+    assert claim["metadata"]["published_at"] == "2026-06-01"
+    assert claim["metadata"]["retrieved_at"] == "2026-06-16T00:00:00Z"
+    assert claim["metadata"]["source_title"] == "ExampleCo Demo Facility"
+    assert claim["metadata"]["source_name"] == "Example Wire"
+    assert claim["metadata"]["publisher"] == "Example Publisher"
+    assert claim["metadata"]["topic"] == "demo market"
+    assert claim["metadata"]["source_path"] == "input/sources/source-001.json"
+    manifest = json.loads(_state_file(ws, "runtime_manifest").read_text(encoding="utf-8"))
+    registry = json.loads(_state_file(ws, "artifact_registry").read_text(encoding="utf-8"))
+    assert manifest["claim_ledger_freeze"]["claim_ledger_sha256"] == _sha256_file(ledger_path)
+    assert registry["artifacts"]["claim_ledger"]["sha256"] == _sha256_file(ledger_path)
+    assert state["claim_ledger_metadata_enrichment"]["enriched_claim_count"] == 2
+    assert _event_records(ws)[-1]["event_type"] == "claim_ledger_metadata_enriched"
+
+
+def test_enrich_claim_metadata_updates_completed_claim_ledger_stage_hash(tmp_path):
+    ws = _write_workspace(tmp_path)
+    initialize_runtime_state(workspace=ws, repo_workdir=ROOT)
+    _set_current_stage(ws, "claim-ledger")
+    _add_imported_source_authority(ws, metadata={"published_at": "2026-06-01"})
+    _add_imported_source_authority(ws, source_id="SRC-002", filename="source-002.json")
+    _write_json_artifact(ws, "claim_drafts.json", _valid_claim_drafts_payload())
+    freeze_claim_ledger_transaction(workspace=ws, repo_workdir=ROOT)
+    complete_stage_transaction(
+        workspace=ws,
+        repo_workdir=ROOT,
+        stage_id="claim-ledger",
+        reason="claim ledger complete",
+    )
+
+    enrich_claim_metadata_transaction(workspace=ws, repo_workdir=ROOT)
+
+    ledger_sha = _sha256_file(_intermediate(ws) / "claim_ledger.json")
+    workflow = json.loads(_state_file(ws, "workflow_state").read_text(encoding="utf-8"))
+    claim_metadata = workflow["stage_statuses"]["claim-ledger"]["metadata"]
+    assert claim_metadata["produced_artifact_sha256"]["claim_ledger"] == ledger_sha
+    assert claim_metadata["claim_ledger_metadata_enrichment"]["claim_ledger_sha256"] == ledger_sha
+
+
+def test_enrich_claim_metadata_accepts_imported_fast_rerun_claim_ledger(tmp_path):
+    ws = _write_workspace(tmp_path)
+    archive = (
+        ROOT
+        / "tests"
+        / "fixtures"
+        / "fast_rerun_clean_archive"
+        / "output"
+        / "runs"
+        / "mabw-20260614T000000Z-public0001"
+        / "manifest.json"
+    )
+    imported = import_fact_layer_transaction(
+        workspace=ws,
+        archive=archive,
+        runtime="codex",
+        repo_workdir=ROOT,
+    )
+    assert "claim_ledger_freeze" not in imported["manifest"]
+    imported_claim_record = next(
+        record
+        for record in imported["manifest"]["fact_layer_import"]["imported_files"]
+        if record["artifact_id"] == "claim_ledger"
+    )
+
+    state = enrich_claim_metadata_transaction(workspace=ws, repo_workdir=ROOT)
+
+    ledger_path = _intermediate(ws) / "claim_ledger.json"
+    ledger = json.loads(ledger_path.read_text(encoding="utf-8"))
+    metadata = ledger[0]["metadata"]
+    assert metadata["published_at"] == "2026-06-10"
+    assert metadata["retrieved_at"] == "2026-06-14T00:00:00Z"
+    assert metadata["source_title"] == "Synthetic public market update"
+    assert metadata["source_path"] == "input/sources/source-001.md"
+    manifest = json.loads(_state_file(ws, "runtime_manifest").read_text(encoding="utf-8"))
+    assert "claim_ledger_freeze" not in manifest
+    enrichment = manifest["claim_ledger_metadata_enrichment"]
+    assert enrichment["claim_ledger_authority"] == "fact_layer_import"
+    assert enrichment["previous_claim_ledger_sha256"] == imported_claim_record["sha256"]
+    assert enrichment["source_claim_ledger_sha256"] == imported_claim_record["sha256"]
+    assert enrichment["claim_ledger_sha256"] == _sha256_file(ledger_path)
+    assert state["fact_layer_import"]["status"] == "valid"
+    shown = show_runtime_state(workspace=ws)
+    assert shown["fact_layer_import"]["status"] == "valid"
+    assert shown["fact_layer_import"]["derived_imported_files"] == [
+        {
+            "artifact_id": "claim_ledger",
+            "workspace_path": "output/intermediate/claim_ledger.json",
+            "original_sha256": imported_claim_record["sha256"],
+            "current_sha256": _sha256_file(ledger_path),
+            "derivation": "claim_ledger_metadata_enrichment",
+        }
+    ]
+
+
+def test_state_enrich_claim_metadata_cli_json(tmp_path, capsys):
+    ws = _write_workspace(tmp_path)
+    initialize_runtime_state(workspace=ws, repo_workdir=ROOT)
+    _set_current_stage(ws, "claim-ledger")
+    _add_imported_source_authority(ws, metadata={"published_at": "2026-06-01"})
+    _add_imported_source_authority(ws, source_id="SRC-002", filename="source-002.json")
+    _write_json_artifact(ws, "claim_drafts.json", _valid_claim_drafts_payload())
+    freeze_claim_ledger_transaction(workspace=ws, repo_workdir=ROOT)
+
+    rc = main([
+        "state",
+        "enrich-claim-metadata",
+        "--workspace",
+        str(ws),
+        "--repo-workdir",
+        str(ROOT),
+        "--from-source-evidence",
+        "--json",
+    ])
+
+    assert rc == 0
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["transaction"]["decision"] == "enrich_claim_metadata"
+    assert payload["claim_ledger_metadata_enrichment"]["enriched_claim_count"] == 2
+
+
+def test_enrich_claim_metadata_rejects_missing_imported_source_authority(tmp_path):
+    ws = _write_workspace(tmp_path)
+    initialize_runtime_state(workspace=ws, repo_workdir=ROOT)
+    _set_current_stage(ws, "claim-ledger")
+    _write_json_artifact(ws, "claim_drafts.json", _valid_claim_drafts_payload())
+    freeze_claim_ledger_transaction(workspace=ws, repo_workdir=ROOT)
+    before_manifest = _state_file(ws, "runtime_manifest").read_bytes()
+    before_ledger = (_intermediate(ws) / "claim_ledger.json").read_bytes()
+
+    with pytest.raises(RuntimeStateError) as excinfo:
+        enrich_claim_metadata_transaction(workspace=ws, repo_workdir=ROOT)
+
+    assert excinfo.value.error_code == "E_TRANSACTION_INTEGRITY"
+    assert "imported frozen source evidence" in str(excinfo.value)
+    assert _state_file(ws, "runtime_manifest").read_bytes() == before_manifest
+    assert (_intermediate(ws) / "claim_ledger.json").read_bytes() == before_ledger
+
+
+def test_enrich_claim_metadata_rejects_hand_edited_statement(tmp_path):
+    ws = _write_workspace(tmp_path)
+    initialize_runtime_state(workspace=ws, repo_workdir=ROOT)
+    _set_current_stage(ws, "claim-ledger")
+    _add_imported_source_authority(ws, metadata={"published_at": "2026-06-01"})
+    _add_imported_source_authority(ws, source_id="SRC-002", filename="source-002.json")
+    _write_json_artifact(ws, "claim_drafts.json", _valid_claim_drafts_payload())
+    freeze_claim_ledger_transaction(workspace=ws, repo_workdir=ROOT)
+    ledger_path = _intermediate(ws) / "claim_ledger.json"
+    ledger = json.loads(ledger_path.read_text(encoding="utf-8"))
+    ledger[0]["statement"] = "Changed statement."
+    ledger_path.write_text(json.dumps(ledger, ensure_ascii=False, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+    with pytest.raises(RuntimeStateError) as excinfo:
+        enrich_claim_metadata_transaction(workspace=ws, repo_workdir=ROOT)
+
+    assert excinfo.value.error_code == runtime_state.operations.E_TRANSACTION_INTEGRITY
+    assert "Frozen Claim Ledger hash does not match current claim_ledger.json" in str(excinfo.value)
+
+
+def test_enrich_claim_metadata_rolls_back_when_state_write_fails(tmp_path, monkeypatch):
+    ws = _write_workspace(tmp_path)
+    initialize_runtime_state(workspace=ws, repo_workdir=ROOT)
+    _set_current_stage(ws, "claim-ledger")
+    _add_imported_source_authority(ws, metadata={"published_at": "2026-06-01"})
+    _add_imported_source_authority(ws, source_id="SRC-002", filename="source-002.json")
+    _write_json_artifact(ws, "claim_drafts.json", _valid_claim_drafts_payload())
+    freeze_claim_ledger_transaction(workspace=ws, repo_workdir=ROOT)
+    before_manifest = _state_file(ws, "runtime_manifest").read_bytes()
+    before_registry = _state_file(ws, "artifact_registry").read_bytes()
+    before_workflow = _state_file(ws, "workflow_state").read_bytes()
+    before_events = _state_file(ws, "event_log").read_bytes()
+    before_ledger = (_intermediate(ws) / "claim_ledger.json").read_bytes()
+    original_write_json_atomic = runtime_state.operations._write_json_atomic
+
+    def fail_artifact_registry_write(path: Path, payload: dict) -> None:
+        if path.name == "artifact_registry.json":
+            raise RuntimeStateError(
+                "artifact registry write failed during enrichment",
+                error_code=runtime_state.operations.E_TRANSACTION_INTEGRITY,
+            )
+        original_write_json_atomic(path, payload)
+
+    monkeypatch.setattr(runtime_state.operations, "_write_json_atomic", fail_artifact_registry_write)
+
+    with pytest.raises(RuntimeStateError) as excinfo:
+        enrich_claim_metadata_transaction(workspace=ws, repo_workdir=ROOT)
+
+    assert excinfo.value.error_code == runtime_state.operations.E_TRANSACTION_INTEGRITY
+    assert excinfo.value.details["restored"] is True
+    assert _state_file(ws, "runtime_manifest").read_bytes() == before_manifest
+    assert _state_file(ws, "artifact_registry").read_bytes() == before_registry
+    assert _state_file(ws, "workflow_state").read_bytes() == before_workflow
+    assert _state_file(ws, "event_log").read_bytes() == before_events
+    assert (_intermediate(ws) / "claim_ledger.json").read_bytes() == before_ledger
 
 
 def test_freeze_claim_ledger_is_idempotent_for_same_frozen_inputs(tmp_path):
