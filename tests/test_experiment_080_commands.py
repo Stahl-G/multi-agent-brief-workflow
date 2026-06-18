@@ -147,6 +147,32 @@ def _write_case_from_archive(case_dir: Path, archive_manifest: Path, *, source_p
     _write_json(case_dir / "guidance_set.json", _guidance_set())
 
 
+def _write_scaffold_workspace(ws: Path) -> None:
+    ws.mkdir(parents=True)
+    (ws / "input").mkdir()
+    (ws / "config.yaml").write_text(
+        "project:\n"
+        "  name: \"080 Seed Workspace\"\n"
+        "language:\n"
+        "  interface: \"zh-CN\"\n"
+        "  output: \"zh-CN\"\n"
+        "  source_handling: \"preserve_original\"\n"
+        "input:\n"
+        "  path: \"input\"\n"
+        "output:\n"
+        "  path: \"output\"\n"
+        "report:\n"
+        "  title: \"Seed Report\"\n"
+        "  date: \"2026-07-15\"\n"
+        "  max_source_age_days: 30\n"
+        "  fail_on_stale_source: false\n",
+        encoding="utf-8",
+    )
+    (ws / "sources.yaml").write_text("manual:\n  sources: []\n", encoding="utf-8")
+    (ws / "user.md").write_text("# Seed user direction\n\nKeep this reader and task direction.\n", encoding="utf-8")
+    (ws / "audience_profile.md").write_text("# Seed audience\n\nBoard-facing Chinese brief.\n", encoding="utf-8")
+
+
 def _copy_archive_to_workspace(ws: Path, archive_manifest: Path) -> Path:
     run_dir = archive_manifest.parent
     target = ws / "output" / "runs" / run_dir.name
@@ -530,8 +556,9 @@ def test_experiments_080_validate_case_is_read_only(tmp_path, capsys):
 
 def test_experiments_080_scaffold_condition_imports_fact_layer_workspace(tmp_path, capsys):
     case_dir = tmp_path / "weekly_public_001"
-    ws = tmp_path / "baseline-workspace"
+    ws = tmp_path / "baseline workspace"
     _write_case_from_archive(case_dir, CLEAN_FIXTURE_MANIFEST)
+    _write_scaffold_workspace(ws)
 
     rc = main(_scaffold_args(case_dir, ws, condition="baseline"))
 
@@ -554,15 +581,17 @@ def test_experiments_080_scaffold_condition_imports_fact_layer_workspace(tmp_pat
     assert metadata["workspace_path"] == "<redacted-workspace>"
     assert metadata["treatment"]["improvement_memory"] == "disabled"
     config = (ws / "config.yaml").read_text(encoding="utf-8")
-    assert "date: \"2026-06-20\"" not in config
-    assert "max_source_age_days" not in config
+    assert "interface: \"zh-CN\"" in config
+    assert "date: \"2026-07-15\"" in config
+    assert "max_source_age_days: 30" in config
     manifest = json.loads((ws / "output" / "intermediate" / "runtime_manifest.json").read_text(encoding="utf-8"))
     freshness = manifest["fact_layer_import"]["freshness_at_import"]
-    assert freshness["status"] == "unknown"
-    assert freshness["reason"] == "report_date_or_max_source_age_missing"
+    assert freshness["report_date"] == "2026-07-15"
+    assert freshness["max_source_age_days"] == 30
     instructions = (ws / "experiment" / "080" / "operator_instructions.md").read_text(encoding="utf-8")
     assert "Do not rerun source-discovery, Scout, Screener, or Claim Ledger" in instructions
     assert "multi-agent-brief run --workspace" in instructions
+    assert f"--workspace '{ws}'" in instructions
     assert not (ws / "improvement" / "memory.md").exists()
 
 
@@ -570,6 +599,7 @@ def test_experiments_080_scaffold_prompt_only_records_guidance_without_memory(tm
     case_dir = tmp_path / "weekly_public_001"
     ws = tmp_path / "prompt-only-workspace"
     _write_case_from_archive(case_dir, CLEAN_FIXTURE_MANIFEST)
+    _write_scaffold_workspace(ws)
     case_manifest = json.loads((case_dir / "case_manifest.json").read_text(encoding="utf-8"))
     case_manifest["conditions"] = ["baseline", "memory", "prompt_only"]
     case_manifest["allowed_claims"]["memory_mechanism_adds_over_prompt"] = True
@@ -620,10 +650,30 @@ def test_experiments_080_scaffold_rejects_archive_fact_layer_mismatch(tmp_path, 
     assert not ws.exists()
 
 
+def test_experiments_080_scaffold_requires_initialized_workspace(tmp_path, capsys):
+    case_dir = tmp_path / "weekly_public_001"
+    ws = tmp_path / "workspace"
+    _write_case_from_archive(case_dir, CLEAN_FIXTURE_MANIFEST)
+
+    rc = main(_scaffold_args(case_dir, ws, condition="baseline"))
+
+    assert rc == 1
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["details"]["code"] == "E_EXPERIMENT_080_WORKSPACE_INVALID"
+    assert sorted(payload["details"]["missing_files"]) == [
+        "audience_profile.md",
+        "config.yaml",
+        "sources.yaml",
+        "user.md",
+    ]
+    assert not ws.exists()
+
+
 def test_experiments_080_scaffold_rejects_existing_runtime_state(tmp_path, capsys):
     case_dir = tmp_path / "weekly_public_001"
     ws = tmp_path / "workspace"
     _write_case_from_archive(case_dir, CLEAN_FIXTURE_MANIFEST)
+    _write_scaffold_workspace(ws)
     assert main(_scaffold_args(case_dir, ws, condition="baseline")) == 0
     capsys.readouterr()
     shutil.rmtree(ws / "experiment")
@@ -640,6 +690,7 @@ def test_experiments_080_scaffold_uses_case_archive_path(tmp_path, capsys):
     case_dir = tmp_path / "weekly_public_001"
     ws = tmp_path / "workspace"
     _write_case_from_archive(case_dir, CLEAN_FIXTURE_MANIFEST)
+    _write_scaffold_workspace(ws)
     run_dir = CLEAN_FIXTURE_MANIFEST.parent
     target_run_dir = case_dir / "output" / "runs" / run_dir.name
     target_run_dir.parent.mkdir(parents=True)

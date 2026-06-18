@@ -84,7 +84,7 @@ def register(subparsers: argparse._SubParsersAction) -> None:
 
     scaffold = exp080_sub.add_parser(
         "scaffold-condition",
-        help="Prepare one MABW-080 condition workspace with deterministic fast-rerun import.",
+        help="Prepare one initialized MABW-080 condition workspace with deterministic fast-rerun import.",
     )
     scaffold.add_argument("--case", required=True, dest="case_dir", help="Path to experiments/080/cases/<case_id>.")
     scaffold.add_argument(
@@ -93,7 +93,14 @@ def register(subparsers: argparse._SubParsersAction) -> None:
         choices=("baseline", "memory", "prompt_only"),
         help="080 condition to scaffold.",
     )
-    scaffold.add_argument("--workspace", required=True, help="Workspace path to initialize or import into.")
+    scaffold.add_argument(
+        "--workspace",
+        required=True,
+        help=(
+            "Initialized condition workspace to import into. Must already contain "
+            "config.yaml, sources.yaml, user.md, and audience_profile.md."
+        ),
+    )
     scaffold.add_argument(
         "--archive",
         help="Optional run archive manifest or archive directory. Defaults to frozen_fact_layer.source_archive_path.",

@@ -129,11 +129,11 @@ status, and invalid reasons. It does not judge output quality, run workflow
 stages, scaffold conditions, or include invalid runs in A-grade denominators.
 
 MABW-080 condition scaffolding is experimental experiment setup tooling. It
-creates or verifies a condition workspace, imports the frozen fact layer through
-the deterministic fast-rerun transaction, writes condition metadata and operator
-instructions, and leaves the run at Analyst. It does not run subagents, gates,
-finalize, register runs, score runs, summarize cases, or create Improvement
-Memory.
+requires an initialized condition workspace, imports the frozen fact layer
+through the deterministic fast-rerun transaction, writes condition metadata and
+operator instructions, and leaves the run at Analyst. It does not create generic
+workspace config, run subagents, gates, finalize, register runs, score runs,
+summarize cases, or create Improvement Memory.
 
 ## Runtimes
 

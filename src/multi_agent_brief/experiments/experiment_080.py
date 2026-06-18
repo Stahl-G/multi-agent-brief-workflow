@@ -5,8 +5,9 @@ frozen fact layer. Schema validators are side-effect free. ``register-run``,
 ``score-run``, ``import-assessment``, ``summarize``, and ``scaffold-condition``
 write only the requested experiment metadata or deterministic scaffold outputs.
 They must not mutate archive files, case files, agent assets, or Improvement
-Ledger files; ``scaffold-condition`` may initialize a new workspace only through
-the deterministic fast-rerun import transaction.
+Ledger files; ``scaffold-condition`` requires an already initialized condition
+workspace and only imports the frozen fact layer through the deterministic
+fast-rerun import transaction.
 """
 
 from __future__ import annotations
@@ -14,6 +15,7 @@ from __future__ import annotations
 import hashlib
 import json
 import re
+import shlex
 import subprocess
 from copy import deepcopy
 from dataclasses import dataclass
@@ -815,7 +817,7 @@ def scaffold_condition(
     runtime: str = "hermes",
     repo_workdir: str | Path | None = None,
 ) -> dict[str, Any]:
-    """Create an 080 condition workspace using deterministic fast-rerun import.
+    """Prepare an initialized 080 condition workspace using deterministic fast-rerun import.
 
     This helper prepares workspace state only. It does not run subagents,
     finalize output, register runs, score runs, or summarize experiments.
@@ -853,11 +855,7 @@ def scaffold_condition(
         archive_manifest=archive_payload,
         archive_manifest_path=archive_manifest,
     )
-    created_shell_files = _ensure_scaffold_workspace_shell(
-        workspace=ws,
-        case_manifest=case_manifest,
-        condition=condition,
-    )
+    _require_scaffold_workspace_shell(workspace=ws)
     _reject_existing_scaffold_metadata(ws)
 
     from multi_agent_brief.orchestrator.runtime_state import RuntimeStateError, import_fact_layer_transaction
@@ -871,7 +869,6 @@ def scaffold_condition(
             actor="cli",
         )
     except RuntimeStateError as exc:
-        _remove_created_scaffold_shell_files(created_shell_files)
         _raise_experiment_error(
             "E_EXPERIMENT_080_SCAFFOLD_IMPORT_FAILED",
             str(exc),
@@ -980,50 +977,26 @@ def _assert_scaffold_archive_matches_case(
         )
 
 
-def _ensure_scaffold_workspace_shell(
-    *,
-    workspace: Path,
-    case_manifest: dict[str, Any],
-    condition: str,
-) -> list[Path]:
+def _require_scaffold_workspace_shell(*, workspace: Path) -> None:
     if workspace.exists() and not workspace.is_dir():
         _raise_experiment_error(
             "E_EXPERIMENT_080_WORKSPACE_INVALID",
             "scaffold-condition workspace path exists but is not a directory.",
             workspace=str(workspace),
         )
-    config_path = workspace / "config.yaml"
-    if config_path.exists():
-        return []
-    if workspace.exists() and any(workspace.iterdir()):
+    required_files = ("config.yaml", "sources.yaml", "user.md", "audience_profile.md")
+    missing = [rel_path for rel_path in required_files if not (workspace / rel_path).is_file()]
+    if missing:
         _raise_experiment_error(
             "E_EXPERIMENT_080_WORKSPACE_INVALID",
-            "scaffold-condition can only initialize an empty workspace or reuse a workspace with config.yaml.",
+            (
+                "scaffold-condition requires an initialized condition workspace. "
+                "Copy or initialize a seed/template workspace first so config, user, audience, "
+                "source policy, report date, and freshness controls remain experiment constants."
+            ),
             workspace=str(workspace),
+            missing_files=missing,
         )
-    workspace.mkdir(parents=True, exist_ok=True)
-    title = str(case_manifest.get("case_title") or case_manifest.get("case_id") or "MABW-080 case")
-    created: list[Path] = []
-    files = {
-        config_path: _scaffold_config_yaml(title=title, condition=condition),
-        workspace / "sources.yaml": "manual:\n  sources: []\n",
-        workspace / "user.md": (
-            "# MABW-080 Condition Workspace\n\n"
-            f"Case: {case_manifest.get('case_id')}\n\n"
-            f"Condition: {condition}\n\n"
-            "This workspace is scaffolded for an experiment condition. The frozen fact layer is imported "
-            "deterministically; source-discovery, Scout, Screener, and Claim Ledger stages are not rerun.\n"
-        ),
-        workspace / "audience_profile.md": (
-            "# Audience Profile\n\n"
-            "Experiment operator reviewing condition outputs under the MABW-080 harness.\n"
-        ),
-    }
-    for path, content in files.items():
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(content, encoding="utf-8")
-        created.append(path)
-    return created
 
 
 def _reject_existing_scaffold_metadata(workspace: Path) -> None:
@@ -1039,41 +1012,6 @@ def _reject_existing_scaffold_metadata(workspace: Path) -> None:
             workspace=str(workspace),
             existing=existing,
         )
-
-
-def _scaffold_config_yaml(*, title: str, condition: str) -> str:
-    escaped_title = title.replace('"', '\\"')
-    escaped_condition = condition.replace('"', '\\"')
-    return (
-        "project:\n"
-        f"  name: \"{escaped_title} / {escaped_condition}\"\n"
-        "language:\n"
-        "  interface: \"en-US\"\n"
-        "  output: \"en-US\"\n"
-        "  source_handling: \"preserve_original\"\n"
-        "input:\n"
-        "  path: \"input\"\n"
-        "output:\n"
-        "  path: \"output\"\n"
-        "report:\n"
-        f"  title: \"{escaped_title} / {escaped_condition}\"\n"
-        "  fail_on_stale_source: false\n"
-    )
-
-
-def _remove_created_scaffold_shell_files(paths: list[Path]) -> None:
-    for path in reversed(paths):
-        try:
-            if path.exists() and path.is_file():
-                path.unlink()
-        except OSError:
-            pass
-    for directory in sorted({path.parent for path in paths}, key=lambda item: len(item.parts), reverse=True):
-        try:
-            if directory.exists() and directory.is_dir() and not any(directory.iterdir()):
-                directory.rmdir()
-        except OSError:
-            pass
 
 
 def _scaffold_condition_metadata(
@@ -1137,7 +1075,10 @@ def _scaffold_condition_metadata(
             "imported_file_count": fact_import.get("imported_file_count"),
         },
         "treatment": treatment,
-        "next_command": f"multi-agent-brief run --workspace {workspace} --recipe fast-rerun --skip-doctor",
+        "next_command": (
+            f"multi-agent-brief run --workspace {shlex.quote(str(workspace))} "
+            "--recipe fast-rerun --skip-doctor"
+        ),
         "boundaries": [
             "scaffold-condition imports a frozen fact layer and writes experiment metadata only",
             "it does not run subagents, gates, finalize, register-run, score-run, or summarize",
