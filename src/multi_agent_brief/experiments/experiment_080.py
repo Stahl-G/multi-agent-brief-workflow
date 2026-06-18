@@ -864,6 +864,7 @@ def scaffold_condition(
     _require_scaffold_workspace_shell(workspace=ws)
     _reject_improvement_memory_for_non_memory_condition(workspace=ws, condition=condition)
     _reject_existing_scaffold_metadata(ws)
+    removed_placeholders = _remove_scaffold_init_placeholders(ws)
 
     from multi_agent_brief.orchestrator.runtime_state import RuntimeStateError, import_fact_layer_transaction
 
@@ -876,6 +877,7 @@ def scaffold_condition(
             actor="cli",
         )
     except RuntimeStateError as exc:
+        _restore_scaffold_init_placeholders(removed_placeholders)
         _raise_experiment_error(
             "E_EXPERIMENT_080_SCAFFOLD_IMPORT_FAILED",
             str(exc),
@@ -1101,6 +1103,31 @@ def _reject_existing_scaffold_metadata(workspace: Path) -> None:
             workspace=str(workspace),
             existing=existing,
         )
+
+
+def _remove_scaffold_init_placeholders(workspace: Path) -> list[tuple[Path, bytes]]:
+    """Remove known init-only source placeholders before fact-layer import.
+
+    ``multi-agent-brief init`` creates ``input/sources/README.md`` as operator
+    guidance. It is not evidence and would otherwise make the strict fast-rerun
+    import reject a normal initialized condition workspace. Real source-like
+    leftovers remain untouched so the import transaction can fail closed.
+    """
+
+    placeholder = workspace / "input" / "sources" / "README.md"
+    removed: list[tuple[Path, bytes]] = []
+    if placeholder.is_file():
+        removed.append((placeholder, placeholder.read_bytes()))
+        placeholder.unlink()
+    return removed
+
+
+def _restore_scaffold_init_placeholders(removed: list[tuple[Path, bytes]]) -> None:
+    for path, content in removed:
+        if path.exists():
+            continue
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(content)
 
 
 def _scaffold_condition_metadata(
@@ -1795,6 +1822,7 @@ def _discover_case_scorecards(
             )
         records.append({
             "path": path.relative_to(case_root).as_posix(),
+            "source_path": str(resolved),
             "scorecard": payload,
         })
         seen_resolved.add(resolved)
@@ -1815,9 +1843,11 @@ def _discover_case_scorecards(
             continue
         records.append({
             "path": _scorecard_display_path(path=path, case_root=case_root),
+            "source_path": str(path),
             "scorecard": _read_scorecard_file(path),
         })
         seen_resolved.add(path)
+    _reject_scorecard_display_path_collisions(records)
     return records
 
 
@@ -1869,6 +1899,34 @@ def _scorecard_display_path(*, path: Path, case_root: Path) -> str:
         return path.relative_to(Path.cwd()).as_posix()
     except ValueError:
         return f"<external-scorecard>/{path.name}"
+
+
+def _reject_scorecard_display_path_collisions(records: list[dict[str, Any]]) -> None:
+    seen: dict[str, str] = {}
+    collisions: list[dict[str, str]] = []
+    for record in records:
+        display_path = str(record.get("path") or "")
+        source_path = str(record.get("source_path") or "")
+        if not display_path:
+            continue
+        first = seen.get(display_path)
+        if first is not None and first != source_path:
+            collisions.append({
+                "display_path": display_path,
+                "first_scorecard": first,
+                "second_scorecard": source_path,
+            })
+            continue
+        seen[display_path] = source_path
+    if collisions:
+        _raise_experiment_error(
+            "E_EXPERIMENT_080_SCORECARD_PATH_COLLISION",
+            (
+                "summarize scorecard display paths are not unique. Move external scorecards "
+                "under the case directory, run from a common parent directory, or use distinct filenames."
+            ),
+            collisions=collisions,
+        )
 
 
 def _build_case_summary(
