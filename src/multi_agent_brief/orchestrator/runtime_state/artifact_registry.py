@@ -202,8 +202,6 @@ def _input_classification_path_is_unsafe(value: str, *, workspace: Path | None) 
     windows_path = PureWindowsPath(raw)
     if ".." in posix_path.parts or ".." in windows_path.parts:
         return True
-    if windows_path.drive:
-        return True
     path = Path(raw)
     if path.is_absolute():
         if workspace is None:
@@ -212,6 +210,9 @@ def _input_classification_path_is_unsafe(value: str, *, workspace: Path | None) 
             path.resolve(strict=False).relative_to(workspace.resolve(strict=False))
         except ValueError:
             return True
+        return False
+    if windows_path.drive:
+        return True
     return False
 
 
