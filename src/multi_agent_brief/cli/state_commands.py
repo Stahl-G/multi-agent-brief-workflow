@@ -11,6 +11,7 @@ from multi_agent_brief.orchestrator.runtime_state import (
     check_runtime_state,
     complete_finalize_transaction,
     complete_stage_transaction,
+    enrich_claim_metadata_transaction,
     freeze_claim_ledger_transaction,
     import_fact_layer_transaction,
     initialize_runtime_state,
@@ -132,6 +133,29 @@ def register(subparsers: argparse._SubParsersAction) -> None:
         help="Actor recorded in event_log.jsonl.",
     )
     freeze_claim_ledger_parser.add_argument("--json", action="store_true", help="Emit machine-readable JSON.")
+
+    enrich_claim_metadata_parser = actions.add_parser(
+        "enrich-claim-metadata",
+        help="Enrich frozen claim_ledger.json metadata from imported source evidence.",
+    )
+    enrich_claim_metadata_parser.add_argument("--workspace", required=True, help="Path to workspace directory.")
+    enrich_claim_metadata_parser.add_argument(
+        "--from-source-evidence",
+        action="store_true",
+        required=True,
+        help="Derive metadata only from imported frozen source evidence.",
+    )
+    enrich_claim_metadata_parser.add_argument(
+        "--repo-workdir",
+        help="Repository or packaged contract base (default: auto-detect).",
+    )
+    enrich_claim_metadata_parser.add_argument(
+        "--actor",
+        default="cli",
+        choices=("cli", "orchestrator", "runtime", "system"),
+        help="Actor recorded in event_log.jsonl.",
+    )
+    enrich_claim_metadata_parser.add_argument("--json", action="store_true", help="Emit machine-readable JSON.")
 
     finalize_complete_parser = actions.add_parser(
         "finalize-complete",
@@ -264,6 +288,28 @@ def handle(args: argparse.Namespace) -> int:
                 print(f"[state freeze-claim-ledger] claim_ledger_sha256: {freeze.get('claim_ledger_sha256', '')}")
                 if freeze.get("warnings"):
                     print(f"[state freeze-claim-ledger] warning_count: {len(freeze.get('warnings') or [])}")
+            return 0
+
+        if args.state_action == "enrich-claim-metadata":
+            state = enrich_claim_metadata_transaction(
+                workspace=args.workspace,
+                repo_workdir=getattr(args, "repo_workdir", None),
+                actor=getattr(args, "actor", "cli"),
+                from_source_evidence=getattr(args, "from_source_evidence", False),
+            )
+            if getattr(args, "json", False):
+                print(json.dumps(state, ensure_ascii=False, indent=2, sort_keys=True))
+            else:
+                _print_human_summary("state enrich-claim-metadata", state)
+                enrichment = state.get("claim_ledger_metadata_enrichment") or {}
+                print(
+                    "[state enrich-claim-metadata] enriched_claim_count: "
+                    f"{enrichment.get('enriched_claim_count', 0)}"
+                )
+                print(
+                    "[state enrich-claim-metadata] claim_ledger_sha256: "
+                    f"{enrichment.get('claim_ledger_sha256', '')}"
+                )
             return 0
 
         if args.state_action == "finalize-complete":
