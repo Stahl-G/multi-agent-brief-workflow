@@ -597,6 +597,74 @@ def test_experiments_080_scaffold_condition_imports_fact_layer_workspace(tmp_pat
     assert not (ws / "improvement" / "memory.md").exists()
 
 
+def test_experiments_080_scaffold_accepts_init_sources_readme_placeholder(tmp_path, capsys):
+    case_dir = tmp_path / "weekly_public_001"
+    ws = tmp_path / "baseline-workspace"
+    _write_case_from_archive(case_dir, CLEAN_FIXTURE_MANIFEST)
+    _write_scaffold_workspace(ws)
+    sources_dir = ws / "input" / "sources"
+    sources_dir.mkdir()
+    (sources_dir / "README.md").write_text(
+        "# External Evidence Sources\n\nPlace source files here.\n",
+        encoding="utf-8",
+    )
+
+    rc = main(_scaffold_args(case_dir, ws, condition="baseline"))
+
+    assert rc == 0
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["ok"] is True
+    assert not (sources_dir / "README.md").exists()
+    assert (sources_dir / "source-001.md").exists()
+
+
+def test_experiments_080_scaffold_rejects_demo_source_leftovers(tmp_path, capsys):
+    case_dir = tmp_path / "weekly_public_001"
+    ws = tmp_path / "baseline-workspace"
+    _write_case_from_archive(case_dir, CLEAN_FIXTURE_MANIFEST)
+    _write_scaffold_workspace(ws)
+    sources_dir = ws / "input" / "sources"
+    sources_dir.mkdir()
+    (sources_dir / "README.md").write_text("# External Evidence Sources\n", encoding="utf-8")
+    (sources_dir / "news.json").write_text('{"items": []}\n', encoding="utf-8")
+    (sources_dir / "market_data.json").write_text('{"items": []}\n', encoding="utf-8")
+
+    rc = main(_scaffold_args(case_dir, ws, condition="baseline"))
+
+    assert rc == 1
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["details"]["code"] == "E_EXPERIMENT_080_SCAFFOLD_IMPORT_FAILED"
+    assert payload["details"]["runtime_error_code"] == "E_FACT_LAYER_IMPORT_INVALID"
+    assert payload["details"]["runtime_error_details"]["existing_leftovers"] == [
+        "input/sources/market_data.json",
+        "input/sources/news.json",
+    ]
+    assert (sources_dir / "README.md").exists()
+    assert (sources_dir / "news.json").exists()
+    assert not (ws / "experiment" / "080" / "condition.json").exists()
+
+
+def test_experiments_080_scaffold_rejects_existing_real_source_leftover(tmp_path, capsys):
+    case_dir = tmp_path / "weekly_public_001"
+    ws = tmp_path / "baseline-workspace"
+    _write_case_from_archive(case_dir, CLEAN_FIXTURE_MANIFEST)
+    _write_scaffold_workspace(ws)
+    sources_dir = ws / "input" / "sources"
+    sources_dir.mkdir()
+    (sources_dir / "source-note.md").write_text("Real source-like material.\n", encoding="utf-8")
+
+    rc = main(_scaffold_args(case_dir, ws, condition="baseline"))
+
+    assert rc == 1
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["details"]["code"] == "E_EXPERIMENT_080_SCAFFOLD_IMPORT_FAILED"
+    assert payload["details"]["runtime_error_details"]["existing_leftovers"] == [
+        "input/sources/source-note.md"
+    ]
+    assert (sources_dir / "source-note.md").exists()
+    assert not (ws / "experiment" / "080" / "condition.json").exists()
+
+
 def test_experiments_080_scaffold_prompt_only_records_guidance_without_memory(tmp_path, capsys):
     case_dir = tmp_path / "weekly_public_001"
     ws = tmp_path / "prompt-only-workspace"
@@ -1771,6 +1839,48 @@ def test_experiments_080_summarize_includes_explicit_scorecard_outside_case_dir(
     assert summary["scorecard_count"] == 1
     assert summary["condition_counts"]["memory"]["total"] == 1
     assert summary["scorecards"][0]["path"] == "<external-scorecard>/assessed_scorecard.json"
+
+
+def test_experiments_080_summarize_rejects_external_scorecard_display_path_collision(tmp_path, capsys):
+    case_dir = tmp_path / "weekly_public_001"
+    _write_case(case_dir)
+    first_dir = tmp_path / "external-a"
+    second_dir = tmp_path / "external-b"
+    first_dir.mkdir()
+    second_dir.mkdir()
+    first = first_dir / "scorecard.json"
+    second = second_dir / "scorecard.json"
+    _write_json(
+        first,
+        _scorecard_payload(
+            condition="baseline",
+            run_id="mabw-20260614T000000Z-baseline01",
+            validity_class="A_controlled",
+        ),
+    )
+    _write_json(
+        second,
+        _scorecard_payload(
+            condition="memory",
+            run_id="mabw-20260614T000000Z-memory01",
+            validity_class="A_controlled",
+        ),
+    )
+    output = tmp_path / "summary.json"
+
+    rc = main(_summarize_args(case_dir, output, scorecards=[first, second]))
+
+    assert rc == 1
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["details"]["code"] == "E_EXPERIMENT_080_SCORECARD_PATH_COLLISION"
+    assert payload["details"]["collisions"] == [
+        {
+            "display_path": "<external-scorecard>/scorecard.json",
+            "first_scorecard": str(first.resolve()),
+            "second_scorecard": str(second.resolve()),
+        }
+    ]
+    assert not output.exists()
 
 
 def test_experiments_080_summarize_rejects_missing_explicit_scorecard(tmp_path, capsys):
