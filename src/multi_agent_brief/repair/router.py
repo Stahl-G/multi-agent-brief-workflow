@@ -128,7 +128,8 @@ def _collect_findings(workspace: Path) -> tuple[list[dict[str, Any]], list[dict[
     findings: list[dict[str, Any]] = []
     input_errors: list[dict[str, str]] = []
     payloads: dict[str, dict[str, Any]] = {}
-    for label, path in _input_paths(workspace).items():
+    input_paths = _input_paths(workspace)
+    for label, path in input_paths.items():
         payload, error = _read_json_object(path)
         if error:
             input_errors.append({"source": label, "path": _workspace_relative(workspace, path), "error": error})
@@ -136,13 +137,22 @@ def _collect_findings(workspace: Path) -> tuple[list[dict[str, Any]], list[dict[
         if payload is None:
             continue
         payloads[label] = payload
-        findings.extend(_findings_from_payload(payload, source=label, path=_workspace_relative(workspace, path)))
-        if label == "finalize_report":
-            findings.extend(_findings_from_finalize_report(payload, path=_workspace_relative(workspace, path)))
+    current_stage = _current_workflow_stage(payloads.get("workflow_state"))
+    for label, payload in payloads.items():
+        path = input_paths[label]
+        rel_path = _workspace_relative(workspace, path)
+        findings.extend(_findings_from_payload(payload, source=label, path=rel_path))
+        if label == "finalize_report" and current_stage == "finalize":
+            findings.extend(_findings_from_finalize_report(payload, path=rel_path))
     registry = payloads.get("artifact_registry")
     findings.extend(_findings_from_artifact_registry(registry))
     findings.extend(_findings_from_frozen_artifact_integrity(workspace, payloads))
     return _dedupe_findings(findings), input_errors, payloads
+
+
+def _current_workflow_stage(workflow_state: dict[str, Any] | None) -> str:
+    stage = workflow_state.get("current_stage") if isinstance(workflow_state, dict) else None
+    return stage if isinstance(stage, str) else ""
 
 
 def _input_paths(workspace: Path) -> dict[str, Path]:

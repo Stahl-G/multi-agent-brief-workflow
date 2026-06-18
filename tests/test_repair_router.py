@@ -186,6 +186,21 @@ def test_repair_route_maps_unsupported_claim_to_audited_brief(tmp_path, capsys):
 def test_repair_route_maps_finalize_reader_clean_failure_to_editor(tmp_path, capsys):
     ws = _workspace(tmp_path)
     initialize_runtime_state(workspace=ws)
+    _set_workflow_stages(
+        ws,
+        completed=[
+            "doctor",
+            "source-discovery",
+            "input-governance",
+            "scout",
+            "screener",
+            "claim-ledger",
+            "analyst",
+            "editor",
+            "auditor",
+        ],
+        current_stage="finalize",
+    )
     _write_finalize_report_with_reader_clean_failure(ws)
 
     rc = main(["repair", "route", "--workspace", str(ws), "--json"])
@@ -200,6 +215,34 @@ def test_repair_route_maps_finalize_reader_clean_failure_to_editor(tmp_path, cap
     assert payload["source"]["stage_id"] == "finalize"
     assert payload["source"]["finding_type"] == "reader_clean_bare_claim_id"
     assert any(route["source"]["finding_type"] == "reader_clean_process_wording" for route in payload["routes"])
+
+
+def test_repair_route_ignores_stale_finalize_report_outside_finalize_stage(tmp_path, capsys):
+    ws = _workspace(tmp_path)
+    initialize_runtime_state(workspace=ws)
+    _set_workflow_stages(
+        ws,
+        completed=[
+            "doctor",
+            "source-discovery",
+            "input-governance",
+            "scout",
+            "screener",
+            "claim-ledger",
+            "analyst",
+            "editor",
+        ],
+        current_stage="auditor",
+    )
+    _write_finalize_report_with_reader_clean_failure(ws)
+
+    rc = main(["repair", "route", "--workspace", str(ws), "--json"])
+
+    assert rc == 0
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["repair_owner"] == "none"
+    assert payload["finding_count"] == 0
+    assert not any(route.get("source", {}).get("kind") == "finalize_report" for route in payload["routes"])
 
 
 def test_repair_start_accepts_finalize_reader_clean_route_from_finalize_stage(tmp_path, capsys):

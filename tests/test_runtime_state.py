@@ -1581,6 +1581,44 @@ def test_state_check_accepts_object_shaped_screened_candidates(tmp_path):
     assert record["validation_result"] == "valid_screened_candidates_schema"
 
 
+def test_state_check_accepts_object_screened_candidates_with_source_url_identity(tmp_path):
+    ws = _write_workspace(tmp_path)
+    initialize_runtime_state(workspace=ws, repo_workdir=ROOT)
+    _write_json_artifact(
+        ws,
+        "screened_candidates.json",
+        json.dumps(
+            {
+                "selected": [
+                    {
+                        "statement": "ExampleCo opened a demo facility.",
+                        "evidence_text": "ExampleCo opened a demo facility in June.",
+                        "source_url": "https://example.com/source",
+                        "published_at": "2026-06-01",
+                        "topic": "market",
+                        "claim_type": "fact",
+                        "confidence": "high",
+                    }
+                ],
+                "excluded": [
+                    {
+                        "statement": "An older duplicate item.",
+                        "reason": "duplicate",
+                    }
+                ],
+                "screening_policy": {"max_items": 8, "freshness_window_days": 90},
+            }
+        )
+        + "\n",
+    )
+
+    state = check_runtime_state(workspace=ws, repo_workdir=ROOT)
+    record = state["artifact_registry"]["artifacts"]["screened_candidates"]
+
+    assert record["status"] == "valid"
+    assert record["validation_result"] == "valid_screened_candidates_schema"
+
+
 def test_state_check_rejects_object_screened_candidates_without_selected_evidence(tmp_path):
     ws = _write_workspace(tmp_path)
     initialize_runtime_state(workspace=ws, repo_workdir=ROOT)
@@ -4421,6 +4459,8 @@ def test_run_archive_records_sha256_for_every_file(tmp_path):
     assert manifest["timing"]["source"] == "event_log"
     assert manifest["timing"]["precision"] == "control_trace_bucket"
     assert manifest["timing"]["status"] in {"available", "partial", "incomplete", "contaminated", "unknown"}
+    assert isinstance(manifest["timing"]["stages"], list)
+    assert isinstance(manifest["timing"]["finalize"], dict)
     assert manifest["files"]
     for record in manifest["files"]:
         path = archive / record["archive_path"]

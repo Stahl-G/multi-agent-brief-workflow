@@ -2625,7 +2625,7 @@ def _timing_gaps_are_imported_upstream_only(timing: dict[str, Any]) -> bool:
         if stage_statuses.get(stage_id) in {None, "incomplete", "unknown"}:
             return False
     finalize = timing.get("finalize")
-    if not isinstance(finalize, dict) or finalize.get("status") in {"incomplete", "unknown"}:
+    if not isinstance(finalize, dict) or finalize.get("status") != "complete":
         return False
     return bool(gap_stage_ids)
 

@@ -276,12 +276,21 @@ def _validate_contract_screened_candidates(payload: dict[str, Any]) -> tuple[str
 def _selected_screened_candidate_error(candidate: Any) -> str | None:
     if not isinstance(candidate, dict):
         return "entry"
-    for field in ("statement", "evidence_text", "source_id"):
+    for field in ("statement", "evidence_text"):
         if not _non_empty_string(candidate.get(field)):
             return field
+    if not _screened_candidate_has_source_identity(candidate):
+        return "source_id_or_source_url_or_source_path"
     if not _candidate_claim_has_source_date(candidate):
         return "published_at_or_retrieved_at"
     return None
+
+
+def _screened_candidate_has_source_identity(candidate: dict[str, Any]) -> bool:
+    return any(
+        _non_empty_string(candidate.get(field))
+        for field in ("source_id", "source_url", "source_path")
+    )
 
 
 def _valid_screened_candidate_entry(candidate: Any) -> bool:

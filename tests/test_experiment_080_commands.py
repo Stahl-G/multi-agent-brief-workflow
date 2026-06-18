@@ -1424,6 +1424,38 @@ def test_experiments_080_score_run_rejects_downstream_only_timing_with_missing_f
     assert scorecard["control_integrity"]["timing_available"] is False
 
 
+def test_experiments_080_score_run_rejects_downstream_only_timing_with_finalize_status_missing(
+    tmp_path,
+    capsys,
+):
+    scorecard = _scorecard_from_fast_rerun_timing(
+        tmp_path,
+        capsys,
+        {
+            "schema_version": "mabw.control_timing.v1",
+            "kind": "control_trace_timing_buckets",
+            "source": "event_log",
+            "status": "incomplete",
+            "total_elapsed_seconds": 123.0,
+            "stages": [
+                {
+                    "stage_id": "scout",
+                    "status": "incomplete",
+                    "reason": "completion_event_missing",
+                },
+                {"stage_id": "analyst", "status": "complete"},
+                {"stage_id": "editor", "status": "complete"},
+                {"stage_id": "auditor", "status": "complete"},
+            ],
+            "finalize": {"stage_id": "finalize"},
+            "warnings": ["scout: completion event missing"],
+        },
+    )
+
+    assert scorecard["timing_summary"]["status"] == "incomplete"
+    assert scorecard["control_integrity"]["timing_available"] is False
+
+
 def _scorecard_from_fast_rerun_timing(tmp_path, capsys, timing: dict) -> dict:
     case_dir = tmp_path / "weekly_public_001"
     ws = tmp_path / "workspace"

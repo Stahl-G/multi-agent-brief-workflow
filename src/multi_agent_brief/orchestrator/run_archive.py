@@ -600,7 +600,7 @@ def _timing_for_manifest(workspace: Path, workflow: dict[str, Any]) -> dict[str,
         workflow_state=workflow,
         expected_run_id=workflow.get("run_id") if isinstance(workflow.get("run_id"), str) else None,
     )
-    return {
+    projected = {
         "schema_version": timing.get("schema_version"),
         "kind": timing.get("kind"),
         "source": timing.get("source"),
@@ -609,6 +609,11 @@ def _timing_for_manifest(workspace: Path, workflow: dict[str, Any]) -> dict[str,
         "total_elapsed_seconds": timing.get("total_elapsed_seconds"),
         "warnings": timing.get("warnings") or [],
     }
+    if isinstance(timing.get("stages"), list):
+        projected["stages"] = timing["stages"]
+    if isinstance(timing.get("finalize"), dict):
+        projected["finalize"] = timing["finalize"]
+    return projected
 
 
 def _fast_rerun_for_manifest(
