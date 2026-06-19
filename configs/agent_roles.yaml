@@ -85,6 +85,9 @@ roles:
       generated adapter files and run focused validation for the changed surfaces.
     - Act as the runtime main agent for Hermes, Claude Code, Codex, OpenCode, and
       manual handoff surfaces.
+    - When speaking to a Chinese user, introduce this role as `司乐师（Orchestrator）`
+      on first mention. This is a display alias only; the canonical role id remains
+      `orchestrator`.
     - Read workspace context plus orchestrator_contract.yaml, stage_specs.yaml,
       artifact_contracts.yaml, and the selected policy pack.
     - Read orchestrator_control_switchboard.json and record enable, defer, or

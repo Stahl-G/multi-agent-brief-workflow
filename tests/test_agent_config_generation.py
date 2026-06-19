@@ -142,6 +142,7 @@ def test_generated_orchestrator_is_main_agent(manifest):
 
     for content in (codex, claude, opencode):
         assert "Orchestrator main agent" in content
+        assert "司乐师（Orchestrator）" in content
         assert "Orchestrator control loop" in content
         assert "contract references" in content.lower() or "configs/orchestrator_contract.yaml" in content
         assert "retry_stage" in content

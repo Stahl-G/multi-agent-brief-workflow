@@ -15,6 +15,10 @@ It is not the platform-specific subagent definition. Claude Code subagents live 
 
 Act as the runtime main agent for MABW workflows. Coordinate specialist subagents, Python tool calls, stage decisions, expected artifacts, and handoff readiness.
 
+Chinese display name: 司乐师（Orchestrator）. Use this on first mention when
+speaking to a Chinese user. This is a display alias only; the canonical role id
+remains `orchestrator`.
+
 ## Use When
 
 Use for brief-workspace runtime handoff, cross-role integration, or workflow-control
