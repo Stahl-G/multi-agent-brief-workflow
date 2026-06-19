@@ -481,6 +481,56 @@ def test_status_command_reports_auditable_target_complete(tmp_path, capsys):
     assert "do not finalize for this target" in out
 
 
+def test_status_command_replays_sticky_contamination_before_auditable_target(tmp_path, capsys):
+    ws = _minimal_workspace(tmp_path / "ws")
+    initialize_runtime_state(workspace=ws, runtime="claude", actor="cli")
+    _write_auditable_target_complete_state(ws)
+    paths = runtime_state_paths(ws)
+    workflow = json.loads(paths["workflow_state"].read_text(encoding="utf-8"))
+    assert workflow["run_integrity"]["status"] == "clean"
+    run_id = str(workflow.get("run_id") or "run-test")
+    with paths["event_log"].open("a", encoding="utf-8") as handle:
+        handle.write(
+            json.dumps(
+                _event(
+                    "contam-1",
+                    "run_integrity_contaminated",
+                    "2026-06-14T00:05:00Z",
+                    run_id=run_id,
+                    stage_id="editor",
+                    artifact_id="audited_brief",
+                    reason="Synthetic sticky contamination.",
+                    metadata={
+                        "reason_code": "frozen_artifact_changed",
+                        "message": "Synthetic sticky contamination.",
+                        "stage_id": "editor",
+                        "artifact_id": "audited_brief",
+                    },
+                ),
+                sort_keys=True,
+            )
+            + "\n"
+        )
+
+    rc = main(["status", "--workspace", str(ws), "--json"])
+
+    assert rc == 0
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["workflow"]["run_integrity"]["status"] == "contaminated"
+    assert payload["workflow"]["run_integrity"]["reference_eligible"] is False
+    assert payload["experiment_080"]["target_complete"] is False
+    assert "run_integrity is not clean" in payload["experiment_080"]["reasons"]
+    assert "experiments 080 register-run" not in payload["suggested_next_command"]
+
+    rc = main(["status", "--workspace", str(ws)])
+
+    assert rc == 0
+    out = capsys.readouterr().out
+    assert "[status] run_integrity: contaminated reference_eligible=False" in out
+    assert "[status] target_complete: auditable_brief" not in out
+    assert "[status] target_incomplete: auditable_brief" in out
+
+
 def test_status_command_reports_malformed_run_integrity_as_unknown(tmp_path, capsys):
     ws = _minimal_workspace(tmp_path / "ws")
     initialize_runtime_state(workspace=ws, runtime="claude", actor="cli")

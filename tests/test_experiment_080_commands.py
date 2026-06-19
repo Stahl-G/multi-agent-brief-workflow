@@ -253,7 +253,7 @@ def _write_auditable_target_workspace(
     gate = gates / "auditor_quality_gate_report.json"
     claim_ledger = intermediate / "claim_ledger.json"
     audited.write_text("# Audited brief\n\nBusiness implication first. [src:CL-0001]\n", encoding="utf-8")
-    _write_json(audit, {"schema_version": "multi-agent-brief-audit-report/v1", "status": "pass", "findings": []})
+    _write_json(audit, {"audit_status": "pass", "audit_score": 100, "findings": []})
     _write_json(
         gate,
         {
