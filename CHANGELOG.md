@@ -45,6 +45,82 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   proof, automatic hallucination elimination, autonomous repair, or
   ready-to-send output guarantees.
 
+## [0.8.6] — 2026-06-19
+
+### Added
+
+- **Auditable-brief assessment target**: MABW-080 now supports
+  `assessment_target=auditable_brief`, allowing content-level experiment runs
+  to stop at the frozen audited brief, audit report, auditor gate report, and
+  auditor-complete boundary instead of requiring finalize, delivery,
+  reader-clean, DOCX/PDF, or delivery archive artifacts.
+- **Python-owned auditable target contract**: status, register-run, score-run,
+  and downstream guards now project auditable target readiness from workflow
+  state, artifact hashes, auditor gate results, run integrity, audit binding,
+  and event-log evidence instead of workspace prose.
+- **Python-owned audit binding for auditable runs**: auditor completion records
+  bind the frozen Claim Ledger, audited brief, audit report, auditor gate
+  report, relevant repair transactions, and current-run auditor completion
+  event.
+- **Treatment-isolation projection for MABW-080**: baseline, memory, and
+  prompt-only conditions now have machine-checkable visibility boundaries:
+  baseline cannot see guidance material, memory receives guidance only through
+  the approved Improvement Memory snapshot, and prompt-only receives guidance
+  only through the explicit prompt guidance block.
+- **Condition-blind assessment packs**: MABW-080 can export blind audited-brief
+  packs and import assessments through a reveal mapping that binds blind item
+  IDs, audited-brief hashes, scorecard hashes, condition identity, run IDs, and
+  guidance entry IDs.
+- **Unsupported strategic implication warning**: quality gates can emit a
+  warning-only `unsupported_strategic_implication` finding for strategic demand,
+  procurement, municipal-buyer, policy-demand, or partnership language that is
+  not lexically supported by the frozen Claim Ledger.
+
+### Changed
+
+- **Formal summary denominator hardened**: `experiments 080 summarize` now
+  separates raw observations from formal interpretable metrics and excludes
+  scorecards that fail control, treatment-isolation, audit-binding,
+  blind-assessment, or hash-bound readiness checks.
+- **Auditable target handoff and finalize behavior hardened**: when
+  `assessment_target=auditable_brief` is complete, runtime guidance and CLI
+  guards direct operators to register, score, and export assessment artifacts
+  instead of continuing to finalize or delivery.
+- **Repair invalidation made stricter**: owner-stage repairs now stale
+  downstream artifacts until the proper producer reruns, and stale repair
+  baselines are derived from repair-time metadata rather than mutable refreshed
+  registry hashes.
+- **Gate and status projections made target-aware**: status output no longer
+  reports auditable target completion from stale clean workflow state, missing
+  repair events, incomplete audit bindings, or contradictory gate reports.
+- **Blind-pack artifact discovery bounded**: `export-blind-pack` checks direct
+  artifact candidates before recursive discovery and limits recursive lookup to
+  explicit workspace roots.
+
+### Fixed
+
+- Prevented formal MABW-080 metrics from trusting self-declared blind metadata
+  without rechecking current scorecard and target-artifact hashes.
+- Prevented refreshed artifact-registry hashes from being treated as stale
+  repair baselines when downstream artifacts did not exist at repair start.
+- Prevented incomplete or contradictory auditable target projections from
+  suggesting delivery/finalize paths.
+
+### Boundaries
+
+- v0.8.6 is A-controlled readiness hardening for a future formal MABW-090
+  rerun. It is not proof that Improvement Memory improves output quality.
+- `auditable_brief` evidence is internal auditable-draft evidence. It is not a
+  management-ready delivery claim and does not cover reader-clean, DOCX/PDF, or
+  final delivery quality.
+- Python validates hashes, schema, event-log bindings, target readiness,
+  treatment isolation, and imported assessment structure. Python still does not
+  judge prose quality, semantic manifestation, factual regression, strategic
+  soundness, or output quality.
+- Contaminated, stale, unbound, non-blind, or treatment-leaking runs may remain
+  useful as failure evidence, but must not enter the formal interpretable
+  denominator.
+
 ## [0.8.5] — 2026-06-16
 
 ### Added
