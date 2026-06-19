@@ -6,8 +6,11 @@ import json
 from pathlib import Path
 from typing import Any
 
+from multi_agent_brief.experiments.target_contract import (
+    load_experiment_080_condition_metadata,
+    project_assessment_target_status,
+)
 from multi_agent_brief.orchestrator.fact_layer_import import summarize_fact_layer_import
-from multi_agent_brief.orchestrator.run_integrity import interpret_run_integrity, project_for_read
 from multi_agent_brief.orchestrator.run_integrity import (
     interpret_run_integrity,
     project_for_read,
@@ -41,6 +44,7 @@ def build_workspace_status(workspace: str | Path) -> dict[str, Any]:
         "reader_clean": {},
         "improvement": {},
         "feedback": {},
+        "experiment_080": {},
         "fact_layer_import": {},
         "timing": {},
         "stale_or_unknown": [],
@@ -86,6 +90,14 @@ def build_workspace_status(workspace: str | Path) -> dict[str, Any]:
     payload["reader_clean"] = _reader_clean_summary(finalize_report)
     payload["improvement"] = _improvement_summary(ws, manifest)
     payload["feedback"] = _feedback_summary(feedback_issues, repair_plan)
+    payload["experiment_080"] = project_assessment_target_status(
+        condition_metadata=load_experiment_080_condition_metadata(ws),
+        workflow_state=workflow_payload if isinstance(workflow_payload, dict) else None,
+        artifact_registry=registry.get("payload") if registry.get("status") == "present" else None,
+        auditor_gate_report=auditor_quality_gate.get("payload")
+        if auditor_quality_gate.get("status") == "present"
+        else None,
+    )
     workflow_payload = workflow.get("payload") if workflow.get("status") == "present" else None
     manifest_payload = manifest.get("payload") if manifest.get("status") == "present" else None
     payload["fact_layer_import"] = summarize_fact_layer_import(
@@ -144,6 +156,7 @@ def format_workspace_status(status: dict[str, Any]) -> str:
     feedback = status.get("feedback") or {}
     fact_layer_import = status.get("fact_layer_import") or {}
     improvement = status.get("improvement") or {}
+    experiment_080 = status.get("experiment_080") or {}
     events = status.get("events") or {}
     timing = status.get("timing") or {}
     run_integrity = workflow.get("run_integrity") if isinstance(workflow.get("run_integrity"), dict) else {}
@@ -172,6 +185,7 @@ def format_workspace_status(status: dict[str, Any]) -> str:
             _format_fact_layer_import_line(fact_layer_import),
             _format_timing_line(timing),
             *_format_topology_satisfaction_lines(timing),
+            *_format_experiment_080_lines(experiment_080),
             f"[status] quality_gate: {gate.get('status') or 'unknown'}",
             f"[status] reader_clean: {reader.get('status') or 'unknown'}",
             (
@@ -210,6 +224,31 @@ def _format_topology_satisfaction_lines(timing: dict[str, Any]) -> list[str]:
             f"[status] topology: {stage_id} complete via {satisfied_by} "
             f"({topology}; required={required_text})"
         )
+    return lines
+
+
+def _format_experiment_080_lines(experiment: dict[str, Any]) -> list[str]:
+    if not experiment.get("present"):
+        return []
+    lines = [
+        (
+            "[status] experiment_080: "
+            f"case={experiment.get('case_id') or 'unknown'} "
+            f"condition={experiment.get('condition') or 'unknown'} "
+            f"assessment_target={experiment.get('assessment_target') or 'unknown'}"
+        )
+    ]
+    if experiment.get("assessment_target") == "auditable_brief":
+        if experiment.get("target_complete"):
+            lines.append("[status] target_complete: auditable_brief")
+            lines.append(
+                "[status] target_next: experiments 080 register-run; score-run; "
+                "do not finalize for this target"
+            )
+        else:
+            reasons = experiment.get("reasons") if isinstance(experiment.get("reasons"), list) else []
+            first_reason = str(reasons[0]) if reasons else "target contract not yet satisfied"
+            lines.append(f"[status] target_incomplete: auditable_brief reason={first_reason}")
     return lines
 
 
@@ -505,10 +544,21 @@ def _suggested_next_command(workspace: Path, status: dict[str, Any]) -> str:
     workflow = status.get("workflow") or {}
     gate = status.get("quality_gate") or {}
     fact_layer_import = status.get("fact_layer_import") or {}
+    experiment_080 = status.get("experiment_080") or {}
     if not (status.get("runtime") or {}).get("present"):
         return f"multi-agent-brief run --workspace {workspace} --runtime claude"
     if workflow.get("blocked"):
         return f"multi-agent-brief state show --workspace {workspace} --json"
+    if (
+        experiment_080.get("assessment_target") == "auditable_brief"
+        and experiment_080.get("target_complete") is True
+    ):
+        condition = experiment_080.get("condition") or "<condition>"
+        return (
+            "multi-agent-brief experiments 080 register-run "
+            f"--case <case_dir> --condition {condition} --workspace {workspace} "
+            "--output <run_record.json>"
+        )
     current_stage = workflow.get("current_stage")
     if fact_layer_import.get("status") == "valid" and current_stage == "analyst":
         return f"multi-agent-brief run --workspace {workspace} --recipe fast-rerun --skip-doctor"

@@ -175,6 +175,98 @@ def _topology_satisfied(
     )
 
 
+def _write_auditable_target_complete_state(ws: Path) -> None:
+    paths = runtime_state_paths(ws)
+    condition_path = ws / "experiment" / "080" / "condition.json"
+    condition_path.parent.mkdir(parents=True, exist_ok=True)
+    condition_path.write_text(
+        json.dumps(
+            {
+                "schema_version": "mabw.experiment_080.condition.v1",
+                "experiment_id": "MABW-080",
+                "case_id": "solar_public_001",
+                "condition": "memory",
+                "assessment_target": "auditable_brief",
+            },
+            indent=2,
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    workflow = json.loads(paths["workflow_state"].read_text(encoding="utf-8"))
+    workflow["current_stage"] = "finalize"
+    workflow["blocked"] = False
+    workflow["run_integrity"] = {
+        "status": "clean",
+        "reference_eligible": True,
+        "clean_single_shot": True,
+        "reasons": [],
+    }
+    workflow["stage_statuses"] = {
+        "analyst": {"status": "complete"},
+        "editor": {"status": "complete"},
+        "auditor": {"status": "complete"},
+        "finalize": {"status": "ready"},
+    }
+    paths["workflow_state"].write_text(json.dumps(workflow, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    paths["artifact_registry"].write_text(
+        json.dumps(
+            {
+                "schema_version": "multi-agent-brief-artifact-registry/v1",
+                "run_id": workflow.get("run_id", "run-test"),
+                "artifacts": {
+                    "audited_brief": {
+                        "artifact_id": "audited_brief",
+                        "path": "output/intermediate/audited_brief.md",
+                        "status": "valid",
+                        "sha256": "a" * 64,
+                    },
+                    "audit_report": {
+                        "artifact_id": "audit_report",
+                        "path": "output/intermediate/audit_report.json",
+                        "status": "valid",
+                        "sha256": "b" * 64,
+                    },
+                    "auditor_quality_gate_report": {
+                        "artifact_id": "auditor_quality_gate_report",
+                        "path": "output/intermediate/gates/auditor_quality_gate_report.json",
+                        "status": "valid",
+                        "sha256": "c" * 64,
+                    },
+                },
+            },
+            ensure_ascii=False,
+            indent=2,
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    gate_path = ws / "output" / "intermediate" / "gates" / "auditor_quality_gate_report.json"
+    gate_path.parent.mkdir(parents=True, exist_ok=True)
+    gate_path.write_text(
+        json.dumps(
+            {
+                "schema_version": "multi-agent-brief-quality-gates/v1",
+                "status": "pass",
+                "metadata": {"gate_stage_id": "auditor", "stage_id": "auditor"},
+                "gate_results": [
+                    {"gate_id": "material_fact", "status": "pass", "blocking": False, "finding_ids": []},
+                    {"gate_id": "freshness", "status": "pass", "blocking": False, "finding_ids": []},
+                    {"gate_id": "target_relevance", "status": "pass", "blocking": False, "finding_ids": []},
+                ],
+                "findings": [],
+            },
+            ensure_ascii=False,
+            indent=2,
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+
 def test_status_command_is_read_only_for_existing_runtime_state(tmp_path, capsys):
     ws = _minimal_workspace(tmp_path / "ws")
     initialize_runtime_state(workspace=ws, runtime="claude", actor="cli")
@@ -348,6 +440,30 @@ def test_status_command_human_output_reports_topology_satisfied_stage(tmp_path, 
         "[status] topology: screener complete via scout "
         "(default; required=candidate_claims,screened_candidates)"
     ) in out
+
+
+def test_status_command_reports_auditable_target_complete(tmp_path, capsys):
+    ws = _minimal_workspace(tmp_path / "ws")
+    initialize_runtime_state(workspace=ws, runtime="claude", actor="cli")
+    _write_auditable_target_complete_state(ws)
+
+    rc = main(["status", "--workspace", str(ws), "--json"])
+
+    assert rc == 0
+    payload = json.loads(capsys.readouterr().out)
+    experiment = payload["experiment_080"]
+    assert experiment["assessment_target"] == "auditable_brief"
+    assert experiment["target_complete"] is True
+    assert experiment["status"] == "complete"
+    assert "experiments 080 register-run" in payload["suggested_next_command"]
+
+    rc = main(["status", "--workspace", str(ws)])
+
+    assert rc == 0
+    out = capsys.readouterr().out
+    assert "[status] experiment_080: case=solar_public_001 condition=memory assessment_target=auditable_brief" in out
+    assert "[status] target_complete: auditable_brief" in out
+    assert "do not finalize for this target" in out
 
 
 def test_status_command_reports_malformed_run_integrity_as_unknown(tmp_path, capsys):

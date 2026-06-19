@@ -23,6 +23,15 @@ from dataclasses import dataclass
 from pathlib import Path, PurePosixPath, PureWindowsPath
 from typing import Any
 
+from multi_agent_brief.experiments.target_contract import (
+    ALLOWED_ASSESSMENT_TARGETS,
+    ASSESSMENT_TARGET_CLAIM_SCOPE,
+    ASSESSMENT_TARGET_EXCLUDED_CLAIM_SCOPE,
+    AUDITABLE_TARGET_ARTIFACTS,
+    DEFAULT_ASSESSMENT_TARGET,
+    assessment_target as _target_contract_assessment_target,
+    assessment_target_manifest,
+)
 from multi_agent_brief.orchestrator_contract import resolve_repo_workdir
 from multi_agent_brief.orchestrator.run_integrity import (
     PERSISTED_RUN_INTEGRITY_STATUSES,
@@ -68,8 +77,6 @@ ALLOWED_GUIDANCE_SOURCES = {"improvement_ledger", "manual", "prompt_only"}
 ALLOWED_ASSESSMENT_METHODS = {"human", "llm_assisted_human_review", "llm_only"}
 A_CONTROLLED_ASSESSMENT_METHODS = {"human", "llm_assisted_human_review"}
 ALLOWED_SCORECARD_ASSESSMENT_STATUSES = {"assessed", "needs_assessment"}
-ALLOWED_ASSESSMENT_TARGETS = {"auditable_brief", "delivery_brief"}
-DEFAULT_ASSESSMENT_TARGET = "delivery_brief"
 DELIVERY_BRIEF_REQUIRED_CONTROL_KEYS = (
     "terminal_workflow",
     "run_integrity_clean",
@@ -97,32 +104,6 @@ A_CONTROLLED_REQUIRED_CONTROL_KEYS = DELIVERY_BRIEF_REQUIRED_CONTROL_KEYS
 A_CONTROLLED_REQUIRED_CONTROL_KEYS_BY_TARGET = {
     "delivery_brief": DELIVERY_BRIEF_REQUIRED_CONTROL_KEYS,
     "auditable_brief": AUDITABLE_BRIEF_REQUIRED_CONTROL_KEYS,
-}
-ASSESSMENT_TARGET_CLAIM_SCOPE = {
-    "auditable_brief": [
-        "guidance_manifestation_in_audited_brief",
-        "evidence_use_under_frozen_fact_layer",
-        "auditor_gate_passage",
-    ],
-    "delivery_brief": [
-        "guidance_manifestation_in_reader_delivery",
-        "reader_clean_delivery",
-        "finalize_transform_included",
-    ],
-}
-ASSESSMENT_TARGET_EXCLUDED_CLAIM_SCOPE = {
-    "auditable_brief": [
-        "reader_clean_delivery",
-        "finalize_transform_correctness",
-        "management_ready_output",
-        "docx_pdf_delivery_quality",
-    ],
-    "delivery_brief": [],
-}
-AUDITABLE_TARGET_ARTIFACTS = {
-    "audited_brief": "output/intermediate/audited_brief.md",
-    "audit_report": "output/intermediate/audit_report.json",
-    "auditor_quality_gate_report": "output/intermediate/gates/auditor_quality_gate_report.json",
 }
 AUDITABLE_TIMING_STAGE_ORDER = ["analyst", "editor", "auditor"]
 
@@ -683,6 +664,7 @@ def register_run_record(
         "condition": condition,
         "run_id": run_id,
         "assessment_target": assessment_target,
+        "assessment_target_manifest": assessment_target_manifest(assessment_target),
         "workspace_path": "<redacted-workspace>",
         "run_archive_path": run_archive_path,
         "repo_commit": repo_commit,
@@ -1342,6 +1324,8 @@ def _scaffold_condition_metadata(
         "experiment_id": EXPERIMENT_080_ID,
         "case_id": str(case_manifest.get("case_id") or ""),
         "condition": condition,
+        "assessment_target": _assessment_target(case_manifest),
+        "assessment_target_manifest": assessment_target_manifest(_assessment_target(case_manifest)),
         "workspace_path": "<redacted-workspace>",
         "source_archive_manifest": fact_import.get("source_archive_manifest")
         or archive_manifest.as_posix(),
@@ -1769,6 +1753,7 @@ def _build_scorecard_draft(
         "condition": run_record["condition"],
         "run_id": run_record["run_id"],
         "assessment_target": assessment_target,
+        "assessment_target_manifest": assessment_target_manifest(assessment_target),
         "claim_scope": ASSESSMENT_TARGET_CLAIM_SCOPE[assessment_target],
         "excluded_claim_scope": ASSESSMENT_TARGET_EXCLUDED_CLAIM_SCOPE[assessment_target],
         "validity_class": validity_class,
@@ -3916,10 +3901,7 @@ def _validate_condition(
 
 
 def _assessment_target(container: dict[str, Any]) -> str:
-    value = container.get("assessment_target")
-    if value in ALLOWED_ASSESSMENT_TARGETS:
-        return str(value)
-    return DEFAULT_ASSESSMENT_TARGET
+    return _target_contract_assessment_target(container)
 
 
 def _validate_assessment_target(

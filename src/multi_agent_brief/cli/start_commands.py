@@ -15,6 +15,11 @@ from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any
 
+from multi_agent_brief.experiments.target_contract import (
+    assessment_target,
+    assessment_target_manifest,
+    load_experiment_080_condition_metadata,
+)
 from multi_agent_brief.orchestrator_contract import (
     CONTRACT_REFERENCES,
     ORCHESTRATOR_LOOP,
@@ -160,6 +165,7 @@ class AgentHandoff:
     provenance_state_files: dict[str, str] = field(default_factory=lambda: dict(PROVENANCE_STATE_FILES))
     contract_references: dict[str, str] = field(default_factory=lambda: dict(CONTRACT_REFERENCES))
     stage_completion_protocol: dict[str, Any] = field(default_factory=dict)
+    assessment_target_manifest: dict[str, Any] = field(default_factory=dict)
     notes: list[str] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:
@@ -543,6 +549,7 @@ def build_handoff(
     handoff.recipe = recipe
     if recipe == RUNTIME_RECIPE_FAST_RERUN:
         _apply_fast_rerun_recipe(handoff, ws)
+    _apply_experiment_080_assessment_target(handoff, ws)
 
     handoff.stage_completion_protocol = _build_stage_completion_protocol(repo)
     protocol_text = _render_stage_completion_protocol_prompt(handoff.stage_completion_protocol)
@@ -831,6 +838,36 @@ def _apply_fast_rerun_recipe(handoff: AgentHandoff, workspace: Path) -> None:
     )
 
 
+def _apply_experiment_080_assessment_target(handoff: AgentHandoff, workspace: Path) -> None:
+    metadata = load_experiment_080_condition_metadata(workspace)
+    if not isinstance(metadata, dict):
+        return
+    target = assessment_target(metadata)
+    manifest = assessment_target_manifest(target)
+    handoff.assessment_target_manifest = manifest
+    if target != "auditable_brief":
+        return
+    text = (
+        "Experiment target: auditable_brief.\n"
+        "TARGET COMPLETE: auditable_brief when Analyst, Editor, Auditor, and auditor gates are complete and clean.\n"
+        "This is an internal auditable-draft experiment target, not management-ready delivery.\n"
+        "After auditor stage-complete succeeds, stop the runtime workflow and register/score the run with "
+        "`multi-agent-brief experiments 080 register-run` and `multi-agent-brief experiments 080 score-run`.\n"
+        "Do not run finalize, finalize-complete, deliver, DOCX/PDF rendering, reader-clean delivery checks, "
+        "or delivery archive for this target unless the operator explicitly starts a delivery_brief run."
+    )
+    handoff.prompt = f"{handoff.prompt}\n\n{text}"
+    handoff.notes.append(text)
+    handoff.expected_artifacts = [
+        artifact for artifact in handoff.expected_artifacts if artifact != "output/delivery/brief.md"
+    ]
+    handoff.next_steps = (
+        f"{handoff.next_steps}\n"
+        "080 auditable_brief target: stop after auditor stage-complete; next allowed commands are "
+        "experiments 080 register-run and score-run."
+    ).strip()
+
+
 def render_handoff_cli(handoff: AgentHandoff) -> str:
     lines = [
         "=" * 60,
@@ -847,6 +884,9 @@ def render_handoff_cli(handoff: AgentHandoff) -> str:
         lines.append("Notes:")
         for n in handoff.notes:
             lines.append(f"  - {n}")
+        lines.append("")
+    if handoff.assessment_target_manifest:
+        lines.append(f"Assessment target: {handoff.assessment_target_manifest.get('assessment_target')}")
         lines.append("")
     return "\n".join(lines)
 
@@ -870,9 +910,33 @@ def write_handoff_artifacts(handoff: AgentHandoff, workspace: Path) -> tuple[Pat
         "",
         handoff.next_steps,
         "",
+    ]
+    if handoff.assessment_target_manifest:
+        md_content.extend([
+            "## Assessment Target",
+            "",
+            f"- Target: `{handoff.assessment_target_manifest.get('assessment_target')}`",
+            f"- Semantics: `{handoff.assessment_target_manifest.get('target_status_semantics')}`",
+            f"- Target artifact: `{handoff.assessment_target_manifest.get('target_artifact')}`",
+            f"- Timing: `{handoff.assessment_target_manifest.get('timing_semantics')}`",
+            "- Excluded claim scope:",
+        ])
+        excluded = handoff.assessment_target_manifest.get("excluded_claim_scope") or []
+        if excluded:
+            for item in excluded:
+                md_content.append(f"  - `{item}`")
+        else:
+            md_content.append("  - none")
+        forbidden = handoff.assessment_target_manifest.get("forbidden_downstream_actions") or []
+        if forbidden:
+            md_content.extend(["", "- Forbidden downstream actions for this target:"])
+            for item in forbidden:
+                md_content.append(f"  - `{item}`")
+        md_content.append("")
+    md_content.extend([
         "## Contract References",
         "",
-    ]
+    ])
     for label, rel_path in handoff.contract_references.items():
         md_content.append(f"- `{label}`: `{rel_path}`")
     md_content.extend([

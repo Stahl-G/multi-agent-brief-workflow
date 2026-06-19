@@ -6,6 +6,7 @@ from . import operations
 from .contracts_loader import load_artifact_contracts, load_stage_specs
 from .errors import (
     E_ACTIVE_REPAIR_OPEN,
+    E_ASSESSMENT_TARGET_COMPLETE,
     E_FACT_LAYER_IMPORT_INVALID,
     E_RUNTIME_STATE_NOT_INITIALIZED,
     E_STAGE_MISMATCH,
@@ -24,6 +25,7 @@ from .operations import (
     import_fact_layer_transaction,
     initialize_runtime_state,
     record_decision,
+    raise_if_auditable_target_complete_blocks_downstream,
     raise_if_active_repair_open,
     show_runtime_state,
     start_repair_transaction,
@@ -33,6 +35,7 @@ from .paths import RUNTIME_STATE_FILES, runtime_state_paths
 
 __all__ = sorted([
     "E_ACTIVE_REPAIR_OPEN",
+    "E_ASSESSMENT_TARGET_COMPLETE",
     "E_FACT_LAYER_IMPORT_INVALID",
     "E_RUNTIME_STATE_NOT_INITIALIZED",
     "E_STAGE_MISMATCH",
@@ -53,6 +56,7 @@ __all__ = sorted([
     "new_run_id",
     "read_event_log_records_strict",
     "record_decision",
+    "raise_if_auditable_target_complete_blocks_downstream",
     "record_handoff_written",
     "raise_if_active_repair_open",
     "runtime_state_paths",

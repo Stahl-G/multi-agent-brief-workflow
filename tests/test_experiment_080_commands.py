@@ -181,6 +181,25 @@ def _write_scaffold_workspace(ws: Path) -> None:
     (ws / "audience_profile.md").write_text("# Seed audience\n\nBoard-facing Chinese brief.\n", encoding="utf-8")
 
 
+def _write_auditable_condition_metadata(ws: Path, *, condition: str = "memory") -> None:
+    condition_path = ws / "experiment" / "080" / "condition.json"
+    condition_path.parent.mkdir(parents=True, exist_ok=True)
+    _write_json(
+        condition_path,
+        {
+            "schema_version": "mabw.experiment_080.condition.v1",
+            "experiment_id": "MABW-080",
+            "case_id": "weekly_public_001",
+            "condition": condition,
+            "assessment_target": "auditable_brief",
+            "assessment_target_manifest": {
+                "assessment_target": "auditable_brief",
+                "target_status_semantics": "auditor_ready_internal_auditable_draft",
+            },
+        },
+    )
+
+
 def _copy_archive_to_workspace(ws: Path, archive_manifest: Path) -> Path:
     run_dir = archive_manifest.parent
     target = ws / "output" / "runs" / run_dir.name
@@ -1573,6 +1592,9 @@ def test_experiments_080_auditable_brief_target_scores_without_finalize(tmp_path
     assert main(_register_args(case_dir, ws, run_record)) == 0
     record = json.loads(run_record.read_text(encoding="utf-8"))
     assert record["assessment_target"] == "auditable_brief"
+    assert record["assessment_target_manifest"]["assessment_target"] == "auditable_brief"
+    assert record["assessment_target_manifest"]["timing_semantics"] == "diagnostic_only"
+    assert record["assessment_target_manifest"]["reader_clean_required"] is False
     assert record["run_archive_path"] == ""
     assert record["target_artifacts"]["audited_brief"]["path"] == "output/intermediate/audited_brief.md"
     assert [stage["stage_id"] for stage in record["timing"]["stages"]] == ["analyst", "editor", "auditor"]
@@ -1584,6 +1606,9 @@ def test_experiments_080_auditable_brief_target_scores_without_finalize(tmp_path
     scorecard = json.loads(scorecard_path.read_text(encoding="utf-8"))
     assert validate_scorecard(scorecard) == []
     assert scorecard["assessment_target"] == "auditable_brief"
+    assert scorecard["assessment_target_manifest"]["assessment_target"] == "auditable_brief"
+    assert scorecard["assessment_target_manifest"]["timing_semantics"] == "diagnostic_only"
+    assert scorecard["assessment_target_manifest"]["reader_clean_required"] is False
     assert scorecard["claim_scope"] == [
         "guidance_manifestation_in_audited_brief",
         "evidence_use_under_frozen_fact_layer",
@@ -1624,6 +1649,53 @@ def test_experiments_080_auditable_brief_target_scores_without_finalize(tmp_path
     no_timing_assessed = json.loads(no_timing_assessed_path.read_text(encoding="utf-8"))
     assert no_timing_assessed["control_integrity"]["timing_available"] is False
     assert no_timing_assessed["validity_class"] == "A_controlled"
+
+
+def test_experiments_080_auditable_brief_target_blocks_finalize(tmp_path, capsys):
+    ws = tmp_path / "workspace"
+    _write_scaffold_workspace(ws)
+    _write_auditable_condition_metadata(ws)
+    _write_auditable_target_workspace(
+        ws,
+        run_id="mabw-20260614T000000Z-auditable0001",
+        source_archive_manifest=CLEAN_FIXTURE_MANIFEST,
+    )
+
+    rc = main(["finalize", "--config", str(ws / "config.yaml")])
+
+    captured = capsys.readouterr()
+    assert rc == 1
+    assert "TARGET COMPLETE: auditable_brief" in captured.err
+    assert "outside this target" in captured.err
+    assert not (ws / "output" / "delivery" / "brief.md").exists()
+    assert not (ws / "output" / "intermediate" / "finalize_report.json").exists()
+
+
+def test_experiments_080_auditable_brief_target_blocks_finalize_complete(tmp_path, capsys):
+    ws = tmp_path / "workspace"
+    _write_scaffold_workspace(ws)
+    _write_auditable_condition_metadata(ws)
+    _write_auditable_target_workspace(
+        ws,
+        run_id="mabw-20260614T000000Z-auditable0001",
+        source_archive_manifest=CLEAN_FIXTURE_MANIFEST,
+    )
+
+    rc = main([
+        "state",
+        "finalize-complete",
+        "--workspace", str(ws),
+        "--reason", "auditable target should stop before delivery",
+        "--json",
+    ])
+
+    assert rc == 1
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["error_code"] == "E_ASSESSMENT_TARGET_COMPLETE"
+    assert payload["details"]["target_complete"] is True
+    assert "multi-agent-brief finalize" in payload["details"]["forbidden_downstream_actions"]
+    events = (ws / "output" / "intermediate" / "event_log.jsonl").read_text(encoding="utf-8").splitlines()
+    assert not any("finalize_completed" in line for line in events)
 
 
 def test_experiments_080_auditable_brief_register_rejects_active_repair(tmp_path, capsys):

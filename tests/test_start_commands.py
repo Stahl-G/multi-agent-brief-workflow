@@ -172,6 +172,26 @@ def _mark_fact_layer_imported(ws: Path) -> None:
     paths["workflow_state"].write_text(json.dumps(workflow, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 
+def _write_auditable_condition_metadata(ws: Path) -> None:
+    condition_path = ws / "experiment" / "080" / "condition.json"
+    condition_path.parent.mkdir(parents=True, exist_ok=True)
+    condition_path.write_text(
+        json.dumps(
+            {
+                "schema_version": "mabw.experiment_080.condition.v1",
+                "experiment_id": "MABW-080",
+                "case_id": "solar_public_001",
+                "condition": "memory",
+                "assessment_target": "auditable_brief",
+            },
+            indent=2,
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+
 def _assert_orchestrator_contract_handoff(data: dict[str, object]) -> None:
     text = "\n".join(
         str(data.get(key, ""))
@@ -484,6 +504,31 @@ def test_start_with_workspace_generates_handoff(tmp_path):
     assert "Pre-completion transactions" in claim_ledger_section
     assert "freeze-claim-ledger" in claim_ledger_section
     assert "state stage-complete --stage claim-ledger" in claim_ledger_section
+
+
+def test_start_handoff_projects_auditable_assessment_target(tmp_path):
+    ws = _write_workspace(tmp_path)
+    _write_auditable_condition_metadata(ws)
+
+    rc = main([
+        "start",
+        "--workspace", str(ws),
+        "--skip-doctor",
+        "--venv", str(tmp_path / ".venv" / "bin" / "activate"),
+    ])
+
+    assert rc == 0
+    data = json.loads((ws / "output" / "intermediate" / "agent_handoff.json").read_text(encoding="utf-8"))
+    md = (ws / "output" / "intermediate" / "agent_handoff.md").read_text(encoding="utf-8")
+    text = data["prompt"] + "\n" + "\n".join(data["notes"]) + "\n" + md
+    assert data["assessment_target_manifest"]["assessment_target"] == "auditable_brief"
+    assert data["assessment_target_manifest"]["reader_clean_required"] is False
+    assert "output/delivery/brief.md" not in data["expected_artifacts"]
+    assert "TARGET COMPLETE: auditable_brief" in text
+    assert "register-run" in text
+    assert "score-run" in text
+    assert "Do not run finalize" in text
+    assert "docx_pdf_delivery_quality" in text
 
 
 def test_start_does_not_generate_brief(tmp_path):
