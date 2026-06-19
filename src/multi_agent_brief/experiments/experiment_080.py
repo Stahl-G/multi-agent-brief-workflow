@@ -1006,6 +1006,7 @@ def export_blind_pack(
                 target_readiness=target_readiness,
             )
         artifact_path, artifact_sha = _resolve_blind_audited_brief(
+            case_root=case_root,
             scorecard_path=scorecard_path,
             scorecard=scorecard,
         )
@@ -1186,7 +1187,8 @@ def import_assessment(
     else:
         output_path = output_path.resolve()
 
-    if blind_pack_path is not None and reveal_mapping_path is not None:
+    blind_import_verified = blind_pack_path is not None and reveal_mapping_path is not None
+    if blind_import_verified:
         scorecard_payload, assessment_payload = _scorecard_and_assessment_from_blind_import(
             blind_pack_path=blind_pack_path,
             reveal_mapping_path=reveal_mapping_path,
@@ -1196,6 +1198,7 @@ def import_assessment(
         assert scorecard_path is not None
         scorecard_payload = _load_json_object(scorecard_path, label="scorecard")
         assessment_payload = _load_json_object(assessment_path, label="assessment")
+        _reject_unverified_blind_assessment_metadata(assessment_payload)
 
     scorecard_diagnostics = validate_scorecard(scorecard_payload)
     if scorecard_diagnostics:
@@ -1220,6 +1223,7 @@ def import_assessment(
         scorecard=scorecard_payload,
         assessment=assessment_payload,
         guidance_scores=guidance_scores,
+        blind_import_verified=blind_import_verified,
     )
     diagnostics = validate_scorecard(assessed_scorecard)
     if diagnostics:
@@ -2647,6 +2651,20 @@ def _validate_assessment_identity(scorecard: dict[str, Any], assessment: dict[st
         )
 
 
+def _reject_unverified_blind_assessment_metadata(assessment: dict[str, Any]) -> None:
+    blind_fields = [
+        field
+        for field in ("blind_pack", "blind_item_id", "blind_artifact_sha256")
+        if field in assessment
+    ]
+    if blind_fields:
+        _raise_experiment_error(
+            "E_EXPERIMENT_080_BLIND_ASSESSMENT_INVALID",
+            "blind assessment metadata is accepted only through --blind-pack and --reveal-mapping verification.",
+            blind_fields=blind_fields,
+        )
+
+
 def _optional_resolved_path(value: str | Path | None) -> Path | None:
     if value is None:
         return None
@@ -2656,7 +2674,12 @@ def _optional_resolved_path(value: str | Path | None) -> Path | None:
     return path.resolve()
 
 
-def _resolve_blind_audited_brief(*, scorecard_path: Path, scorecard: dict[str, Any]) -> tuple[Path, str]:
+def _resolve_blind_audited_brief(
+    *,
+    case_root: Path,
+    scorecard_path: Path,
+    scorecard: dict[str, Any],
+) -> tuple[Path, str]:
     target_artifacts = (
         scorecard.get("target_artifacts")
         if isinstance(scorecard.get("target_artifacts"), dict)
@@ -2677,30 +2700,70 @@ def _resolve_blind_audited_brief(*, scorecard_path: Path, scorecard: dict[str, A
             "scorecard target_artifacts.audited_brief.sha256 must be present before blind export.",
             scorecard_path=str(scorecard_path),
         )
-    candidates = [
-        scorecard_path.parent / rel_path,
-        scorecard_path.parent.parent / rel_path,
-        Path.cwd() / rel_path,
-    ]
+    candidates = _blind_artifact_candidates(
+        case_root=case_root,
+        scorecard_path=scorecard_path,
+        rel_path=rel_path,
+    )
+    mismatches: list[dict[str, str]] = []
     for candidate in candidates:
         if candidate.is_file():
             actual_sha = _sha256_file(candidate)
-            if actual_sha != expected_sha:
-                _raise_experiment_error(
-                    "E_EXPERIMENT_080_BLIND_PACK_INVALID",
-                    "audited brief artifact bytes do not match scorecard target artifact hash.",
-                    scorecard_path=str(scorecard_path),
-                    artifact_path=str(candidate),
-                    expected_sha256=expected_sha,
-                    actual_sha256=actual_sha,
-                )
-            return candidate.resolve(), actual_sha
+            if actual_sha == expected_sha:
+                return candidate.resolve(), actual_sha
+            mismatches.append({
+                "artifact_path": str(candidate),
+                "actual_sha256": actual_sha,
+            })
     _raise_experiment_error(
         "E_EXPERIMENT_080_BLIND_PACK_INVALID",
-        "audited brief artifact could not be resolved for blind export. Place scorecards beside the workspace root or run export from the workspace root.",
+        "audited brief artifact could not be resolved for blind export. Place scorecards beside the workspace root, run export from the experiment root, or keep condition workspaces near the case directory.",
         scorecard_path=str(scorecard_path),
         artifact_path=rel_path,
+        expected_sha256=expected_sha,
+        mismatches=mismatches,
+        searched=[str(candidate) for candidate in candidates],
     )
+
+
+def _blind_artifact_candidates(*, case_root: Path, scorecard_path: Path, rel_path: str) -> list[Path]:
+    direct_roots = _unique_paths([
+        scorecard_path.parent,
+        scorecard_path.parent.parent,
+        Path.cwd().resolve(),
+        case_root,
+        case_root.parent,
+        case_root.parent.parent,
+    ])
+    candidates: list[Path] = []
+    seen: set[Path] = set()
+
+    def add(path: Path) -> None:
+        resolved = path.resolve()
+        if resolved not in seen:
+            seen.add(resolved)
+            candidates.append(resolved)
+
+    for root in direct_roots:
+        add(root / rel_path)
+
+    for root in _unique_paths([case_root.parent, case_root.parent.parent]):
+        if not root.exists() or not root.is_dir():
+            continue
+        for candidate in sorted(root.rglob(rel_path), key=lambda item: item.as_posix()):
+            add(candidate)
+    return candidates
+
+
+def _unique_paths(paths: list[Path]) -> list[Path]:
+    result: list[Path] = []
+    seen: set[Path] = set()
+    for path in paths:
+        resolved = path.resolve()
+        if resolved not in seen:
+            seen.add(resolved)
+            result.append(resolved)
+    return result
 
 
 def _blind_pack_rubric(guidance_set: dict[str, Any]) -> dict[str, Any]:
@@ -2975,6 +3038,7 @@ def _scorecard_with_imported_assessment(
     scorecard: dict[str, Any],
     assessment: dict[str, Any],
     guidance_scores: list[dict[str, Any]],
+    blind_import_verified: bool,
 ) -> dict[str, Any]:
     assessed = deepcopy(scorecard)
     assessed["assessment_status"] = "assessed"
@@ -2999,11 +3063,11 @@ def _scorecard_with_imported_assessment(
     }
     if "notes" in assessment:
         imported_assessment["assessment_notes_present"] = isinstance(assessment.get("notes"), list)
-    if isinstance(assessment.get("blind_pack"), dict):
+    if blind_import_verified and isinstance(assessment.get("blind_pack"), dict):
         imported_assessment["blind_pack"] = deepcopy(assessment["blind_pack"])
-    if isinstance(assessment.get("blind_item_id"), str):
+    if blind_import_verified and isinstance(assessment.get("blind_item_id"), str):
         imported_assessment["blind_item_id"] = assessment["blind_item_id"]
-    if isinstance(assessment.get("blind_artifact_sha256"), str):
+    if blind_import_verified and isinstance(assessment.get("blind_artifact_sha256"), str):
         imported_assessment["blind_artifact_sha256"] = assessment["blind_artifact_sha256"]
     assessed["guidance_assessment"] = imported_assessment
     assessed["assessment_boundary"] = (
