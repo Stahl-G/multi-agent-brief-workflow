@@ -3258,6 +3258,37 @@ def test_experiments_080_export_blind_pack_strips_conditions_and_hash_binds(tmp_
     ).read_text(encoding="utf-8")
 
 
+def test_experiments_080_export_blind_pack_resolves_artifacts_from_condition_workspaces(tmp_path, capsys):
+    case_dir = tmp_path / "cases" / "weekly_public_001"
+    _write_auditable_three_condition_case(case_dir)
+    scorecard_dir = case_dir / "scorecards"
+    scorecard_dir.mkdir(parents=True)
+    workspace_root = tmp_path / "workspaces"
+    workspace_root.mkdir()
+    scorecards: list[Path] = []
+    for condition in ("baseline", "memory", "prompt_only"):
+        workspace_scorecard = _write_auditable_scorecard_for_condition(
+            workspace_root,
+            capsys,
+            case_dir=case_dir,
+            condition=condition,
+            run_id=f"mabw-20260614T000000Z-{condition.replace('_', '')}0001",
+        )
+        scorecard = scorecard_dir / f"{condition}.scorecard.json"
+        shutil.copyfile(workspace_scorecard, scorecard)
+        scorecards.append(scorecard)
+    blind_dir = case_dir / "blind-pack"
+
+    rc = main(_export_blind_pack_args(case_dir, blind_dir, scorecards, seed="080-fixed"))
+
+    assert rc == 0
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["blind_item_count"] == 3
+    pack = json.loads((blind_dir / "blind_pack.json").read_text(encoding="utf-8"))
+    for item in pack["items"]:
+        assert (blind_dir / item["artifact_path"]).is_file()
+
+
 def test_experiments_080_import_blind_assessment_verifies_hash_and_reveals_identity(tmp_path, capsys):
     case_dir = tmp_path / "weekly_public_001"
     _write_auditable_three_condition_case(case_dir)
@@ -3436,6 +3467,24 @@ def test_experiments_080_import_assessment_promotes_to_a_controlled(tmp_path, ca
     assert assessed["guidance_scores"][0]["assessment_method"] == "human"
     assert assessed["guidance_assessment"]["source"] == "imported_assessment"
     assert "Python did not judge guidance manifestation" in assessed["notes"][-1]
+
+
+def test_experiments_080_import_assessment_rejects_unverified_blind_metadata(tmp_path, capsys):
+    _, scorecard_path = _write_scorecard_draft_from_fixture(tmp_path, capsys)
+    assessment_path = tmp_path / "assessment.json"
+    output_path = tmp_path / "assessed.scorecard.json"
+    assessment = _assessment_payload(method="human")
+    assessment["blind_item_id"] = "BI-A"
+    assessment["blind_artifact_sha256"] = "a" * 64
+    assessment["blind_pack"] = {"hash_verified": True}
+    _write_json(assessment_path, assessment)
+
+    rc = main(_assessment_args(scorecard_path, assessment_path, output_path))
+
+    assert rc == 1
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["details"]["code"] == "E_EXPERIMENT_080_BLIND_ASSESSMENT_INVALID"
+    assert not output_path.exists()
 
 
 def test_experiments_080_import_assessment_requires_delivery_treatment_isolation(tmp_path, capsys):
