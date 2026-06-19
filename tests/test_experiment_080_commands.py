@@ -5,9 +5,13 @@ import shutil
 import subprocess
 from pathlib import Path
 
+import pytest
+
 from multi_agent_brief.cli.main import main
 from multi_agent_brief.experiments import validate_run_record, validate_scorecard
 from multi_agent_brief.orchestrator.runtime_state import (
+    E_ASSESSMENT_TARGET_COMPLETE,
+    RuntimeStateError,
     raise_if_auditable_target_complete_blocks_downstream,
 )
 
@@ -1760,11 +1764,63 @@ def test_experiments_080_auditable_brief_target_block_uses_event_log_repair_bind
         )
     workflow = json.loads((ws / "output" / "intermediate" / "workflow_state.json").read_text(encoding="utf-8"))
 
-    raise_if_auditable_target_complete_blocks_downstream(
-        workspace=ws,
-        workflow=workflow,
-        command="finalize",
+    with pytest.raises(RuntimeStateError) as excinfo:
+        raise_if_auditable_target_complete_blocks_downstream(
+            workspace=ws,
+            workflow=workflow,
+            command="finalize",
+        )
+
+    assert excinfo.value.error_code == E_ASSESSMENT_TARGET_COMPLETE
+    assert excinfo.value.details["target_complete"] is False
+    assert "audit binding relevant_repair_transaction_ids does not match event_log" in excinfo.value.details["reasons"]
+
+
+def test_experiments_080_auditable_brief_finalize_blocks_incomplete_target_before_writing(
+    tmp_path,
+    capsys,
+):
+    ws = tmp_path / "workspace"
+    _write_scaffold_workspace(ws)
+    _write_auditable_condition_metadata(ws)
+    _write_auditable_target_workspace(
+        ws,
+        run_id="mabw-20260614T000000Z-auditable0001",
+        source_archive_manifest=CLEAN_FIXTURE_MANIFEST,
     )
+    event_log = ws / "output" / "intermediate" / "event_log.jsonl"
+    with event_log.open("a", encoding="utf-8") as handle:
+        handle.write(
+            json.dumps(
+                {
+                    "schema_version": "multi-agent-brief-event-log/v1",
+                    "event_id": "repair-event-1",
+                    "run_id": "mabw-20260614T000000Z-auditable0001",
+                    "created_at": "2026-06-14T00:04:00+00:00",
+                    "event_type": "repair_completed",
+                    "actor": "cli",
+                    "stage_id": "editor",
+                    "artifact_id": None,
+                    "decision": "repair_complete",
+                    "reason": "editor repair completed",
+                    "metadata": {
+                        "transaction_id": "repair-editor-1",
+                        "allowed_artifacts": ["output/intermediate/audited_brief.md"],
+                    },
+                },
+                sort_keys=True,
+            )
+            + "\n"
+        )
+
+    rc = main(["finalize", "--config", str(ws / "config.yaml")])
+
+    captured = capsys.readouterr()
+    assert rc == 1
+    assert "TARGET INCOMPLETE: auditable_brief" in captured.err
+    assert "TARGET COMPLETE: auditable_brief" not in captured.err
+    assert not (ws / "output" / "delivery" / "brief.md").exists()
+    assert not (ws / "output" / "intermediate" / "finalize_report.json").exists()
 
 
 def test_experiments_080_auditable_brief_target_blocks_finalize_complete(tmp_path, capsys):

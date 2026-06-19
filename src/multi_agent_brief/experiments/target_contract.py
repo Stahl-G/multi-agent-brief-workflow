@@ -274,22 +274,33 @@ def _extend_audit_binding_reasons(
             reasons.append(f"audit binding cannot verify {field.removesuffix('_sha256')}")
         elif actual != expected_sha:
             reasons.append(f"audit binding {field} does not match artifact_registry")
+    run_id = workflow.get("run_id")
+    run_id_text = run_id.strip() if isinstance(run_id, str) and run_id.strip() else ""
     repair_ids = binding.get("relevant_repair_transaction_ids")
     if not isinstance(repair_ids, list) or any(not isinstance(item, str) or not item for item in repair_ids):
         reasons.append("audit binding relevant_repair_transaction_ids is invalid")
     elif event_records is not None:
-        run_id = workflow.get("run_id")
-        if not isinstance(run_id, str) or not run_id.strip():
+        if not run_id_text:
             reasons.append("audit binding repair history cannot verify workflow run_id")
         else:
             expected_repair_ids = _auditable_brief_repair_transaction_ids(
                 event_records,
-                run_id=run_id.strip(),
+                run_id=run_id_text,
             )
             if list(repair_ids) != expected_repair_ids:
                 reasons.append("audit binding relevant_repair_transaction_ids does not match event_log")
-    if not isinstance(binding.get("auditor_stage_transaction_id"), str) or not binding.get("auditor_stage_transaction_id"):
+    auditor_stage_transaction_id = binding.get("auditor_stage_transaction_id")
+    if not isinstance(auditor_stage_transaction_id, str) or not auditor_stage_transaction_id:
         reasons.append("audit binding auditor_stage_transaction_id is missing")
+    elif event_records is not None:
+        if not run_id_text:
+            reasons.append("audit binding auditor_stage_transaction_id cannot verify workflow run_id")
+        elif _auditable_auditor_completion_event(
+            event_records,
+            run_id=run_id_text,
+            transaction_id=auditor_stage_transaction_id,
+        ) is None:
+            reasons.append("audit binding auditor_stage_transaction_id does not match event_log")
 
 
 def _artifact_sha(artifacts: dict[str, Any], artifact_id: str) -> str | None:
@@ -323,3 +334,22 @@ def _auditable_brief_repair_transaction_ids(
 def _artifact_path_matches(pattern: str, path: str) -> bool:
     candidate = pattern.strip()
     return bool(candidate and (path == candidate or fnmatch.fnmatch(path, candidate)))
+
+
+def _auditable_auditor_completion_event(
+    records: list[dict[str, Any]],
+    *,
+    run_id: str,
+    transaction_id: str,
+) -> dict[str, Any] | None:
+    for event in records:
+        if event.get("run_id") != run_id:
+            continue
+        if event.get("event_type") != "decision_recorded":
+            continue
+        if event.get("stage_id") != "auditor" or event.get("decision") != "continue":
+            continue
+        metadata = event.get("metadata") if isinstance(event.get("metadata"), dict) else {}
+        if metadata.get("transaction_id") == transaction_id:
+            return event
+    return None
