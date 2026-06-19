@@ -43,6 +43,19 @@ tree is fully bilingual.
 - [BriefLoop-090 A-controlled auditable-brief pilot](reference-runs/briefloop-090-a-controlled-pilot.md)
 - [Security](security.md)
 
+## Technical Reports And Architecture References
+
+These longer-form technical notes are design and architecture references. Treat
+`docs/architecture-status.md` and `docs/support-matrix.md` as the current
+implementation/support source of truth when they differ.
+
+- [BriefLoop architecture reference v0.3.0](briefloop-architecture-reference-v0.3.0.md)
+- [MABW architecture reference v0.2.0](mabw-architecture-reference-v0.2.0.md)
+- [MABW architecture reference v0.3.0 revision roadmap](mabw-architecture-reference-v0.3.0-revision-roadmap.md)
+- [Tech report v0.3.0 abstract draft](tech-report-v0.3.0/abstract-draft-v0.3.0.md)
+- [Tech report v0.3.0 industrial related work](tech-report-v0.3.0/industrial-related-work.md)
+- [Tech report v0.3.0 v0.9 design rationale](tech-report-v0.3.0/v09-design-rationale.md)
+
 ## Chinese-Only Or Memo Docs
 
 The following documents are intentionally not part of the first bilingual
