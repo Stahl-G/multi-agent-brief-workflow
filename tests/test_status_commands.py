@@ -203,10 +203,19 @@ def _write_auditable_target_complete_state(ws: Path) -> None:
         "clean_single_shot": True,
         "reasons": [],
     }
+    audit_binding = {
+        "schema_version": "mabw.auditable_audit_binding.v1",
+        "source": "auditor_stage_complete",
+        "claim_ledger_sha256": "d" * 64,
+        "audited_brief_sha256": "a" * 64,
+        "audit_report_sha256": "b" * 64,
+        "relevant_repair_transaction_ids": [],
+        "auditor_stage_transaction_id": "tx-auditor-complete",
+    }
     workflow["stage_statuses"] = {
         "analyst": {"status": "complete"},
         "editor": {"status": "complete"},
-        "auditor": {"status": "complete"},
+        "auditor": {"status": "complete", "metadata": {"audit_binding": audit_binding}},
         "finalize": {"status": "ready"},
     }
     paths["workflow_state"].write_text(json.dumps(workflow, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
@@ -216,6 +225,12 @@ def _write_auditable_target_complete_state(ws: Path) -> None:
                 "schema_version": "multi-agent-brief-artifact-registry/v1",
                 "run_id": workflow.get("run_id", "run-test"),
                 "artifacts": {
+                    "claim_ledger": {
+                        "artifact_id": "claim_ledger",
+                        "path": "output/intermediate/claim_ledger.json",
+                        "status": "valid",
+                        "sha256": "d" * 64,
+                    },
                     "audited_brief": {
                         "artifact_id": "audited_brief",
                         "path": "output/intermediate/audited_brief.md",
