@@ -11,10 +11,16 @@ from __future__ import annotations
 import json
 import os
 import sys
+from copy import deepcopy
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any
 
+from multi_agent_brief.experiments.target_contract import (
+    assessment_target,
+    assessment_target_manifest,
+    load_experiment_080_condition_metadata,
+)
 from multi_agent_brief.orchestrator_contract import (
     CONTRACT_REFERENCES,
     ORCHESTRATOR_LOOP,
@@ -160,6 +166,7 @@ class AgentHandoff:
     provenance_state_files: dict[str, str] = field(default_factory=lambda: dict(PROVENANCE_STATE_FILES))
     contract_references: dict[str, str] = field(default_factory=lambda: dict(CONTRACT_REFERENCES))
     stage_completion_protocol: dict[str, Any] = field(default_factory=dict)
+    assessment_target_manifest: dict[str, Any] = field(default_factory=dict)
     notes: list[str] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:
@@ -547,6 +554,7 @@ def build_handoff(
     handoff.stage_completion_protocol = _build_stage_completion_protocol(repo)
     protocol_text = _render_stage_completion_protocol_prompt(handoff.stage_completion_protocol)
     handoff.prompt = f"{handoff.prompt}\n\n{protocol_text}"
+    _apply_experiment_080_assessment_target(handoff, ws)
 
     if run_doctor:
         rc, status = _run_doctor(ws)
@@ -831,6 +839,102 @@ def _apply_fast_rerun_recipe(handoff: AgentHandoff, workspace: Path) -> None:
     )
 
 
+def _apply_experiment_080_assessment_target(handoff: AgentHandoff, workspace: Path) -> None:
+    metadata = load_experiment_080_condition_metadata(workspace)
+    if not isinstance(metadata, dict):
+        return
+    target = assessment_target(metadata)
+    manifest = assessment_target_manifest(target)
+    handoff.assessment_target_manifest = manifest
+    if target != "auditable_brief":
+        return
+    handoff.prompt = _without_auditable_delivery_steps(handoff.prompt)
+    handoff.notes = [
+        note
+        for note in handoff.notes
+        if not _is_auditable_delivery_step_note(note)
+    ]
+    handoff.stage_completion_protocol = _without_auditable_delivery_protocol(handoff.stage_completion_protocol)
+    text = (
+        "Experiment target: auditable_brief.\n"
+        "TARGET COMPLETE: auditable_brief when Analyst, Editor, Auditor, and auditor gates are complete and clean.\n"
+        "This is an internal auditable-draft experiment target, not management-ready delivery.\n"
+        "After auditor stage-complete succeeds, stop the runtime workflow and register/score the run with "
+        "`multi-agent-brief experiments 080 register-run` and `multi-agent-brief experiments 080 score-run`.\n"
+        "Do not run finalize, finalize-complete, deliver, DOCX/PDF rendering, reader-clean delivery checks, "
+        "or delivery archive for this target unless the operator explicitly starts a delivery_brief run."
+    )
+    handoff.prompt = f"{handoff.prompt}\n\n{text}"
+    handoff.notes.append(text)
+    handoff.expected_artifacts = [
+        artifact for artifact in handoff.expected_artifacts if artifact != "output/delivery/brief.md"
+    ]
+    handoff.next_steps = (
+        "080 auditable_brief target: stop after auditor stage-complete; next allowed commands are "
+        "experiments 080 register-run and score-run."
+    )
+
+
+def _without_auditable_delivery_steps(text: str) -> str:
+    replacements = {
+        " → auditor → finalize": " → auditor",
+        " -> auditor -> finalize": " -> auditor",
+        "auditor → finalize": "auditor",
+        "auditor -> finalize": "auditor",
+    }
+    for old, new in replacements.items():
+        text = text.replace(old, new)
+    blocked_fragments = (
+        "multi-agent-brief finalize",
+        "state finalize-complete",
+        "--stage finalize",
+        "formatter/finalize ->",
+        "Finalize is a Python delivery/rendering tool",
+        "Final status must list the delivery bundle",
+        "Continue through Analyst, Editor, Auditor, gates, finalize",
+        "After all artifacts are ready",
+        "Before finalize,",
+        "After the finalize tool writes",
+        "The 'auditor' step and required gates check must run before finalize",
+        "Record finalize completion",
+        "Formatter/finalize may only write",
+    )
+    kept: list[str] = []
+    for line in text.splitlines():
+        if any(fragment in line for fragment in blocked_fragments):
+            continue
+        kept.append(line)
+    return "\n".join(kept).strip()
+
+
+def _is_auditable_delivery_step_note(note: str) -> bool:
+    blocked_fragments = (
+        FINALIZE_GATE_NOTE,
+        "finalize",
+        "delivery bundle",
+        "delivery artifacts",
+        "formatter",
+    )
+    return any(fragment in note for fragment in blocked_fragments)
+
+
+def _without_auditable_delivery_protocol(protocol: dict[str, Any]) -> dict[str, Any]:
+    if not isinstance(protocol, dict):
+        return protocol
+    rewritten = deepcopy(protocol)
+    rewritten["stages"] = [
+        stage
+        for stage in rewritten.get("stages", [])
+        if not (isinstance(stage, dict) and stage.get("stage_id") == "finalize")
+    ]
+    rewritten["rules"] = [
+        rule
+        for rule in rewritten.get("rules", [])
+        if "finalize" not in str(rule).lower() and "reader delivery" not in str(rule).lower()
+    ]
+    return rewritten
+
+
 def render_handoff_cli(handoff: AgentHandoff) -> str:
     lines = [
         "=" * 60,
@@ -847,6 +951,9 @@ def render_handoff_cli(handoff: AgentHandoff) -> str:
         lines.append("Notes:")
         for n in handoff.notes:
             lines.append(f"  - {n}")
+        lines.append("")
+    if handoff.assessment_target_manifest:
+        lines.append(f"Assessment target: {handoff.assessment_target_manifest.get('assessment_target')}")
         lines.append("")
     return "\n".join(lines)
 
@@ -870,9 +977,33 @@ def write_handoff_artifacts(handoff: AgentHandoff, workspace: Path) -> tuple[Pat
         "",
         handoff.next_steps,
         "",
+    ]
+    if handoff.assessment_target_manifest:
+        md_content.extend([
+            "## Assessment Target",
+            "",
+            f"- Target: `{handoff.assessment_target_manifest.get('assessment_target')}`",
+            f"- Semantics: `{handoff.assessment_target_manifest.get('target_status_semantics')}`",
+            f"- Target artifact: `{handoff.assessment_target_manifest.get('target_artifact')}`",
+            f"- Timing: `{handoff.assessment_target_manifest.get('timing_semantics')}`",
+            "- Excluded claim scope:",
+        ])
+        excluded = handoff.assessment_target_manifest.get("excluded_claim_scope") or []
+        if excluded:
+            for item in excluded:
+                md_content.append(f"  - `{item}`")
+        else:
+            md_content.append("  - none")
+        forbidden = handoff.assessment_target_manifest.get("forbidden_downstream_actions") or []
+        if forbidden:
+            md_content.extend(["", "- Forbidden downstream actions for this target:"])
+            for item in forbidden:
+                md_content.append(f"  - `{item}`")
+        md_content.append("")
+    md_content.extend([
         "## Contract References",
         "",
-    ]
+    ])
     for label, rel_path in handoff.contract_references.items():
         md_content.append(f"- `{label}`: `{rel_path}`")
     md_content.extend([

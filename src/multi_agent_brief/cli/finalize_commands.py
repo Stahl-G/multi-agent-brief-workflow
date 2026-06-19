@@ -10,8 +10,10 @@ from pathlib import Path
 from multi_agent_brief.core.config import build_run_settings, get_output_config, load_config
 from multi_agent_brief.orchestrator.runtime_state import (
     E_ACTIVE_REPAIR_OPEN,
+    E_ASSESSMENT_TARGET_COMPLETE,
     RuntimeStateError,
     check_runtime_state,
+    raise_if_auditable_target_complete_blocks_downstream,
     raise_if_active_repair_open,
     runtime_state_paths,
 )
@@ -107,10 +109,17 @@ def _preflight_runtime_state_before_finalize(workspace: Path) -> None:
         raise RuntimeStateError("workflow_state.json must contain an object before finalize.")
     try:
         raise_if_active_repair_open(workspace=workspace, workflow=workflow)
+        raise_if_auditable_target_complete_blocks_downstream(
+            workspace=workspace,
+            workflow=workflow,
+            command="finalize",
+        )
     except RuntimeStateError as exc:
         if exc.error_code == E_ACTIVE_REPAIR_OPEN:
             raise
-        raise RuntimeStateError(f"Unable to verify active repair state before finalize: {exc}") from exc
+        if exc.error_code == E_ASSESSMENT_TARGET_COMPLETE:
+            raise
+        raise RuntimeStateError(f"Unable to verify runtime state before finalize: {exc}") from exc
     if paths["runtime_manifest"].exists():
         try:
             check_runtime_state(workspace=workspace, actor="cli")

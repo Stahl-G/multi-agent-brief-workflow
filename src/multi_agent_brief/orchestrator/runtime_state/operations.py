@@ -13,6 +13,10 @@ import uuid
 from pathlib import Path
 from typing import Any
 
+from multi_agent_brief.experiments.target_contract import (
+    load_experiment_080_condition_metadata,
+    project_assessment_target_status,
+)
 from multi_agent_brief.feedback.feedback_contract import (
     current_stage_feedback_blocking_reasons,
 )
@@ -58,6 +62,7 @@ from multi_agent_brief.orchestrator.runtime_state.completion_gates import (
 from multi_agent_brief.orchestrator.runtime_state.errors import (
     E_ARTIFACT_INVALID,
     E_ACTIVE_REPAIR_OPEN,
+    E_ASSESSMENT_TARGET_COMPLETE,
     E_CLAIM_DRAFT_CONTRACT_INVALID,
     E_COMPLETION_TRANSACTION_REQUIRED,
     E_FACT_LAYER_IMPORT_INVALID,
@@ -3033,6 +3038,60 @@ def raise_if_active_repair_open(*, workspace: Path, workflow: dict[str, Any]) ->
         raise _active_repair_blocking_error(workspace, workflow)
 
 
+def raise_if_auditable_target_complete_blocks_downstream(
+    *,
+    workspace: Path,
+    workflow: dict[str, Any],
+    command: str,
+) -> None:
+    condition_metadata = load_experiment_080_condition_metadata(workspace)
+    if not isinstance(condition_metadata, dict) or condition_metadata.get("assessment_target") != "auditable_brief":
+        return
+    paths = runtime_state_paths(workspace)
+    registry = _read_json_if_exists(paths["artifact_registry"])
+    auditor_gate = _read_json_if_exists(
+        workspace / "output" / "intermediate" / "gates" / "auditor_quality_gate_report.json"
+    )
+    projection = project_assessment_target_status(
+        condition_metadata=condition_metadata,
+        workflow_state=workflow,
+        artifact_registry=registry,
+        auditor_gate_report=auditor_gate,
+    )
+    if projection.get("target_complete") is not True:
+        return
+    workspace_arg = shlex.quote(str(workspace))
+    raise RuntimeStateError(
+        (
+            "TARGET COMPLETE: auditable_brief. This 080 workspace has reached the auditable-brief "
+            "assessment target; finalize/delivery actions are outside this target."
+        ),
+        details={
+            "assessment_target": "auditable_brief",
+            "command": command,
+            "target_complete": True,
+            "next_allowed_commands": [
+                (
+                    "multi-agent-brief experiments 080 register-run --case <case_dir> "
+                    f"--condition {projection.get('condition') or '<condition>'} "
+                    f"--workspace {workspace_arg} --output <run_record.json>"
+                ),
+                (
+                    "multi-agent-brief experiments 080 score-run --case <case_dir> "
+                    "--run-record <run_record.json> --output <scorecard.json>"
+                ),
+            ],
+            "forbidden_downstream_actions": [
+                "multi-agent-brief finalize",
+                "multi-agent-brief state finalize-complete",
+                "multi-agent-brief deliver",
+            ],
+            "projection": projection,
+        },
+        error_code=E_ASSESSMENT_TARGET_COMPLETE,
+    )
+
+
 def _complete_stage_transaction(
     *,
     workspace: str | Path,
@@ -3049,6 +3108,12 @@ def _complete_stage_transaction(
     _preflight_transaction_files(paths)
     ws, paths, manifest, workflow = _load_manifest_and_workflow(ws)
     raise_if_active_repair_open(workspace=ws, workflow=workflow)
+    if finalize:
+        raise_if_auditable_target_complete_blocks_downstream(
+            workspace=ws,
+            workflow=workflow,
+            command="state finalize-complete",
+        )
     repo = resolve_repo_workdir(repo_workdir, workspace=ws)
     stages = load_stage_specs(repo)
     artifacts = load_artifact_contracts(repo)
