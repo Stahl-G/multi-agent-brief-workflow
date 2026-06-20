@@ -29,6 +29,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   reproducibility only; it does not add semantic support assessment,
   Claim-Support Matrix behavior, support-sufficiency gates, or source appendix
   UI.
+- **Evidence span source appendix trace view**: finalize now adds reader-safe
+  Evidence Span summary counts to the Source Appendix when a present registry is
+  valid, and writes raw span details only to `output/source_appendix_trace.md`
+  as an audit copy. This does not add semantic support assessment,
+  Claim-Support Matrix behavior, support-sufficiency gates, or a delivery
+  artifact.
 
 ## [0.9.1] — 2026-06-20
 

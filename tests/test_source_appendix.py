@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 from pathlib import Path
 
@@ -12,6 +13,10 @@ from multi_agent_brief.outputs.source_appendix import (
 
 def _write_ledger(path: Path, claims: list[dict]) -> None:
     path.write_text(json.dumps(claims, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
+def _span_hash(text: str) -> str:
+    return "sha256:" + hashlib.sha256(text.encode("utf-8")).hexdigest()
 
 
 def _claim(
@@ -202,3 +207,146 @@ def test_source_appendix_filters_internal_id_shaped_metadata(tmp_path: Path):
     assert "CLAIM_INTERNAL_001" not in result.markdown
     assert "Source record" in result.markdown
     assert result.warnings
+
+
+def test_source_appendix_adds_reader_safe_span_summary_and_audit_trace(tmp_path: Path):
+    ws = tmp_path / "workspace"
+    intermediate = ws / "output" / "intermediate"
+    source_dir = ws / "input" / "sources"
+    intermediate.mkdir(parents=True)
+    source_dir.mkdir(parents=True)
+    raw_excerpt = "ExampleCo said module shipments reached 12 MW in Q2."
+    source_text = f"Intro.\n{raw_excerpt}\nOutro.\n"
+    source_path = source_dir / "source-001.md"
+    source_path.write_text(source_text, encoding="utf-8")
+    start = source_text.index(raw_excerpt)
+    ledger = intermediate / "claim_ledger.json"
+    _write_ledger(
+        ledger,
+        [
+            _claim(
+                "CL-001",
+                source_id="SRC-001",
+                source_url="https://example.com/source-001",
+                statement="ExampleCo shipments reached 12 MW.",
+                evidence_text=raw_excerpt,
+                metadata={
+                    "source_title": "ExampleCo Source",
+                    "publisher": "Example News",
+                    "published_at": "2026-06-01",
+                },
+            ),
+        ],
+    )
+    registry = intermediate / "evidence_span_registry.json"
+    registry.write_text(
+        json.dumps({
+            "schema_version": "mabw.evidence_span_registry.v1",
+            "sources": [
+                {
+                    "source_id": "SRC-001",
+                    "source_type": "local_file",
+                    "source_tier": "primary",
+                    "source_path": "input/sources/source-001.md",
+                    "retrieved_at": "2026-06-02",
+                    "spans": [
+                        {
+                            "span_id": "ESP-001-01",
+                            "raw_excerpt": raw_excerpt,
+                            "hash": _span_hash(raw_excerpt),
+                            "span_role": "numeric_observation",
+                            "char_start": start,
+                            "char_end": start + len(raw_excerpt),
+                        }
+                    ],
+                }
+            ],
+        }),
+        encoding="utf-8",
+    )
+
+    result = build_source_appendix(
+        audited_markdown="ExampleCo shipments reached 12 MW. [src:CL-001]\n",
+        ledger_path=ledger,
+        evidence_span_registry_path=registry,
+        workspace=ws,
+    )
+
+    assert result.trace_status == "generated"
+    assert result.trace_source_count == 1
+    assert result.trace_span_count == 1
+    assert "Evidence trace: 1 span; roles: numeric observation" in result.markdown
+    assert "ESP-001-01" not in result.markdown
+    assert "SRC-001" not in result.markdown
+    assert "input/sources/source-001.md" not in result.markdown
+    assert raw_excerpt not in result.markdown
+    assert "support sufficiency" not in result.markdown.lower()
+    assert "ESP-001-01" in result.trace_markdown
+    assert "SRC-001" in result.trace_markdown
+    assert "input/sources/source-001.md" in result.trace_markdown
+    assert f"Raw excerpt hash: `{_span_hash(raw_excerpt)}`" in result.trace_markdown
+    assert f"Offsets: {start}..{start + len(raw_excerpt)}" in result.trace_markdown
+    assert raw_excerpt in result.trace_markdown
+    assert "traceability surface only" in result.trace_markdown
+
+
+def test_source_appendix_skips_trace_non_blockingly_when_source_pack_mismatches(tmp_path: Path):
+    ws = tmp_path / "workspace"
+    intermediate = ws / "output" / "intermediate"
+    source_dir = ws / "input" / "sources"
+    intermediate.mkdir(parents=True)
+    source_dir.mkdir(parents=True)
+    (source_dir / "source-001.md").write_text("Different source bytes.\n", encoding="utf-8")
+    raw_excerpt = "ExampleCo said module shipments reached 12 MW in Q2."
+    ledger = intermediate / "claim_ledger.json"
+    _write_ledger(
+        ledger,
+        [
+            _claim(
+                "CL-001",
+                source_id="SRC-001",
+                source_url="https://example.com/source-001",
+                statement="ExampleCo shipments reached 12 MW.",
+                evidence_text=raw_excerpt,
+                metadata={"source_title": "ExampleCo Source", "publisher": "Example News"},
+            ),
+        ],
+    )
+    registry = intermediate / "evidence_span_registry.json"
+    registry.write_text(
+        json.dumps({
+            "schema_version": "mabw.evidence_span_registry.v1",
+            "sources": [
+                {
+                    "source_id": "SRC-001",
+                    "source_type": "local_file",
+                    "source_tier": "primary",
+                    "source_path": "input/sources/source-001.md",
+                    "retrieved_at": "2026-06-02",
+                    "spans": [
+                        {
+                            "span_id": "ESP-001-01",
+                            "raw_excerpt": raw_excerpt,
+                            "hash": _span_hash(raw_excerpt),
+                            "span_role": "numeric_observation",
+                        }
+                    ],
+                }
+            ],
+        }),
+        encoding="utf-8",
+    )
+
+    result = build_source_appendix(
+        audited_markdown="ExampleCo shipments reached 12 MW. [src:CL-001]\n",
+        ledger_path=ledger,
+        evidence_span_registry_path=registry,
+        workspace=ws,
+    )
+
+    assert result.status == "generated"
+    assert result.source_count == 1
+    assert result.trace_status == "skipped"
+    assert result.trace_markdown == ""
+    assert result.trace_span_count == 0
+    assert any("does not match source bytes" in warning for warning in result.trace_warnings)

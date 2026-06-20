@@ -368,6 +368,17 @@ def _finalize_report_reader_artifact_paths(workspace: Path, report: dict[str, An
     return unique
 
 
+def _finalize_report_auxiliary_artifact_reasons(workspace: Path, report: dict[str, Any]) -> list[str]:
+    reasons: list[str] = []
+    for key in ("source_appendix_trace",):
+        path = _resolve_report_artifact_path(workspace, report.get(key))
+        if path is None:
+            continue
+        if not path.exists():
+            reasons.append(f"finalize_report.json references missing auxiliary artifact {key}: {path}.")
+    return reasons
+
+
 def _finalize_report_delivery_artifact_reasons(workspace: Path, report: dict[str, Any]) -> list[str]:
     artifacts = report.get("delivery_artifacts")
     if not isinstance(artifacts, list) or not artifacts:
@@ -586,6 +597,7 @@ def _finalize_completion_reasons(
         )
     )
     reasons.extend(_finalize_report_delivery_artifact_reasons(workspace, report))
+    reasons.extend(_finalize_report_auxiliary_artifact_reasons(workspace, report))
     if runtime_manifest is None:
         manifest_path = workspace / "output" / "intermediate" / "runtime_manifest.json"
         try:

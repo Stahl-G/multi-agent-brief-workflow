@@ -1,11 +1,13 @@
 from __future__ import annotations
 
+import json
 import re
 from dataclasses import asdict, dataclass, field
 from pathlib import Path, PureWindowsPath
 from typing import Any
 from urllib.parse import urlparse
 
+from multi_agent_brief.contracts.schemas.evidence_span_registry import EvidenceSpanRegistryContract
 from multi_agent_brief.core.claim_ledger import ClaimLedger
 from multi_agent_brief.core.schemas import Claim
 
@@ -16,18 +18,22 @@ _WINDOWS_USER_RE = re.compile(r"[A-Za-z]:\\Users\\")
 _INTERNAL_ID_RE = re.compile(
     r"\b(?:SYN_)?(?:CLAIM|SRC|SOURCE|CLM)_[A-Z0-9][A-Z0-9_-]*\b"
 )
+_TRACE_EXCERPT_LIMIT = 500
 
 
 @dataclass
 class SourceAppendixRecord:
     label: str
     title: str
+    source_id: str = ""
     publisher: str = ""
     published_at: str = ""
     retrieved_at: str = ""
     url: str = ""
     source_type: str = ""
     claim_count: int = 0
+    span_count: int = 0
+    span_roles: list[str] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -44,6 +50,11 @@ class SourceAppendixResult:
     records: list[SourceAppendixRecord] = field(default_factory=list)
     citation_labels: dict[str, str] = field(default_factory=dict)
     claim_source_map: dict[str, dict[str, str]] = field(default_factory=dict)
+    trace_status: str = "not_available"
+    trace_markdown: str = ""
+    trace_source_count: int = 0
+    trace_span_count: int = 0
+    trace_warnings: list[str] = field(default_factory=list)
 
     def to_report_fields(
         self,
@@ -62,6 +73,10 @@ class SourceAppendixResult:
             "source_appendix_resolved_claim_count": self.resolved_claim_count,
             "source_appendix_warnings": list(self.warnings),
             "source_appendix_claim_map": dict(self.claim_source_map),
+            "source_appendix_trace_generation": self.trace_status,
+            "source_appendix_trace_source_count": self.trace_source_count,
+            "source_appendix_trace_span_count": self.trace_span_count,
+            "source_appendix_trace_warnings": list(self.trace_warnings),
         }
 
 
@@ -82,6 +97,8 @@ def build_source_appendix(
     *,
     audited_markdown: str,
     ledger_path: str | Path,
+    evidence_span_registry_path: str | Path | None = None,
+    workspace: str | Path | None = None,
 ) -> SourceAppendixResult:
     """Build reader-facing source appendix Markdown from cited Claim Ledger entries."""
     claim_ids = cited_claim_ids(audited_markdown)
@@ -89,6 +106,7 @@ def build_source_appendix(
     ledger = ClaimLedger.import_json(ledger_path)
     records_by_key: dict[str, SourceAppendixRecord] = {}
     claim_source_keys: dict[str, str] = {}
+    source_ids_by_key: dict[str, str] = {}
     order: list[str] = []
     resolved_claim_count = 0
 
@@ -106,10 +124,13 @@ def build_source_appendix(
             records_by_key[key] = source_record
         records_by_key[key].claim_count += 1
         claim_source_keys[claim_id] = key
+        if claim.source_id and key not in source_ids_by_key:
+            source_ids_by_key[key] = claim.source_id.strip()
 
     records = [records_by_key[key] for key in order]
     for idx, record in enumerate(records, start=1):
         record.label = f"S{idx}"
+        record.source_id = source_ids_by_key.get(order[idx - 1], "")
     citation_labels = {
         claim_id: records_by_key[key].label
         for claim_id, key in claim_source_keys.items()
@@ -120,6 +141,12 @@ def build_source_appendix(
         for claim_id, key in claim_source_keys.items()
         if key in records_by_key and records_by_key[key].label
     }
+    trace = _build_source_appendix_trace(
+        registry_path=evidence_span_registry_path,
+        workspace=workspace,
+        ledger_path=ledger_path,
+        records=records,
+    )
 
     status = "generated_with_warnings" if warnings else "generated"
     markdown = render_source_appendix(records, warnings=warnings)
@@ -133,6 +160,11 @@ def build_source_appendix(
         records=records,
         citation_labels=citation_labels,
         claim_source_map=claim_source_map,
+        trace_status=trace["status"],
+        trace_markdown=trace["markdown"],
+        trace_source_count=trace["source_count"],
+        trace_span_count=trace["span_count"],
+        trace_warnings=trace["warnings"],
     )
 
 
@@ -182,6 +214,12 @@ def render_source_appendix(
         if record.source_type and record.source_type != "local_file":
             lines.append(f"- Source type: {record.source_type}")
         lines.append(f"- Used in: {record.claim_count} claim-backed statement{'s' if record.claim_count != 1 else ''}")
+        if record.span_count:
+            role_summary = ", ".join(_reader_role_label(role) for role in record.span_roles)
+            lines.append(
+                f"- Evidence trace: {record.span_count} span{'s' if record.span_count != 1 else ''}"
+                + (f"; roles: {role_summary}" if role_summary else "")
+            )
         lines.append("")
     if warnings:
         lines.extend([
@@ -230,6 +268,7 @@ def _record_from_claim(claim: Claim) -> tuple[SourceAppendixRecord, list[str]]:
         SourceAppendixRecord(
             label="",
             title=title,
+            source_id=claim.source_id.strip() if claim.source_id else "",
             publisher=publisher,
             published_at=published_at,
             retrieved_at=retrieved_at,
@@ -250,6 +289,172 @@ def _claim_source_map_record(record: SourceAppendixRecord) -> dict[str, str]:
         "retrieved_at": record.retrieved_at,
         "source_type": record.source_type,
     }
+
+
+def _build_source_appendix_trace(
+    *,
+    registry_path: str | Path | None,
+    workspace: str | Path | None,
+    ledger_path: str | Path,
+    records: list[SourceAppendixRecord],
+) -> dict[str, Any]:
+    empty = {
+        "status": "not_available",
+        "markdown": "",
+        "source_count": 0,
+        "span_count": 0,
+        "warnings": [],
+    }
+    if registry_path is None:
+        return empty
+    path = Path(registry_path)
+    if not path.exists():
+        return empty
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+        return _trace_skip(f"Evidence span trace skipped because evidence_span_registry.json is unreadable: {exc}")
+    if not isinstance(payload, dict):
+        return _trace_skip("Evidence span trace skipped because evidence_span_registry.json is not an object.")
+
+    violations = EvidenceSpanRegistryContract.validate(payload)
+    errors = [violation for violation in violations if violation.severity == "error"]
+    if errors:
+        return _trace_skip(
+            "Evidence span trace skipped because evidence_span_registry.json is invalid: "
+            f"evidence_span_registry_schema_error:{errors[0].field}"
+        )
+
+    ws = Path(workspace).expanduser().resolve() if workspace is not None else _workspace_from_ledger_path(ledger_path)
+    from multi_agent_brief.orchestrator.runtime_state.evidence_span_registry import (
+        EVIDENCE_SPAN_REGISTRY_VALIDATION_PREFIX,
+        validate_evidence_span_registry_against_source_pack,
+    )
+
+    reason = validate_evidence_span_registry_against_source_pack(
+        registry_payload=payload,
+        workspace=ws,
+    )
+    if reason:
+        return _trace_skip(
+            "Evidence span trace skipped because evidence_span_registry.json does not match source bytes: "
+            f"{EVIDENCE_SPAN_REGISTRY_VALIDATION_PREFIX}:{reason}"
+        )
+
+    records_by_source_id = {
+        record.source_id: record
+        for record in records
+        if record.source_id
+    }
+    trace_sources: list[dict[str, Any]] = []
+    for source in sorted(
+        (item for item in payload.get("sources", []) if isinstance(item, dict)),
+        key=lambda item: str(item.get("source_id") or ""),
+    ):
+        source_id = str(source.get("source_id") or "").strip()
+        record = records_by_source_id.get(source_id)
+        if record is None:
+            continue
+        spans = [
+            span
+            for span in source.get("spans", [])
+            if isinstance(span, dict)
+        ]
+        if not spans:
+            continue
+        roles = sorted({
+            str(span.get("span_role") or "").strip()
+            for span in spans
+            if str(span.get("span_role") or "").strip()
+        })
+        record.span_count = len(spans)
+        record.span_roles = roles
+        trace_sources.append({
+            "label": record.label,
+            "title": record.title,
+            "source_id": source_id,
+            "source_path": str(source.get("source_path") or ""),
+            "spans": sorted(spans, key=lambda item: str(item.get("span_id") or "")),
+        })
+
+    if not trace_sources:
+        return _trace_skip("Evidence span trace skipped because no registry sources matched cited claims.")
+
+    markdown = render_source_appendix_trace(trace_sources)
+    return {
+        "status": "generated",
+        "markdown": markdown,
+        "source_count": len(trace_sources),
+        "span_count": sum(len(source["spans"]) for source in trace_sources),
+        "warnings": [],
+    }
+
+
+def _trace_skip(message: str) -> dict[str, Any]:
+    return {
+        "status": "skipped",
+        "markdown": "",
+        "source_count": 0,
+        "span_count": 0,
+        "warnings": [message],
+    }
+
+
+def render_source_appendix_trace(trace_sources: list[dict[str, Any]]) -> str:
+    lines = [
+        "# Evidence Span Trace Audit Copy",
+        "",
+        "This audit copy lists machine-checkable Evidence Span Registry entries used by the source appendix. It is a traceability surface only, not semantic proof or support sufficiency.",
+        "",
+    ]
+    for source in trace_sources:
+        title = source.get("title") or "Local workspace source"
+        lines.extend([
+            f"## [{source.get('label')}] {title}",
+            "",
+            f"- Source ID: `{source.get('source_id')}`",
+            f"- Source path: `{source.get('source_path')}`",
+            f"- Span count: {len(source.get('spans') or [])}",
+            "",
+        ])
+        for span in source.get("spans") or []:
+            span_id = str(span.get("span_id") or "<unknown_span>").strip()
+            lines.extend([
+                f"### {span_id}",
+                "",
+                f"- Role: {_reader_role_label(str(span.get('span_role') or ''))}",
+                f"- Raw excerpt hash: `{span.get('hash') or ''}`",
+            ])
+            if isinstance(span.get("char_start"), int) and isinstance(span.get("char_end"), int):
+                lines.append(f"- Offsets: {span['char_start']}..{span['char_end']}")
+            lines.extend(["", "Raw excerpt:", ""])
+            lines.extend(_blockquote(_cap_excerpt(str(span.get("raw_excerpt") or ""))))
+            lines.append("")
+    return "\n".join(lines).rstrip() + "\n"
+
+
+def _workspace_from_ledger_path(ledger_path: str | Path) -> Path:
+    path = Path(ledger_path).expanduser().resolve()
+    try:
+        return path.parents[2]
+    except IndexError:
+        return path.parent
+
+
+def _reader_role_label(role: str) -> str:
+    return role.replace("_", " ").strip()
+
+
+def _cap_excerpt(text: str) -> str:
+    if len(text) <= _TRACE_EXCERPT_LIMIT:
+        return text
+    return text[:_TRACE_EXCERPT_LIMIT].rstrip() + "... [truncated]"
+
+
+def _blockquote(text: str) -> list[str]:
+    if not text:
+        return [">"]
+    return ["> " + line for line in text.splitlines()]
 
 
 def _source_key(claim: Claim, record: SourceAppendixRecord) -> str:

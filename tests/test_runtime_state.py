@@ -5476,6 +5476,69 @@ def test_finalize_complete_archives_delivery_intermediate_and_control_files(tmp_
     assert any(event["event_type"] == "run_archived" for event in _event_records(ws))
 
 
+def test_finalize_complete_archives_source_appendix_trace_as_auxiliary_artifact(tmp_path):
+    ws = _write_workspace(tmp_path)
+    initialize_runtime_state(workspace=ws, repo_workdir=ROOT)
+    _advance_to_finalize(ws)
+    _write_quality_gate_report(ws, stage_id="finalize")
+    _write_finalize_report(ws)
+    trace = ws / "output" / "source_appendix_trace.md"
+    trace.write_text(
+        "# Evidence Span Trace Audit Copy\n\nTraceability surface only.\n",
+        encoding="utf-8",
+    )
+    report_path = _intermediate(ws) / "finalize_report.json"
+    report = json.loads(report_path.read_text(encoding="utf-8"))
+    report["source_appendix_trace"] = str(trace)
+    report["source_appendix_trace_generation"] = "generated"
+    report["source_appendix_trace_source_count"] = 1
+    report["source_appendix_trace_span_count"] = 1
+    report_path.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
+
+    state = complete_finalize_transaction(
+        workspace=ws,
+        repo_workdir=ROOT,
+        reason="reader artifacts finalized",
+    )
+    archive = ws / "output" / "runs" / state["manifest"]["run_id"]
+    manifest = json.loads((archive / "manifest.json").read_text(encoding="utf-8"))
+    trace_records = [
+        record
+        for record in manifest["files"]
+        if record.get("original_path") == "output/source_appendix_trace.md"
+    ]
+
+    assert (archive / "auxiliary" / "source_appendix_trace.md").exists()
+    assert len(trace_records) == 1
+    assert trace_records[0]["role"] == "auxiliary"
+    assert trace_records[0]["archive_path"] == "auxiliary/source_appendix_trace.md"
+    assert trace_records[0]["sha256"] == _sha256_file(trace)
+
+
+def test_finalize_complete_rejects_missing_source_appendix_trace_reference(tmp_path):
+    ws = _write_workspace(tmp_path)
+    initialize_runtime_state(workspace=ws, repo_workdir=ROOT)
+    _advance_to_finalize(ws)
+    _write_quality_gate_report(ws, stage_id="finalize")
+    _write_finalize_report(ws)
+    report_path = _intermediate(ws) / "finalize_report.json"
+    report = json.loads(report_path.read_text(encoding="utf-8"))
+    report["source_appendix_trace"] = "output/source_appendix_trace.md"
+    report["source_appendix_trace_generation"] = "generated"
+    report_path.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
+
+    with pytest.raises(runtime_state.operations.RuntimeStateError) as excinfo:
+        complete_finalize_transaction(
+            workspace=ws,
+            repo_workdir=ROOT,
+            reason="reader artifacts finalized",
+        )
+
+    assert "missing auxiliary artifact source_appendix_trace" in str(excinfo.value)
+    manifest = json.loads(_state_file(ws, "runtime_manifest").read_text(encoding="utf-8"))
+    assert not (ws / "output" / "runs" / manifest["run_id"]).exists()
+
+
 def test_run_archive_manifest_uses_workspace_relative_paths_only(tmp_path):
     ws = _write_workspace(tmp_path)
     state = _complete_finalized_workspace(ws)

@@ -105,6 +105,49 @@ def _write_single_claim_ledger(path: Path, *, claim_id: str = "CL-001") -> None:
     path.write_text(json.dumps(claims, ensure_ascii=False, indent=2), encoding="utf-8")
 
 
+def _span_hash(text: str) -> str:
+    return "sha256:" + hashlib.sha256(text.encode("utf-8")).hexdigest()
+
+
+def _write_evidence_span_registry(output_dir: Path, *, raw_excerpt: str | None = None) -> None:
+    raw_excerpt = raw_excerpt or "ExampleCo opened a public demo facility in June 2026."
+    source_dir = output_dir.parent / "input" / "sources"
+    source_dir.mkdir(parents=True, exist_ok=True)
+    source_text = f"Intro.\n{raw_excerpt}\nOutro.\n"
+    (source_dir / "source-001.md").write_text(source_text, encoding="utf-8")
+    start = source_text.index(raw_excerpt)
+    intermediate = output_dir / "intermediate"
+    (intermediate / "evidence_span_registry.json").write_text(
+        json.dumps(
+            {
+                "schema_version": "mabw.evidence_span_registry.v1",
+                "sources": [
+                    {
+                        "source_id": "SRC-001",
+                        "source_type": "local_file",
+                        "source_tier": "primary",
+                        "source_path": "input/sources/source-001.md",
+                        "retrieved_at": "2026-06-02",
+                        "spans": [
+                            {
+                                "span_id": "ESP-001-01",
+                                "raw_excerpt": raw_excerpt,
+                                "hash": _span_hash(raw_excerpt),
+                                "span_role": "direct_statement",
+                                "char_start": start,
+                                "char_end": start + len(raw_excerpt),
+                            }
+                        ],
+                    }
+                ],
+            },
+            ensure_ascii=False,
+            indent=2,
+        ),
+        encoding="utf-8",
+    )
+
+
 def _write_audit_control_chain(intermediate: Path) -> None:
     ledger = intermediate / "claim_ledger.json"
     audited = intermediate / "audited_brief.md"
@@ -808,6 +851,97 @@ def test_finalize_maps_src_claim_to_reader_source_label(tmp_path: Path):
     assert report["source_appendix_claim_map"]["claim-001"]["source_url"] == "https://example.com/exampleco-demo"
     assert report["reader_clean"]["status"] == "pass"
     assert report["reader_clean"]["blank_citation_row_count"] == 0
+
+
+def test_finalize_writes_source_appendix_trace_audit_copy_without_delivery_leak(tmp_path: Path):
+    output_dir = tmp_path / "output"
+    intermediate = output_dir / "intermediate"
+    intermediate.mkdir(parents=True)
+    raw_excerpt = "ExampleCo opened a public demo facility in June 2026."
+    (intermediate / "audited_brief.md").write_text(
+        "# Brief\n\n"
+        "ExampleCo opened a public demo facility. [src:CL-001]\n",
+        encoding="utf-8",
+    )
+    _write_single_claim_ledger(intermediate / "claim_ledger.json")
+    _write_evidence_span_registry(output_dir, raw_excerpt=raw_excerpt)
+
+    result = finalize_reader_outputs(
+        output_dir=output_dir,
+        project_name="ExampleCo Brief",
+        output_formats=["markdown", "source_appendix"],
+        output_named_outputs=False,
+    )
+
+    reader = (output_dir / "brief.md").read_text(encoding="utf-8")
+    delivery = (output_dir / "delivery" / "brief.md").read_text(encoding="utf-8")
+    appendix = (output_dir / "source_appendix.md").read_text(encoding="utf-8")
+    trace = (output_dir / "source_appendix_trace.md").read_text(encoding="utf-8")
+    report = json.loads((intermediate / "finalize_report.json").read_text(encoding="utf-8"))
+
+    assert result.source_appendix_trace_generation == "generated"
+    assert result.source_appendix_trace_source_count == 1
+    assert result.source_appendix_trace_span_count == 1
+    assert report["source_appendix_trace"] == "output/source_appendix_trace.md"
+    assert report["source_appendix_trace_generation"] == "generated"
+    assert report["source_appendix_trace_source_count"] == 1
+    assert report["source_appendix_trace_span_count"] == 1
+    assert "Evidence trace: 1 span; roles: direct statement" in appendix
+    assert "ESP-001-01" not in reader
+    assert "ESP-001-01" not in delivery
+    assert "ESP-001-01" not in appendix
+    assert "SRC-001" not in reader
+    assert "input/sources/source-001.md" not in reader
+    assert raw_excerpt not in reader
+    assert raw_excerpt not in delivery
+    assert raw_excerpt not in appendix
+    assert "ESP-001-01" in trace
+    assert "SRC-001" in trace
+    assert "input/sources/source-001.md" in trace
+    assert raw_excerpt in trace
+    assert "traceability surface only" in trace
+    assert not (output_dir / "delivery" / "source_appendix_trace.md").exists()
+    assert "source_appendix_trace.md" not in "\n".join(report["delivery_artifacts"])
+    assert report["reader_clean"]["status"] == "pass"
+
+
+def test_finalize_skips_invalid_span_trace_and_removes_stale_trace_copy(tmp_path: Path):
+    output_dir = tmp_path / "output"
+    intermediate = output_dir / "intermediate"
+    intermediate.mkdir(parents=True)
+    (intermediate / "audited_brief.md").write_text(
+        "# Brief\n\n"
+        "ExampleCo opened a public demo facility. [src:CL-001]\n",
+        encoding="utf-8",
+    )
+    _write_single_claim_ledger(intermediate / "claim_ledger.json")
+    _write_evidence_span_registry(output_dir)
+    (tmp_path / "input" / "sources" / "source-001.md").write_text(
+        "Different source bytes.\n",
+        encoding="utf-8",
+    )
+    stale_trace = output_dir / "source_appendix_trace.md"
+    stale_trace.write_text("stale trace", encoding="utf-8")
+
+    result = finalize_reader_outputs(
+        output_dir=output_dir,
+        project_name="ExampleCo Brief",
+        output_formats=["markdown", "source_appendix"],
+        output_named_outputs=False,
+    )
+
+    report = json.loads((intermediate / "finalize_report.json").read_text(encoding="utf-8"))
+    assert result.status == "pass"
+    assert result.source_appendix_generation == "generated"
+    assert result.source_appendix_trace_generation == "skipped"
+    assert result.source_appendix_trace == ""
+    assert not stale_trace.exists()
+    assert report["source_appendix_trace"] == ""
+    assert report["source_appendix_trace_generation"] == "skipped"
+    assert report["source_appendix_trace_span_count"] == 0
+    assert report["source_appendix_trace_warnings"]
+    assert "does not match source bytes" in report["source_appendix_trace_warnings"][0]
+    assert report["reader_clean"]["status"] == "pass"
 
 
 def test_finalize_auto_renders_source_labels_for_markdown_only_output(tmp_path: Path):
