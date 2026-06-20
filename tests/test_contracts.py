@@ -259,6 +259,33 @@ class TestAtomicClaimGraphContract:
 
         assert any(violation.field == f"claims[0].edges[0].{field}" for violation in violations)
 
+    def test_rejects_cross_claim_edge_reference(self):
+        graph = _valid_atomic_claim_graph()
+        graph["claims"].append(
+            {
+                "claim_id": "CL-0002",
+                "atoms": [
+                    {
+                        "atom_id": "AC-0002-01",
+                        "text": "BetaCo expanded output.",
+                        "claim_role": "observed_fact",
+                        "materiality": "medium",
+                    }
+                ],
+            }
+        )
+        graph["claims"][0]["edges"] = [
+            {
+                "from": "AC-0001-01",
+                "to": "AC-0002-01",
+                "relation": "cross_claim_reference",
+            }
+        ]
+
+        violations = AtomicClaimGraphContract.validate(graph)
+
+        assert any(violation.field == "claims[0].edges[0].to" for violation in violations)
+
     @pytest.mark.parametrize(
         ("path", "value", "field"),
         [

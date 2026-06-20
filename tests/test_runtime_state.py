@@ -206,6 +206,46 @@ def _valid_atomic_claim_graph_payload(claim_id: str = "CL-001", atom_id: str = "
     ) + "\n"
 
 
+def _cross_claim_edge_atomic_claim_graph_payload() -> str:
+    return json.dumps(
+        {
+            "schema_version": "mabw.atomic_claim_graph.v1",
+            "claims": [
+                {
+                    "claim_id": "CL-0001",
+                    "atoms": [
+                        {
+                            "atom_id": "AC-0001-01",
+                            "text": "ExampleCo opened a demo facility.",
+                            "claim_role": "observed_fact",
+                            "materiality": "high",
+                        }
+                    ],
+                    "edges": [
+                        {
+                            "from": "AC-0001-01",
+                            "to": "AC-0002-01",
+                            "relation": "cross_claim_reference",
+                        }
+                    ],
+                },
+                {
+                    "claim_id": "CL-0002",
+                    "atoms": [
+                        {
+                            "atom_id": "AC-0002-01",
+                            "text": "BetaCo expanded module output.",
+                            "claim_role": "observed_fact",
+                            "materiality": "medium",
+                        }
+                    ],
+                    "edges": [],
+                },
+            ],
+        }
+    ) + "\n"
+
+
 def _valid_claim_drafts_payload(*, duplicate: bool = False) -> str:
     drafts = [
         {
@@ -3214,6 +3254,39 @@ def test_state_check_marks_atomic_claim_graph_unknown_claim_id_invalid(tmp_path)
     assert record["validation_result"] == (
         "atomic_claim_graph_schema_error:claims[0].claim_id_unknown:CL-9999"
     )
+
+
+def test_state_check_marks_atomic_claim_graph_cross_claim_edge_invalid(tmp_path):
+    ws = _write_workspace(tmp_path)
+    initialize_runtime_state(workspace=ws, repo_workdir=ROOT)
+    _write_json_artifact(
+        ws,
+        "claim_ledger.json",
+        json.dumps(
+            [
+                {
+                    "claim_id": "CL-0001",
+                    "statement": "ExampleCo opened a demo facility.",
+                    "source_id": "SRC-001",
+                    "evidence_text": "Example evidence.",
+                },
+                {
+                    "claim_id": "CL-0002",
+                    "statement": "BetaCo expanded module output.",
+                    "source_id": "SRC-002",
+                    "evidence_text": "Second example evidence.",
+                },
+            ]
+        )
+        + "\n",
+    )
+    _write_json_artifact(ws, "atomic_claim_graph.json", _cross_claim_edge_atomic_claim_graph_payload())
+
+    state = check_runtime_state(workspace=ws, repo_workdir=ROOT)
+    record = state["artifact_registry"]["artifacts"]["atomic_claim_graph"]
+
+    assert record["status"] == "invalid"
+    assert record["validation_result"] == "atomic_claim_graph_schema_error:claims[0].edges[0].to"
 
 
 def test_state_check_marks_atomic_claim_graph_missing_claim_ledger_invalid(tmp_path):

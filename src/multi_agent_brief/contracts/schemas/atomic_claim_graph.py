@@ -136,7 +136,6 @@ class AtomicClaimGraphContract(Contract):
 
         seen_claim_ids: set[str] = set()
         seen_atom_ids: set[str] = set()
-        edge_refs: list[tuple[str, str, str]] = []
         for claim_idx, claim in enumerate(claims):
             violations.extend(
                 _validate_claim_entry(
@@ -144,13 +143,8 @@ class AtomicClaimGraphContract(Contract):
                     idx=claim_idx,
                     seen_claim_ids=seen_claim_ids,
                     seen_atom_ids=seen_atom_ids,
-                    edge_refs=edge_refs,
                 )
             )
-
-        for field, path, atom_id in edge_refs:
-            if atom_id not in seen_atom_ids:
-                violations.append(FieldViolation(field=field, error=f"unknown atom_id '{atom_id}'"))
 
         return violations
 
@@ -165,7 +159,6 @@ def _validate_claim_entry(
     idx: int,
     seen_claim_ids: set[str],
     seen_atom_ids: set[str],
-    edge_refs: list[tuple[str, str, str]],
 ) -> list[FieldViolation]:
     prefix = f"claims[{idx}]"
     violations: list[FieldViolation] = []
@@ -199,6 +192,7 @@ def _validate_claim_entry(
         violations.append(FieldViolation(field=f"{prefix}.atoms", error="must be a non-empty list"))
 
     expected_atom_prefix = canonical_claim_match.group(1) if canonical_claim_match else None
+    local_atom_ids: set[str] = set()
     for atom_idx, atom in enumerate(atoms):
         violations.extend(
             _validate_atom_entry(
@@ -207,6 +201,7 @@ def _validate_claim_entry(
                 atom_idx=atom_idx,
                 expected_atom_prefix=expected_atom_prefix,
                 seen_atom_ids=seen_atom_ids,
+                local_atom_ids=local_atom_ids,
             )
         )
 
@@ -218,7 +213,7 @@ def _validate_claim_entry(
         return violations
     for edge_idx, edge in enumerate(edges):
         violations.extend(
-            _validate_edge_entry(edge, claim_prefix=prefix, edge_idx=edge_idx, edge_refs=edge_refs)
+            _validate_edge_entry(edge, claim_prefix=prefix, edge_idx=edge_idx, local_atom_ids=local_atom_ids)
         )
     return violations
 
@@ -230,6 +225,7 @@ def _validate_atom_entry(
     atom_idx: int,
     expected_atom_prefix: str | None,
     seen_atom_ids: set[str],
+    local_atom_ids: set[str],
 ) -> list[FieldViolation]:
     prefix = f"{claim_prefix}.atoms[{atom_idx}]"
     violations: list[FieldViolation] = []
@@ -247,6 +243,7 @@ def _validate_atom_entry(
                 FieldViolation(field=f"{prefix}.atom_id", error=f"duplicate atom_id:{normalized_atom_id}")
             )
         seen_atom_ids.add(normalized_atom_id)
+        local_atom_ids.add(normalized_atom_id)
         if expected_atom_prefix is not None and atom_match.group(1) != expected_atom_prefix:
             violations.append(
                 FieldViolation(
@@ -289,7 +286,7 @@ def _validate_edge_entry(
     *,
     claim_prefix: str,
     edge_idx: int,
-    edge_refs: list[tuple[str, str, str]],
+    local_atom_ids: set[str],
 ) -> list[FieldViolation]:
     prefix = f"{claim_prefix}.edges[{edge_idx}]"
     violations: list[FieldViolation] = []
@@ -299,8 +296,10 @@ def _validate_edge_entry(
         value = edge.get(field)
         if not _non_empty_string(value):
             violations.append(FieldViolation(field=f"{prefix}.{field}", error="must be a non-empty string"))
-        else:
-            edge_refs.append((f"{prefix}.{field}", field, str(value).strip()))
+        elif str(value).strip() not in local_atom_ids:
+            violations.append(
+                FieldViolation(field=f"{prefix}.{field}", error=f"unknown local atom_id '{str(value).strip()}'")
+            )
     relation = edge.get("relation")
     if not _non_empty_string(relation):
         violations.append(FieldViolation(field=f"{prefix}.relation", error="must be a non-empty string"))
