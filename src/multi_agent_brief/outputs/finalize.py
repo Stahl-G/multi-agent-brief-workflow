@@ -55,6 +55,11 @@ class FinalizeResult:
     source_appendix_resolved_claim_count: int = 0
     source_appendix_warnings: list[str] | None = None
     source_appendix_claim_map: dict[str, dict[str, str]] = field(default_factory=dict)
+    source_appendix_trace: str = ""
+    source_appendix_trace_generation: str = "not_available"
+    source_appendix_trace_source_count: int = 0
+    source_appendix_trace_span_count: int = 0
+    source_appendix_trace_warnings: list[str] | None = None
     delivery_markdown: str = ""
     delivery_docx: str = ""
     delivery_latest_dir: str = ""
@@ -72,6 +77,8 @@ class FinalizeResult:
         data = asdict(self)
         if data["source_appendix_warnings"] is None:
             data["source_appendix_warnings"] = []
+        if data["source_appendix_trace_warnings"] is None:
+            data["source_appendix_trace_warnings"] = []
         if data["reader_clean"] is None:
             data["reader_clean"] = _empty_reader_clean_report()
         if data["audit_binding"] is None:
@@ -86,6 +93,7 @@ _FINALIZE_REPORT_PATH_FIELDS = (
     "reader_docx",
     "named_reader_docx",
     "source_appendix",
+    "source_appendix_trace",
     "delivery_markdown",
     "delivery_docx",
     "delivery_latest_dir",
@@ -181,12 +189,16 @@ def finalize_reader_outputs(
         source_appendix_config=source_appendix_config or {},
     )
     appendix_path = out / "source_appendix.md"
+    appendix_trace_path = out / "source_appendix_trace.md"
     if appendix_path.exists():
         appendix_path.unlink()
+    if appendix_trace_path.exists():
+        appendix_trace_path.unlink()
     appendix_result = _maybe_generate_source_appendix(
         audited_markdown=audited_markdown,
         ledger_path=intermediate_dir / "claim_ledger.json",
         appendix_path=appendix_path,
+        trace_path=appendix_trace_path,
         requested_by=appendix_request["requested_by"],
         explicit=bool(appendix_request["explicit"]),
     )
@@ -272,6 +284,15 @@ def finalize_reader_outputs(
         source_appendix_resolved_claim_count=appendix_result.resolved_claim_count,
         source_appendix_warnings=appendix_result.warnings,
         source_appendix_claim_map=appendix_result.claim_source_map,
+        source_appendix_trace=(
+            str(appendix_trace_path)
+            if appendix_result.trace_markdown and appendix_trace_path.exists()
+            else ""
+        ),
+        source_appendix_trace_generation=appendix_result.trace_status,
+        source_appendix_trace_source_count=appendix_result.trace_source_count,
+        source_appendix_trace_span_count=appendix_result.trace_span_count,
+        source_appendix_trace_warnings=appendix_result.trace_warnings,
         audit_binding=_audit_binding_report(
             intermediate_dir=intermediate_dir,
             audited_markdown=audited_markdown,
@@ -1035,6 +1056,7 @@ def _maybe_generate_source_appendix(
     audited_markdown: str,
     ledger_path: Path,
     appendix_path: Path,
+    trace_path: Path,
     requested_by: str,
     explicit: bool,
 ) -> SourceAppendixResult:
@@ -1055,6 +1077,8 @@ def _maybe_generate_source_appendix(
         result = build_source_appendix(
             audited_markdown=audited_markdown,
             ledger_path=ledger_path,
+            evidence_span_registry_path=ledger_path.parent / "evidence_span_registry.json",
+            workspace=ledger_path.parents[2] if len(ledger_path.parents) > 2 else ledger_path.parent,
         )
     except (json.JSONDecodeError, TypeError, ValueError) as exc:
         if explicit:
@@ -1071,6 +1095,8 @@ def _maybe_generate_source_appendix(
         result.warnings.append(message)
     if result.markdown:
         appendix_path.write_text(result.markdown, encoding="utf-8")
+    if result.trace_markdown and result.trace_span_count:
+        trace_path.write_text(result.trace_markdown, encoding="utf-8")
     return result
 
 

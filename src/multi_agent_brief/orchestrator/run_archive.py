@@ -220,6 +220,12 @@ def _archive_plan(
             "finalize_report.json must list at least one delivery artifact for run archive.",
             details={"field": "delivery_artifacts"},
         )
+    _add_finalize_auxiliary_records(
+        records=records,
+        seen_archive_paths=seen_archive_paths,
+        workspace=workspace,
+        finalize_report=finalize_report,
+    )
 
     intermediate_dir = workspace / "output" / "intermediate"
     for name in _KNOWN_INTERMEDIATE_FILES:
@@ -381,6 +387,40 @@ def _add_fact_layer_records(
         "artifacts": artifacts,
         "excluded": excluded,
     }
+
+
+def _add_finalize_auxiliary_records(
+    *,
+    records: list[dict[str, Any]],
+    seen_archive_paths: set[str],
+    workspace: Path,
+    finalize_report: dict[str, Any],
+) -> None:
+    for field_name in ("source_appendix_trace",):
+        raw_path = finalize_report.get(field_name)
+        if not isinstance(raw_path, str) or not raw_path.strip():
+            continue
+        source = _resolve_workspace_file(workspace, raw_path)
+        try:
+            rel_from_output = source.relative_to(workspace / "output")
+        except ValueError as exc:
+            raise RunArchiveError(
+                "Finalize report auxiliary artifact must be under output/.",
+                details={"field": field_name, "artifact": raw_path},
+            ) from exc
+        if rel_from_output.parts[:1] == ("delivery",):
+            raise RunArchiveError(
+                "Finalize report auxiliary artifact must not be part of the reader delivery bundle.",
+                details={"field": field_name, "artifact": raw_path},
+            )
+        _add_file_record(
+            records,
+            seen_archive_paths,
+            role="auxiliary",
+            source=source,
+            original_path=_workspace_relative(workspace, source),
+            archive_path=Path("auxiliary") / rel_from_output,
+        )
 
 
 def _iter_durable_source_files(workspace: Path) -> list[Path]:
@@ -585,7 +625,7 @@ def _add_file_record(
 def _resolve_workspace_file(workspace: Path, raw_path: Any) -> Path:
     if not isinstance(raw_path, str) or not raw_path.strip():
         raise RunArchiveError(
-            "Finalize report contains an invalid delivery artifact path.",
+            "Finalize report contains an invalid artifact path.",
             details={"artifact": raw_path},
         )
     path = Path(raw_path)
@@ -596,12 +636,12 @@ def _resolve_workspace_file(workspace: Path, raw_path: Any) -> Path:
         resolved.relative_to(workspace)
     except ValueError as exc:
         raise RunArchiveError(
-            "Finalize report delivery artifact is outside the workspace.",
+            "Finalize report artifact is outside the workspace.",
             details={"artifact": raw_path},
         ) from exc
     if not resolved.exists() or not resolved.is_file():
         raise RunArchiveError(
-            "Finalize report delivery artifact does not exist.",
+            "Finalize report artifact does not exist.",
             details={"artifact": raw_path},
         )
     return resolved
