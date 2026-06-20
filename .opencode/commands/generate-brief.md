@@ -81,7 +81,11 @@ Stage sequence:
 11. Check `claim_ledger.json`, then delegate the **brief-analyst** subagent:
    - Write the Analyst working draft from `claim_ledger.json` and `user.md`.
    - Use only `claim_ledger.json` as source evidence.
+   - If `atomic_claim_graph.json` is present and valid, use it only as an optional experimental structural decomposition aid for frozen Claim Ledger claims; it is not source evidence or proof of support.
    - Preserve all valid [src:<claim_id>] citations that use real Claim Ledger IDs.
+   - Do not cite atom IDs in reader-facing prose.
+   - Do not introduce material atoms absent from the frozen Claim Ledger and, when present and valid, `atomic_claim_graph.json`.
+   - Do not create, edit, rewrite, repair, or extend `$ARGUMENTS/output/intermediate/atomic_claim_graph.json`; if it is absent or invalid, do not repair it.
    - Write the working auditable brief to `$ARGUMENTS/output/intermediate/audited_brief.md`.
    - Do not write `$ARGUMENTS/output/intermediate/analyst_draft_snapshot.md`; Python freezes it during analyst stage-complete.
 
@@ -90,6 +94,10 @@ Stage sequence:
     - Own the Editor-owned final auditable brief at `$ARGUMENTS/output/intermediate/audited_brief.md`.
     - Polish for management / research team readability.
     - Do not add new facts, numbers, named entities, dates, causal claims, or citations.
+    - If `$ARGUMENTS/output/intermediate/atomic_claim_graph.json` is present and valid, use it only as an optional experimental structural decomposition aid; if it is absent or invalid, do not repair it.
+    - Do not create, edit, rewrite, repair, or extend `$ARGUMENTS/output/intermediate/atomic_claim_graph.json`.
+    - Do not introduce material atoms absent from the frozen Claim Ledger and, when present and valid, `atomic_claim_graph.json`.
+    - Do not cite atom IDs in reader-facing prose.
     - Preserve valid [src:<claim_id>] in `audited_brief.md` that use real Claim Ledger IDs.
 
 13. Check edited `audited_brief.md`, then delegate the **brief-auditor** subagent:

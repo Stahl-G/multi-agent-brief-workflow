@@ -90,7 +90,7 @@ Goal: Draft the audited MABW brief.
 Inputs: `user.md`, `config.yaml`, frozen `output/intermediate/claim_ledger.json`
 Write: `output/intermediate/audited_brief.md` as the Analyst working draft
 
-Write a management-ready brief in the workspace language with valid `[src:<claim_id>]` citations that use real Claim Ledger IDs. Do not read `claim_drafts.json`; use frozen `claim_ledger.json` as the Claim Ledger input. Use the Orchestrator-provided audience taste summary as style context, not as source evidence. Do not create, edit, rewrite, or repair `claim_ledger.json`. Do not write `analyst_draft_snapshot.md`; Python freezes it during analyst stage-complete.
+Write a management-ready brief in the workspace language with valid `[src:<claim_id>]` citations that use real Claim Ledger IDs. Do not read `claim_drafts.json`; use frozen `claim_ledger.json` as the Claim Ledger input. If `atomic_claim_graph.json` is present and valid, use it only as an optional experimental structural decomposition aid for frozen Claim Ledger claims; it is not source evidence or proof of support. Do not create, edit, rewrite, repair, or extend `atomic_claim_graph.json`, and do not cite atom IDs in reader-facing prose. Do not introduce material atoms absent from the frozen Claim Ledger and, when present and valid, `atomic_claim_graph.json`. Use the Orchestrator-provided audience taste summary as style context, not as source evidence. Do not create, edit, rewrite, or repair `claim_ledger.json`. Do not write `analyst_draft_snapshot.md`; Python freezes it during analyst stage-complete.
 
 ### Editor / Delivery Editor
 
@@ -99,7 +99,7 @@ Goal: Polish the audited MABW brief without adding facts.
 Inputs: `output/intermediate/analyst_draft_snapshot.md`, `output/intermediate/audited_brief.md`
 Write: `output/intermediate/audited_brief.md` as the Editor-owned final auditable brief
 
-Improve readability, structure, and executive tone while preserving factual scope, caveats, uncertainty, and valid citations. Do not introduce new numbers, named entities, dates, causal claims, or citations.
+Improve readability, structure, and executive tone while preserving factual scope, caveats, uncertainty, and valid citations. If `atomic_claim_graph.json` is present and valid, use it only as an optional experimental structural decomposition aid; if it is absent or invalid, do not repair it. Do not create, edit, rewrite, repair, or extend `atomic_claim_graph.json`. Do not introduce new numbers, named entities, dates, causal claims, citations, or material atoms absent from the frozen Claim Ledger and, when present and valid, `atomic_claim_graph.json`. Do not cite atom IDs in reader-facing prose.
 
 ### Auditor
 

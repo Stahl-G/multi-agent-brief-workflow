@@ -192,6 +192,16 @@ def _write_auditable_condition_metadata(ws: Path) -> None:
     )
 
 
+def _assert_atomic_graph_boundary(text: str) -> None:
+    normalized = " ".join(text.replace("`", "").split())
+    assert "output/intermediate/atomic_claim_graph.json" in normalized
+    assert "optional experimental structural decomposition aid" in normalized
+    assert "not source evidence or proof of support" in normalized
+    assert "Do not cite atom IDs" in normalized or "do not cite atom IDs" in normalized
+    assert "create/edit/repair/extend" in normalized
+    assert "material atoms absent" in normalized
+
+
 def _assert_orchestrator_contract_handoff(data: dict[str, object]) -> None:
     text = "\n".join(
         str(data.get(key, ""))
@@ -208,6 +218,7 @@ def _assert_orchestrator_contract_handoff(data: dict[str, object]) -> None:
     assert data["provenance_state_files"] == PROVENANCE_STATE_FILES
     protocol = data.get("stage_completion_protocol")
     assert isinstance(protocol, dict)
+    protocol_text = json.dumps(protocol, sort_keys=True)
     assert protocol["schema_version"] == "multi-agent-brief-stage-completion-protocol/v1"
     assert protocol["status"] == "canonical_handoff_protocol"
     assert any("artifact-based" in rule for rule in protocol["rules"])
@@ -312,6 +323,8 @@ def _assert_orchestrator_contract_handoff(data: dict[str, object]) -> None:
         assert rel_path not in data["expected_artifacts"]
     for rel_path in data["expected_artifacts"]:
         assert not Path(str(rel_path)).is_absolute()
+    assert "output/intermediate/atomic_claim_graph.json" not in data["expected_artifacts"]
+    _assert_atomic_graph_boundary(protocol_text)
     assert "Orchestrator main agent" in text or "Orchestrator main-agent" in text
     assert "configs/orchestrator_contract.yaml" in text
     assert "configs/stage_specs.yaml" in text
@@ -506,6 +519,8 @@ def test_start_with_workspace_generates_handoff(tmp_path):
     assert data["runtime"] == "hermes"
     _assert_orchestrator_contract_handoff(data)
     md_text = md.read_text(encoding="utf-8")
+    _assert_atomic_graph_boundary(data["prompt"])
+    _assert_atomic_graph_boundary(md_text)
     claim_ledger_section = md_text.split("#### `claim-ledger`", 1)[1].split("#### `analyst`", 1)[0]
     assert "Freeze input artifacts" in claim_ledger_section
     assert "`claim_drafts` at `output/intermediate/claim_drafts.json`" in claim_ledger_section

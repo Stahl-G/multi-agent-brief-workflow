@@ -697,7 +697,11 @@ Write:
 
 Write a management-ready brief in the workspace language.
 Use Claim Ledger evidence for factual statements.
+If output/intermediate/atomic_claim_graph.json is present and valid, use it only as an optional experimental structural decomposition aid for frozen Claim Ledger claims; it is not source evidence or proof of support.
 Preserve valid [src:<claim_id>] citations that use real Claim Ledger IDs.
+Do not cite atom IDs in reader-facing prose.
+Do not introduce material atoms absent from the frozen Claim Ledger and, when present and valid, atomic_claim_graph.json.
+Do not create, edit, rewrite, repair, or extend atomic_claim_graph.json; if it is absent or invalid, do not repair it.
 Include source dates where useful.
 Return a section summary and any source limitations.
 Do not write analyst_draft_snapshot.md; Python freezes that control artifact during analyst stage-complete.
@@ -721,6 +725,10 @@ Write:
 
 Improve readability, structure, and executive tone.
 Preserve factual scope, uncertainty, and valid [src:<claim_id>] citations that use real Claim Ledger IDs.
+If output/intermediate/atomic_claim_graph.json is present and valid, use it only as an optional experimental structural decomposition aid; if it is absent or invalid, do not repair it.
+Do not create, edit, rewrite, repair, or extend atomic_claim_graph.json.
+Do not introduce material atoms absent from the frozen Claim Ledger and, when present and valid, atomic_claim_graph.json.
+Do not cite atom IDs in reader-facing prose.
 Return edits made and any unresolved issues.
 """,
     toolsets=["file", "terminal"]
@@ -972,12 +980,14 @@ As the Hermes Orchestrator main agent, execute:
    Goal: "Draft the audited MABW brief"
    Inputs: user.md and output/intermediate/claim_ledger.json
    Write: output/intermediate/audited_brief.md as the Analyst working draft
+   Optional atomic graph boundary: if output/intermediate/atomic_claim_graph.json is present and valid, use it only as an optional experimental structural decomposition aid for frozen Claim Ledger claims; it is not source evidence or proof of support. Do not cite atom IDs, create/edit/repair/extend the graph, or introduce material atoms absent from the frozen Claim Ledger and valid graph.
    toolsets: ["file", "terminal"]
 
 16. After analyst stage-complete freezes analyst_draft_snapshot.md, delegate editor / Delivery Editor child:
    Goal: "Polish the audited MABW brief without adding facts"
    Inputs: output/intermediate/analyst_draft_snapshot.md and output/intermediate/audited_brief.md
    Write: output/intermediate/audited_brief.md as the Editor-owned final auditable brief
+   Optional atomic graph boundary: if output/intermediate/atomic_claim_graph.json is present and valid, use it only as an optional experimental structural decomposition aid; if it is absent or invalid, do not repair it. Do not create/edit/repair/extend the graph, cite atom IDs, or introduce material atoms absent from the frozen Claim Ledger and valid graph.
    toolsets: ["file", "terminal"]
 
 17. After editor completes, delegate auditor child:

@@ -231,6 +231,30 @@ def test_generated_analyst_and_editor_explain_audited_brief_ownership(manifest):
     assert "do not wrap heading text in inline formatting" in rendered
 
 
+def test_generated_analyst_and_editor_use_optional_atomic_graph_boundary(manifest):
+    analyst = manifest["roles"]["analyst"]
+    editor = manifest["roles"]["editor"]
+    rendered = "\n".join([
+        render_codex_agent("analyst", analyst, manifest),
+        render_claude_agent("analyst", analyst, manifest),
+        render_opencode_agent("analyst", analyst, manifest),
+        render_codex_agent("editor", editor, manifest),
+        render_claude_agent("editor", editor, manifest),
+        render_opencode_agent("editor", editor, manifest),
+    ])
+
+    assert "output/intermediate/atomic_claim_graph.json" in rendered
+    assert "optional experimental structural decomposition aid" in rendered
+    assert "not source evidence or proof of support" in rendered
+    assert "Do not create, edit, rewrite, repair, or extend atomic_claim_graph.json" in rendered
+    assert "If atomic_claim_graph.json is absent or invalid, do not repair it" in rendered
+    assert "Do not cite atom IDs in reader-facing prose" in rendered
+    assert "Do not introduce material atoms absent from frozen claim_ledger.json" in rendered
+    assert "Claim-Support Matrix" not in rendered
+    assert "Evidence Span Registry" not in rendered
+    assert "support sufficiency" not in rendered.lower()
+
+
 def test_generated_formatter_preserves_frozen_audited_brief_boundary(manifest):
     role = manifest["roles"]["formatter"]
     rendered = "\n".join([

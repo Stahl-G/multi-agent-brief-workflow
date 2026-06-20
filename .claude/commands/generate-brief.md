@@ -141,12 +141,16 @@ your editorial judgment.
 
 10. Invoke the **analyst** subagent:
    - Read the frozen `$ARGUMENTS/output/intermediate/claim_ledger.json` and `$ARGUMENTS/user.md`.
+   - If `$ARGUMENTS/output/intermediate/atomic_claim_graph.json` is present and valid, use it only as an optional experimental structural decomposition aid for frozen Claim Ledger claims; it is not source evidence or proof of support.
    - Do not read `$ARGUMENTS/output/intermediate/claim_drafts.json`.
    - Write the Analyst working auditable brief using frozen Claim Ledger evidence.
    - Preserve valid `[src:<claim_id>]` citations that use real Claim Ledger IDs.
+   - Do not cite atom IDs in reader-facing prose.
+   - Do not introduce material atoms absent from the frozen Claim Ledger and, when present and valid, `atomic_claim_graph.json`.
    - Include dates for news items.
    - Write `$ARGUMENTS/output/intermediate/audited_brief.md`.
    - Do not create, edit, rewrite, or repair `$ARGUMENTS/output/intermediate/claim_ledger.json`.
+   - Do not create, edit, rewrite, repair, or extend `$ARGUMENTS/output/intermediate/atomic_claim_graph.json`; if it is absent or invalid, do not repair it.
    - Do not write `$ARGUMENTS/output/intermediate/analyst_draft_snapshot.md`; Python freezes it during analyst stage-complete.
    - Check the expected artifact.
    - Run `multi-agent-brief state stage-complete --workspace $ARGUMENTS --stage analyst --reason "Auditable brief was drafted from the Claim Ledger."`.
@@ -157,6 +161,10 @@ your editorial judgment.
     - Clean invalid citation markers and process residue.
     - Read `$ARGUMENTS/output/intermediate/analyst_draft_snapshot.md` as the frozen factual boundary.
     - Own the final `$ARGUMENTS/output/intermediate/audited_brief.md` consumed by Auditor and finalize.
+    - If `$ARGUMENTS/output/intermediate/atomic_claim_graph.json` is present and valid, use it only as an optional experimental structural decomposition aid; if it is absent or invalid, do not repair it.
+    - Do not create, edit, rewrite, repair, or extend `$ARGUMENTS/output/intermediate/atomic_claim_graph.json`.
+    - Do not introduce material atoms absent from the frozen Claim Ledger and, when present and valid, `atomic_claim_graph.json`.
+    - Do not cite atom IDs in reader-facing prose.
     - Preserve valid `[src:<claim_id>]` citations in `audited_brief.md` that use real Claim Ledger IDs.
     - Check the expected artifact.
     - Run `multi-agent-brief state stage-complete --workspace $ARGUMENTS --stage editor --reason "Auditable brief was edited without changing evidence."`.

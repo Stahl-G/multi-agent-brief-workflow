@@ -370,6 +370,9 @@ roles:
     - Write concise analytical Chinese or English according to workspace language.
     - Keep all added facts within Claim Ledger support.
     - Use frozen claim_ledger.json and approved analysis artifacts as the evidence base.
+    - When present, read output/intermediate/atomic_claim_graph.json only as an
+      optional experimental structural decomposition aid for frozen Claim Ledger
+      claims; it is not source evidence or proof of support.
     - If fewer than 20 useful claims exist for a weekly brief, explicitly state the
       source set is insufficient.
     hard_rules:
@@ -379,11 +382,18 @@ roles:
     - Read only frozen claim_ledger.json as the Claim Ledger input. Do not read
       claim_drafts.json; it is a pre-freeze writer artifact, not Analyst evidence.
     - Do not create, edit, rewrite, or repair claim_ledger.json.
+    - Do not create, edit, rewrite, repair, or extend atomic_claim_graph.json.
+    - If atomic_claim_graph.json is absent or invalid, do not repair it; continue
+      from the frozen Claim Ledger unless Orchestrator routes a separate repair
+      or human review.
     - Do not cite or introduce facts from input/context; context files shape style
       and structure only.
     - Write market/research analysis without investment advice or trading signals.
     - Cite only claim IDs that exist in the ledger.
     - Preserve real [src:<claim_id>] citations exactly.
+    - Do not cite atom IDs in reader-facing prose; cite only Claim Ledger IDs.
+    - Do not introduce material atoms absent from frozen claim_ledger.json and,
+      when present and valid, atomic_claim_graph.json.
     - Do not write the placeholder <claim_id> literally; use only claim IDs that exist in claim_ledger.json.
     - Always read claim_ledger.json before writing.
     - Do not edit output/intermediate/analyst_draft_snapshot.md; it is written by
@@ -473,6 +483,9 @@ roles:
       audit in background).
     - Keep editorial changes within existing facts.
     - Keep claim IDs unchanged.
+    - When present, read output/intermediate/atomic_claim_graph.json only as an
+      optional experimental structural decomposition aid for frozen Claim Ledger
+      claims; it is not source evidence or proof of support.
     - 'Treat output/intermediate/analyst_draft_snapshot.md as the factual boundary:
       restructure and clarify output/intermediate/audited_brief.md, but do not
       introduce new numbers, named entities, dates, causal claims, or new [src:<claim_id>]
@@ -484,10 +497,17 @@ roles:
     - Own output/intermediate/audited_brief.md after editing; do not modify
       output/intermediate/analyst_draft_snapshot.md.
     - Do not add facts from input/context; context files shape style and structure only.
+    - Do not create, edit, rewrite, repair, or extend atomic_claim_graph.json.
+    - If atomic_claim_graph.json is absent or invalid, do not repair it; keep
+      the frozen Claim Ledger and analyst_draft_snapshot.md as the factual
+      boundary unless Orchestrator routes a separate repair or human review.
     - Do not add new facts, numbers, named entities, dates, causal claims, or citations.
+    - Do not introduce material atoms absent from frozen claim_ledger.json and,
+      when present and valid, atomic_claim_graph.json.
     - Keep claim citations with supported statements.
     - Preserve caveats and uncertainty.
     - Preserve real [src:<claim_id>] citations exactly.
+    - Do not cite atom IDs in reader-facing prose; preserve only Claim Ledger IDs.
     - Do not write the placeholder <claim_id> literally; preserve only existing claim IDs.
   formatter:
     stage: pipeline
