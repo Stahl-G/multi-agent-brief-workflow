@@ -154,8 +154,16 @@ class ClaimSupportMatrixContract(Contract):
             violations.append(FieldViolation(field="rows", error="must be a non-empty list"))
 
         seen_row_ids: set[str] = set()
+        seen_relation_keys: set[tuple[str, str | None]] = set()
         for row_idx, row in enumerate(rows):
-            violations.extend(_validate_row_entry(row, idx=row_idx, seen_row_ids=seen_row_ids))
+            violations.extend(
+                _validate_row_entry(
+                    row,
+                    idx=row_idx,
+                    seen_row_ids=seen_row_ids,
+                    seen_relation_keys=seen_relation_keys,
+                )
+            )
 
         return violations
 
@@ -169,6 +177,7 @@ def _validate_row_entry(
     *,
     idx: int,
     seen_row_ids: set[str],
+    seen_relation_keys: set[tuple[str, str | None]],
 ) -> list[FieldViolation]:
     prefix = f"rows[{idx}]"
     violations: list[FieldViolation] = []
@@ -216,6 +225,17 @@ def _validate_row_entry(
         violations.append(FieldViolation(field=f"{prefix}.evidence_span_id", error="required field is missing"))
     else:
         violations.extend(_validate_evidence_span_id(row.get("evidence_span_id"), prefix=prefix))
+        relation_key = _relation_key(atom_id=row.get("atom_id"), evidence_span_id=row.get("evidence_span_id"))
+        if relation_key is not None:
+            if relation_key in seen_relation_keys:
+                evidence_label = relation_key[1] if relation_key[1] is not None else "null"
+                violations.append(
+                    FieldViolation(
+                        field=f"{prefix}.evidence_span_id",
+                        error=f"duplicate atom_evidence_relation:{relation_key[0]}:{evidence_label}",
+                    )
+                )
+            seen_relation_keys.add(relation_key)
 
     _validate_enum_field(
         row,
@@ -268,6 +288,26 @@ def _validate_evidence_span_id(
     if not EVIDENCE_SPAN_ID_RE.match(str(value).strip()):
         return [FieldViolation(field=f"{prefix}.evidence_span_id", error="must match ESP-###-## or be null")]
     return []
+
+
+def _relation_key(
+    *,
+    atom_id: Any,
+    evidence_span_id: Any,
+) -> tuple[str, str | None] | None:
+    if not _non_empty_string(atom_id):
+        return None
+    normalized_atom_id = str(atom_id).strip()
+    if not ATOM_ID_RE.match(normalized_atom_id):
+        return None
+    if evidence_span_id is None:
+        return (normalized_atom_id, None)
+    if not _non_empty_string(evidence_span_id):
+        return None
+    normalized_span_id = str(evidence_span_id).strip()
+    if not EVIDENCE_SPAN_ID_RE.match(normalized_span_id):
+        return None
+    return (normalized_atom_id, normalized_span_id)
 
 
 def _validate_enum_field(

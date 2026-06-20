@@ -3602,6 +3602,26 @@ def test_state_check_marks_malformed_claim_support_matrix_invalid(tmp_path):
     assert record["validation_result"] == "claim_support_matrix_schema_error:schema_version"
 
 
+def test_state_check_marks_duplicate_claim_support_matrix_relation_invalid(tmp_path):
+    ws = _write_workspace(tmp_path)
+    initialize_runtime_state(workspace=ws, repo_workdir=ROOT)
+    payload = json.loads(_valid_claim_support_matrix_payload())
+    duplicate = dict(payload["rows"][0])
+    duplicate["row_id"] = "CSM-0002"
+    duplicate["support_label"] = "unsupported"
+    duplicate["support_strength"] = "none"
+    duplicate["required_action"] = "block_release"
+    payload["rows"].append(duplicate)
+    _write_json_artifact(ws, "claim_support_matrix.json", json.dumps(payload) + "\n")
+
+    state = check_runtime_state(workspace=ws, repo_workdir=ROOT)
+    record = state["artifact_registry"]["artifacts"]["claim_support_matrix"]
+
+    assert record["status"] == "invalid"
+    assert record["required"] is False
+    assert record["validation_result"] == "claim_support_matrix_schema_error:rows[1].evidence_span_id"
+
+
 def test_state_check_marks_url_only_evidence_span_registry_runtime_invalid(tmp_path):
     ws = _write_workspace(tmp_path)
     initialize_runtime_state(workspace=ws, repo_workdir=ROOT)
