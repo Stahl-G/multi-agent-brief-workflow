@@ -54,6 +54,16 @@ manual:
     return ws
 
 
+def _assert_atomic_graph_boundary(text: str) -> None:
+    normalized = " ".join(text.replace("`", "").split())
+    assert "atomic_claim_graph.json" in normalized
+    assert "optional experimental structural decomposition aid" in normalized
+    assert "not source evidence or proof of support" in normalized
+    assert "Do not cite atom IDs" in normalized or "do not cite atom IDs" in normalized
+    assert "create, edit, rewrite, repair, or extend" in normalized or "create/edit/repair/extend" in normalized
+    assert "material atoms absent" in normalized
+
+
 # ---------------------------------------------------------------------------
 # Cron plan structure tests
 # ---------------------------------------------------------------------------
@@ -213,6 +223,10 @@ def test_hermes_skill_has_delegation_sequence():
     assert "Only the final joined" in skill
 
 
+def test_hermes_skill_contains_atomic_graph_boundary():
+    skill = render_hermes_skill()
+    _assert_atomic_graph_boundary(skill)
+
 
 def test_hermes_skill_no_prepare_reference():
     skill = render_hermes_skill()
@@ -233,6 +247,15 @@ def test_hermes_prompt_keeps_user_inside_hermes():
     assert "Hermes" in prompt
     assert "Orchestrator main agent" in prompt
     assert "configs/orchestrator_contract.yaml" in prompt
+
+
+def test_hermes_prompt_contains_atomic_graph_boundary():
+    prompt = render_hermes_prompt(
+        workspace="/tmp/test-ws",
+        repo_workdir="/tmp/test-repo",
+        venv_path="/tmp/test-repo/.venv/bin/activate",
+    )
+    _assert_atomic_graph_boundary(prompt)
     assert "configs/stage_specs.yaml" in prompt
     assert "configs/artifact_contracts.yaml" in prompt
     assert "retry_stage" in prompt
@@ -357,8 +380,10 @@ def test_cli_hermes_skill_writes_file(tmp_path: Path):
     result = main(["hermes", "skill", "--output", str(output)])
     assert result == 0
     assert output.exists()
-    assert "Skills" not in output.read_text(encoding="utf-8").splitlines()[0]
-    assert "multi-agent-brief-hermes" in output.read_text(encoding="utf-8")
+    text = output.read_text(encoding="utf-8")
+    assert "Skills" not in text.splitlines()[0]
+    assert "multi-agent-brief-hermes" in text
+    _assert_atomic_graph_boundary(text)
 
 
 def test_cli_hermes_sync_sources_enables_cached_package(tmp_path: Path):
@@ -408,6 +433,7 @@ def test_cli_hermes_prompt_output_contains_workflow_steps(capsys, tmp_path: Path
     assert "delegate_task" in output
     assert "Orchestrator main agent" in output
     assert "configs/orchestrator_contract.yaml" in output
+    _assert_atomic_graph_boundary(output)
     assert "retry_stage" in output
     assert "scout" in output
     assert "multi-agent-brief gates check" in output

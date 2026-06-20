@@ -493,8 +493,8 @@ def _manual_handoff(workspace: Path, repo: Path, venv: str) -> AgentHandoff:
             "7. Use the 'claim-ledger' subagent to write output/intermediate/claim_drafts.json, then run "
             f"multi-agent-brief state freeze-claim-ledger --workspace {ws_path} to create output/intermediate/claim_ledger.json, "
             f"then run multi-agent-brief state stage-complete --workspace {ws_path} --stage claim-ledger --reason \"Claim Ledger was frozen from claim drafts.\"\n"
-            "8. Use the 'analyst' subagent to read frozen output/intermediate/claim_ledger.json only, never claim_drafts.json, and write output/intermediate/audited_brief.md as a working draft; analyst stage-complete freezes output/intermediate/analyst_draft_snapshot.md\n"
-            "9. Use the 'editor' / Delivery Editor subagent to own and polish the final output/intermediate/audited_brief.md without adding facts\n"
+            "8. Use the 'analyst' subagent to read frozen output/intermediate/claim_ledger.json only, never claim_drafts.json, and write output/intermediate/audited_brief.md as a working draft. If output/intermediate/atomic_claim_graph.json is present and valid, use it only as an optional experimental structural decomposition aid; it is not source evidence or proof of support. Do not cite atom IDs, create/edit/repair/extend the graph, or introduce material atoms absent from the frozen Claim Ledger and valid graph. Analyst stage-complete freezes output/intermediate/analyst_draft_snapshot.md\n"
+            "9. Use the 'editor' / Delivery Editor subagent to own and polish the final output/intermediate/audited_brief.md without adding facts. If output/intermediate/atomic_claim_graph.json is present and valid, use it only as an optional experimental structural decomposition aid; if absent or invalid, do not repair it. Do not cite atom IDs, create/edit/repair/extend the graph, or introduce material atoms absent from the frozen Claim Ledger and valid graph\n"
             "10. Use the 'auditor' subagent to audit against frozen output/intermediate/claim_ledger.json, including overstatement and support-strength calibration, and write output/intermediate/audit_report.json\n"
             f"11. multi-agent-brief gates check --workspace {ws_path} --stage auditor\n"
             f"12. multi-agent-brief state check --workspace {ws_path} --strict\n"
@@ -671,6 +671,20 @@ def _build_stage_completion_protocol(repo: Path) -> dict[str, Any]:
                     "drop duplicates silently during chunk join",
                 ],
             }
+        contract_notes: list[str] = []
+        if stage_id in {"analyst", "editor"}:
+            contract_notes.extend([
+                (
+                    "Optional atomic graph: output/intermediate/atomic_claim_graph.json may be read only "
+                    "when present and valid as an optional experimental structural decomposition aid for "
+                    "frozen Claim Ledger claims; it is not source evidence or proof of support."
+                ),
+                (
+                    "No-new-atom boundary: do not cite atom IDs, do not create/edit/repair/extend "
+                    "atomic_claim_graph.json, and do not introduce material atoms absent from the frozen "
+                    "Claim Ledger and valid graph; if the graph is absent or invalid, do not repair it."
+                ),
+            ])
         independent_topologies = [
             topology
             for topology in _ordered_role_topologies()
@@ -686,6 +700,7 @@ def _build_stage_completion_protocol(repo: Path) -> dict[str, Any]:
             "freeze_input_artifacts": freeze_input_artifacts,
             "pre_completion_transactions": pre_completion_transactions,
             "parallel_chunk_contract": parallel_chunk_contract,
+            "contract_notes": contract_notes,
             "topology_satisfaction": topology_satisfaction,
             "independent_completion_topologies": independent_topologies,
             "allowed_decisions": [str(item) for item in (stage.get("allowed_decisions") or [])],
@@ -788,6 +803,8 @@ def _render_stage_completion_protocol_prompt(protocol: dict[str, Any]) -> str:
             forbidden = ", ".join(str(item) for item in (chunk_contract.get("forbidden") or []))
             if forbidden:
                 lines.append(f"  chunk forbidden: {forbidden}")
+        for note in stage.get("contract_notes") or []:
+            lines.append(f"  contract note: {note}")
         if freeze_inputs != "none":
             lines.append(f"  role MUST produce freeze input: {freeze_inputs}")
         for transaction in stage.get("pre_completion_transactions") or []:
@@ -1127,6 +1144,11 @@ def write_handoff_artifacts(handoff: AgentHandoff, workspace: Path) -> tuple[Pat
                 md_content.append(f"  - `{transaction.get('transaction')}`: `{transaction.get('command')}`")
                 md_content.append(f"    - Reads: {reads}")
                 md_content.append(f"    - Writes: {writes}")
+        contract_notes = stage.get("contract_notes") or []
+        if contract_notes:
+            md_content.append("- Contract notes:")
+            for note in contract_notes:
+                md_content.append(f"  - {note}")
         chunk_contract = stage.get("parallel_chunk_contract")
         if isinstance(chunk_contract, dict):
             md_content.append("- Optional chunk parallelism:")

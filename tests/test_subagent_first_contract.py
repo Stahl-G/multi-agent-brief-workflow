@@ -386,6 +386,46 @@ def test_runtime_prompts_do_not_use_literal_claim_id_placeholder():
         assert "[src:CLAIM_ID]" not in text, f"literal placeholder leaked in {path}"
 
 
+def test_analyst_editor_contracts_use_atomic_graph_as_optional_no_new_atom_aid():
+    prompt_paths = [
+        "configs/agent_roles.yaml",
+        ".agents/skills/analyst/SKILL.md",
+        ".agents/skills/editor/SKILL.md",
+        ".agents/hermes-skills/multi-agent-brief-hermes/references/delegate-task-sequence.md",
+        ".claude/commands/generate-brief.md",
+        ".claude/agents/analyst.md",
+        ".claude/agents/editor.md",
+        ".codex/agents/analyst.toml",
+        ".codex/agents/editor.toml",
+        ".opencode/commands/generate-brief.md",
+        ".opencode/agents/brief-analyst.md",
+        ".opencode/agents/brief-editor.md",
+    ]
+    for path in prompt_paths:
+        text = _read(path)
+        normalized = " ".join(text.replace("`", "").split())
+        assert "atomic_claim_graph.json" in normalized, f"atomic graph boundary missing in {path}"
+        assert "optional experimental structural decomposition aid" in normalized, (
+            f"optional aid wording missing in {path}"
+        )
+        assert "not source evidence" in normalized, f"source-evidence boundary missing in {path}"
+        assert "proof of support" in normalized, f"support-proof boundary missing in {path}"
+        assert "create, edit, rewrite, repair, or extend" in normalized, (
+            f"graph mutation ban missing in {path}"
+        )
+        assert "absent or invalid" in normalized, f"absent/invalid graph boundary missing in {path}"
+        assert "Do not cite atom IDs in reader-facing prose" in normalized, (
+            f"atom citation ban missing in {path}"
+        )
+        assert "material atoms absent" in normalized, f"no-new-atom boundary missing in {path}"
+
+
+def test_stage_protocol_does_not_require_atomic_claim_graph():
+    text = _read(".claude/commands/generate-brief.md")
+    assert "MUST produce: atomic_claim_graph" not in text
+    assert "required input artifact: atomic_claim_graph" not in text.lower()
+
+
 def test_formatter_contract_forbids_patching_frozen_audited_brief():
     prompt_paths = [
         "configs/agent_roles.yaml",

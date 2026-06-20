@@ -19,6 +19,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   coverage and Claim Ledger type-consistency checks. The graph remains optional
   and this does not perform semantic atomization or support-sufficiency
   assessment.
+- **Analyst/Editor Atomic Claim Graph boundary**: Analyst and Editor contracts
+  now treat present `atomic_claim_graph.json` files as optional experimental
+  decomposition aids only. The Claim Ledger remains the factual evidence base;
+  this adds no no-new-atom checker, gate, CLI, or support-sufficiency claim.
 
 ## [0.9.0] — 2026-06-19
 

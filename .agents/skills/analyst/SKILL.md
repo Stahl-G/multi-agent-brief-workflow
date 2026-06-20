@@ -24,6 +24,7 @@ Use after the Claim Ledger freeze transaction has produced `claim_ledger.json`.
 - `user.md`
 - `config.yaml`
 - frozen `output/intermediate/claim_ledger.json`
+- optional `output/intermediate/atomic_claim_graph.json` when present and valid
 - `output/input_classification.json` when present, especially entries under `context`
 
 ## Outputs
@@ -37,6 +38,9 @@ Use after the Claim Ledger freeze transaction has produced `claim_ledger.json`.
   freeze it into `output/intermediate/analyst_draft_snapshot.md` during
   `state stage-complete --stage analyst`.
 - Use frozen `output/intermediate/claim_ledger.json` entries as the factual evidence base.
+- When present and valid, use `output/intermediate/atomic_claim_graph.json` only
+  as an optional experimental structural decomposition aid for frozen Claim
+  Ledger claims. It is not source evidence and is not proof of support.
 - Do not read `output/intermediate/claim_drafts.json`; it is a pre-freeze writer
   artifact, not Analyst evidence.
 - Use `input/context/` files listed in `output/input_classification.json` only as
@@ -49,6 +53,14 @@ Use after the Claim Ledger freeze transaction has produced `claim_ledger.json`.
   such as `# **Heading**` or `### *Heading*`.
 - Do not cite or introduce facts from `input/context/`; those files do not enter
   the Claim Ledger.
+- Do not create, edit, rewrite, repair, or extend
+  `output/intermediate/atomic_claim_graph.json`.
+- If `atomic_claim_graph.json` is absent or invalid, do not repair it; continue
+  from the frozen Claim Ledger unless Orchestrator routes a separate repair or
+  human review.
+- Do not cite atom IDs in reader-facing prose; cite only Claim Ledger IDs.
+- Do not introduce material atoms absent from the frozen Claim Ledger and, when
+  present and valid, `atomic_claim_graph.json`.
 - Do not write or edit `output/intermediate/analyst_draft_snapshot.md`; it is a
   Python control artifact.
 - Do not create, edit, rewrite, or repair `output/intermediate/claim_ledger.json`.
