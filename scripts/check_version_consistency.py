@@ -152,6 +152,16 @@ def main() -> int:
             _error(f"Hermes skill SKILL.md version mismatch")
             errors.append("SKILL.md")
 
+    # 10. Homebrew Formula source archive tag
+    formula_path = ROOT / "Formula" / "multi-agent-brief.rb"
+    if formula_path.exists():
+        formula = _read(formula_path)
+        if f"refs/tags/{tag}.tar.gz" in formula:
+            _ok("Homebrew formula tag")
+        else:
+            _error(f"Homebrew formula URL does not point at {tag}")
+            errors.append("Formula/multi-agent-brief.rb")
+
     # ── report ──
     print()
     if errors:
