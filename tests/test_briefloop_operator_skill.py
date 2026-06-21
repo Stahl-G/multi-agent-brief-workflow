@@ -42,7 +42,7 @@ def test_claude_projection_is_thin_wrapper() -> None:
 
 def test_version_matrix_tracks_current_surface_without_planned_overclaim() -> None:
     text = _read(CANONICAL / "references" / "version-matrix.md")
-    assert "v0.9.3" in text
+    assert "v0.9.4" in text
     assert "multi-agent-brief" in text
     assert "/mabw" in text
     assert "No `/briefloop` user command" in text
@@ -52,6 +52,8 @@ def test_version_matrix_tracks_current_surface_without_planned_overclaim() -> No
     assert "Planned / Not Yet Authoritative" in text
     assert "Atomic Claim Graph" in text
     assert "Claim-Support Matrix" in text
+    assert "Semantic Assessment Report" in text
+    assert "proposal-only Claim-Support Matrix delta projection" in text
     assert "MABW-080 experiment operations" in text
     assert "MABW-080 / BriefLoop-090 experiment operations" not in text
     assert "BriefLoop-090 is a future readiness/fresh-rerun label" in text

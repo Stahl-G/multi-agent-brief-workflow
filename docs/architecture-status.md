@@ -47,6 +47,13 @@ runtime capability, not a breaking rename.
   findings. This is a support-record control plane only, not automatic support
   assessment, semantic proof, release eligibility, or a support-sufficiency
   gate.
+- Experimental Semantic Assessment Report controls can validate an optional
+  `output/intermediate/semantic_assessment_report.json` schema, validate
+  machine-checkable references to Claim Ledger claims, Atomic Claim Graph atoms,
+  and Evidence Span Registry spans, project rows into proposal-only
+  Claim-Support Matrix delta candidates, and surface read-only status counts.
+  This is a proposal surface only, not accepted support truth, adjudication
+  queue creation, delivery gating, release authority, or semantic proof.
 - Python commands provide setup, source tooling, validation, audit support, and rendering.
 - Hermes, Claude Code, Codex, OpenCode, and manual fallback are treated as agent runtime surfaces.
 - Input governance can extract supported non-text input documents to Markdown with MinerU, then separates evidence from feedback, instructions, and background context.

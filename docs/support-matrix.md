@@ -38,6 +38,7 @@ validation unless that is stated separately.
 | Atomic Claim Graph (`atomic_claim_graph.json` schema, coverage/type validation, Analyst/Editor contract boundary, and reader-residue projection) | Experimental |
 | Evidence Span Registry (`evidence_span_registry.json` schema, source-pack byte binding, archive projection, and Source Appendix trace view) | Experimental |
 | Claim-Support Matrix (`claim_support_matrix.json` schema, cross-artifact validation, and gate/status projection from explicit support records) | Experimental |
+| Semantic Assessment Report (`semantic_assessment_report.json` schema, reference validation, proposal projection, and status visibility) | Experimental |
 | Provenance projection control file (`provenance_graph.json`) | Supported |
 | Finalize delivery bundle (`output/delivery/brief.md` + configured DOCX) | Supported |
 | Source appendix audit/control copy (`source_appendix.md`) | Supported |
@@ -109,14 +110,14 @@ deterministic type consistency, and reader-facing atom/process residue. The
 graph is not source evidence, not a reader citation surface, and not support
 sufficiency.
 
-Evidence Span Registry support is experimental in the v0.9.3 release.
+Evidence Span Registry support is experimental since the v0.9.3 release.
 When present, `evidence_span_registry.json` is validated as an optional span
 trace artifact; Python checks schema, source-pack byte binding, raw-excerpt
 hashes, optional offsets, archive hash projection, and Source Appendix trace
 surfaces. It is not source-support judgment, not a Claim-Support Matrix, not a
 support-sufficiency gate, and not a reader citation contract.
 
-Claim-Support Matrix support is experimental in the v0.9.3 release.
+Claim-Support Matrix support is experimental since the v0.9.3 release.
 When present, `claim_support_matrix.json` is validated as an optional
 atom-to-evidence support-record artifact; Python checks schema vocabulary,
 Claim Ledger / Atomic Claim Graph / Evidence Span Registry references,
@@ -127,6 +128,17 @@ support records. Missing matrices remain non-blocking, and invalid matrices are
 not consumed for support projection findings. This does not assess semantic
 support, create automatic support records, decide release eligibility, or prove
 truth.
+
+Semantic Assessment Report support is experimental in the v0.9.4 release.
+When present, `semantic_assessment_report.json` is validated as an optional
+proposal artifact; Python checks schema, assessor/row provenance,
+Claim Ledger / Atomic Claim Graph / Evidence Span Registry references, and
+high-materiality `llm_only` adjudication flags. Present valid reports can
+project proposal-only Claim-Support Matrix delta candidates and read-only status
+counts. Missing reports remain non-blocking, and invalid reports are not
+projected. This does not create support truth, write the Claim-Support Matrix,
+create adjudication queue items, gate delivery, decide release eligibility, or
+prove truth.
 
 Source appendices are reader-facing delivery artifacts generated during finalize from cited Claim Ledger sources. They are not source evidence, semantic proof, runtime state, provenance graphs, or workflow gates.
 

@@ -1,7 +1,7 @@
 # BriefLoop Skill Version Matrix
 
 Skill contract version: `briefloop-operator-skill-v0.1`
-Last verified against BriefLoop runtime: `v0.9.3`
+Last verified against BriefLoop runtime: `v0.9.4`
 Public project name: BriefLoop
 Historical implementation name: MABW
 
@@ -22,6 +22,10 @@ Historical implementation name: MABW
     - schema and vocabulary validation
     - cross-artifact reference validation
     - read-only status projection and quality-gate findings from explicit rows
+  - Semantic Assessment Report: `semantic_assessment_report.json`
+    - schema and reference validation
+    - proposal-only Claim-Support Matrix delta projection
+    - read-only status visibility
 - MABW-080 experiment operations:
   - `validate-case`
   - `scaffold-condition`
