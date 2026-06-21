@@ -41,6 +41,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and vocabulary foundation only; it does not assess support, validate
   cross-artifact references, route repairs, add gates, decide release
   eligibility, or claim support sufficiency.
+- **Claim-Support Matrix policy projection helper**: added a pure deterministic
+  helper that projects explicit matrix rows into atom-level policy signals such
+  as blocking rows, weak support, downgrade requirements, adjudication
+  requirements, and inference-framing requirements. This does not assess
+  semantic support, write workspace state, add gates/status integration, or
+  decide release eligibility.
 
 ## [0.9.1] — 2026-06-20
 

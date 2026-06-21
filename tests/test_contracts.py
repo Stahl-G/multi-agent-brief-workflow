@@ -510,6 +510,42 @@ class TestClaimSupportMatrixContract:
 
         assert ClaimSupportMatrixContract.validate(matrix) == []
 
+    def test_rejects_duplicate_atom_span_relation(self):
+        matrix = _valid_claim_support_matrix()
+        second = dict(matrix["rows"][0])
+        second["row_id"] = "CSM-0002"
+        second["support_label"] = "unsupported"
+        second["support_strength"] = "none"
+        second["required_action"] = "block_release"
+        matrix["rows"].append(second)
+
+        violations = ClaimSupportMatrixContract.validate(matrix)
+
+        assert any(
+            violation.field == "rows[1].evidence_span_id"
+            and "duplicate atom_evidence_relation:AC-0001-01:ESP-001-01" in violation.error
+            for violation in violations
+        )
+
+    def test_rejects_duplicate_atom_null_span_relation(self):
+        matrix = _valid_claim_support_matrix()
+        matrix["rows"][0]["evidence_span_id"] = None
+        matrix["rows"][0]["support_label"] = "unsupported"
+        matrix["rows"][0]["support_strength"] = "none"
+        matrix["rows"][0]["required_action"] = "block_release"
+        second = dict(matrix["rows"][0])
+        second["row_id"] = "CSM-0002"
+        second["support_label"] = "insufficient_evidence"
+        matrix["rows"].append(second)
+
+        violations = ClaimSupportMatrixContract.validate(matrix)
+
+        assert any(
+            violation.field == "rows[1].evidence_span_id"
+            and "duplicate atom_evidence_relation:AC-0001-01:null" in violation.error
+            for violation in violations
+        )
+
     @pytest.mark.parametrize(
         ("field", "value"),
         [
