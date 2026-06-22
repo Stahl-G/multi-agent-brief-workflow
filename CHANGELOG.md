@@ -29,6 +29,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   registry, workflow, and events atomically, and remains fail-closed after
   finalize or downstream completion.
 
+### Fixed
+
+- **Enriched source type rendering**: claim metadata enrichment now mirrors
+  imported `source_url` and non-default `source_type` into the Claim Ledger
+  fields read by Source Appendix rendering, so non-local imported sources are
+  not displayed as default local-file sources.
+
 ## [0.10.1] — 2026-06-22
 
 ### Added
