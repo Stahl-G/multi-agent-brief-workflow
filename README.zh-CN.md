@@ -360,8 +360,9 @@ multi-agent-brief run --workspace <workspace> --skip-doctor
 
 * **v0.7**：改进账本（Improvement Ledger）——把人工撰写、人工批准的读者偏好按运行冻结为 Improvement Memory snapshot；不做自动学习、FrictionStore 自动检测或输出质量承诺。
 * **v0.8**：measurement、fast-rerun、role topology 与 evaluation——计时投影、同证据 rerun、default / strict topology 选择，以及不削弱问责 artifacts 的受控实验工具。
-* **v0.9**：support sufficiency 与 brief-loop engineering。当前路径：Atomic Claim Graph -> Evidence Span Registry -> Claim-Support Matrix -> Semantic Assessment Report proposal surface。后续 v0.9.x 候选包括 human adjudication、coverage/omission gates、semantic regression、release eligibility、quality packs 和 finding-to-repair workflows。
-* **v1.0**：稳定基线——schema 冻结、CLI 表面冻结、安全威胁模型、明确支持边界。
+* **v0.9**：support-sufficiency core。当前路径：Atomic Claim Graph -> Evidence Span Registry -> Claim-Support Matrix -> Semantic Assessment Report proposal surface。human adjudication、coverage/omission gates、semantic regression、release eligibility、quality packs 和 finding-to-repair workflows 均延后为 semantic-governance surfaces，不再是默认下一阶段实现主线。
+* **v0.10**：Product OS 和 report packs——ReportSpec、ReportPack registry、zero-config workspaces、template rendering、delivery/audit bundle projection、`evidence_extract`、SourceHub Lite、release modes 和 human approval records，但不削弱问责主链。
+* **v1.0**：稳定 weekly/monthly/evidence-extract CLI product——report contracts 冻结、兼容策略和安全威胁模型。
 
 完整版见 [docs/roadmap.zh-CN.md](docs/roadmap.zh-CN.md)；已实现 vs 目标的区分见 [docs/architecture-status.zh-CN.md](docs/architecture-status.zh-CN.md)。
 

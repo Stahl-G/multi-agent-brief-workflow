@@ -39,6 +39,7 @@ validation unless that is stated separately.
 | Evidence Span Registry (`evidence_span_registry.json` schema, source-pack byte binding, archive projection, and Source Appendix trace view) | Experimental |
 | Claim-Support Matrix (`claim_support_matrix.json` schema, cross-artifact validation, and gate/status projection from explicit support records) | Experimental |
 | Semantic Assessment Report (`semantic_assessment_report.json` schema, reference validation, proposal projection, and status visibility) | Experimental |
+| ReportSpec / ReportPack registry (`report_spec.yaml` contract, packaged `market_weekly` and `management_monthly` pack registry, and read-only `packs` / `validate-report-spec` CLI) | Experimental |
 | Provenance projection control file (`provenance_graph.json`) | Supported |
 | Finalize delivery bundle (`output/delivery/brief.md` + configured DOCX) | Supported |
 | Source appendix audit/control copy (`source_appendix.md`) | Supported |
@@ -139,6 +140,13 @@ counts. Missing reports remain non-blocking, and invalid reports are not
 projected. This does not create support truth, write the Claim-Support Matrix,
 create adjudication queue items, gate delivery, decide release eligibility, or
 prove truth.
+
+ReportSpec / ReportPack registry support is experimental. Product-layer report
+contracts can describe report type metadata and required control-spine
+preservation, and the CLI can list packaged packs or validate a
+`report_spec.yaml`. This does not create workspaces, run subagents, run gates,
+render templates, deliver reports, authorize publication, add a `/briefloop`
+slash command, or provide a lite/force-deliver path.
 
 Source appendices are reader-facing delivery artifacts generated during finalize from cited Claim Ledger sources. They are not source evidence, semantic proof, runtime state, provenance graphs, or workflow gates.
 

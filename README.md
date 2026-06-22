@@ -227,9 +227,11 @@ The runtime orchestrator is named after the office in the Chinese ritual-music t
 
 **v0.8**: measurement, fast-rerun, role topology, and evaluation — timing projection, same-evidence reruns, default/strict topology choices, and controlled experiment tooling without weakening accountable artifacts.
 
-**v0.9**: support sufficiency and brief-loop engineering. Current path: Atomic Claim Graph -> Evidence Span Registry -> Claim-Support Matrix -> Semantic Assessment Report proposal surface. Later v0.9.x candidates include human adjudication, coverage/omission gates, semantic regression, release eligibility, quality packs, and finding-to-repair workflows.
+**v0.9**: support-sufficiency core. Current path: Atomic Claim Graph -> Evidence Span Registry -> Claim-Support Matrix -> Semantic Assessment Report proposal surface. Human adjudication, coverage/omission gates, semantic regression, release eligibility, quality packs, and finding-to-repair workflows are deferred semantic-governance surfaces, not the next default implementation track.
 
-**v1.0**: frozen schemas and CLI surface, compatibility policy, and threat model.
+**v0.10**: Product OS and report packs — ReportSpec, ReportPack registry, zero-config workspaces, template rendering, delivery/audit bundle projection, `evidence_extract`, SourceHub Lite, release modes, and human approval records without weakening the accountability spine.
+
+**v1.0**: stable weekly/monthly/evidence-extract CLI product, frozen report contracts, compatibility policy, and threat model.
 
 ## 🤝 Collaboration
 
