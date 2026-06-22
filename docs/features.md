@@ -11,13 +11,14 @@ Status labels:
 - **Experimental**: implemented but not yet a stable v1.0 contract.
 - **Roadmap**: planned or scoped, not an implemented capability.
 
-Current baseline: **v0.9.3**.
+Current baseline: **v0.9.4**.
 
 ## Start And Operate A Brief
 
 | Function | What it does | Status | Entry points |
 |---|---|---|---|
 | Workspace onboarding | Collects brief purpose, audience, cadence, source mode, and output preferences before creating a workspace | Always on | `multi-agent-brief onboard`, `multi-agent-brief init --from-onboarding` |
+| Product workspace skeleton | Creates a conservative local-first workspace and `report_spec.yaml` from an experimental packaged ReportPack | Experimental | `briefloop new market-weekly <workspace>`, `multi-agent-brief new market-weekly <workspace>` |
 | Claude writer command | Gives writers a five-verb interface for normal work | Optional, first-class writer path | `/briefloop new`, `/briefloop run`, `/briefloop status`, `/briefloop feedback`, `/briefloop deliver`; `/mabw` remains a compatibility alias |
 | Runtime handoff | Builds the runtime handoff for the external orchestrator and subagents | Always on | `multi-agent-brief run --workspace <workspace>` |
 | Status view | Shows current stage, blockers, artifacts, timing buckets, and next safe actions | Always on | `/briefloop status`, `multi-agent-brief status` |
@@ -78,7 +79,7 @@ into a truth-proof system.
 | Atomic Claim Graph | Optional atom-level decomposition of Claim Ledger entries | Experimental | Automatic atomization correctness |
 | Evidence Span Registry | Optional source-pack byte binding and span trace records | Experimental | Semantic support proof |
 | Claim-Support Matrix | Optional atom-to-evidence support rows with validation and gate/status projection | Experimental | Automatic support assessment, truth proof, or release eligibility |
-| Semantic support assessment proposals | Structured multi-assessor proposal layer for support labels | Roadmap | A single model judge deciding truth |
+| Semantic support assessment proposals | Structured multi-assessor proposal layer for support labels | Experimental | A single model judge deciding truth |
 | Human adjudication queue | Human resolution of disputed support assessments | Roadmap | Automatic adjudication |
 | Release eligibility | Explicit release/reference classification from support and evaluation records | Roadmap | Hidden quality claims |
 

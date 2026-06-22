@@ -3,11 +3,12 @@
 from __future__ import annotations
 
 import json
+import sys
 from pathlib import Path
 
 import yaml
 
-from multi_agent_brief.cli.main import main
+from multi_agent_brief.cli.main import build_parser, main
 from multi_agent_brief.contracts.registry import ContractRegistry
 from multi_agent_brief.contracts.schemas.report_spec import ReportSpecContract
 from multi_agent_brief.product.report_pack import validate_report_pack_payload
@@ -157,3 +158,97 @@ def test_validate_report_spec_cli_rejects_malformed_yaml_without_traceback(
     assert "invalid YAML" in payload["errors"][0]["error"]
     assert "Traceback" not in captured.out
     assert "Traceback" not in captured.err
+
+
+def test_new_report_pack_workspace_creates_local_first_skeleton(tmp_path: Path, capsys) -> None:
+    workspace = tmp_path / "weekly"
+
+    assert main(["new", "market-weekly", str(workspace)]) == 0
+
+    output = capsys.readouterr().out
+    assert "Created BriefLoop workspace" in output
+    assert "briefloop run --workspace" in output
+    assert (workspace / "config.yaml").exists()
+    assert (workspace / "sources.yaml").exists()
+    assert (workspace / "report_spec.yaml").exists()
+    assert (workspace / "user.md").exists()
+    assert (workspace / ".gitignore").exists()
+    assert (workspace / "input" / "sources").is_dir()
+
+    spec = yaml.safe_load((workspace / "report_spec.yaml").read_text(encoding="utf-8"))
+    assert spec["report_pack"] == "market_weekly"
+    assert spec["source_policy"]["mode"] == "local_first"
+    assert spec["source_policy"]["hidden_autonomous_crawling"] is False
+
+    sources = yaml.safe_load((workspace / "sources.yaml").read_text(encoding="utf-8"))
+    assert sources["source_strategy"]["profile"] == "conservative"
+    assert sources["source_strategy"]["enabled_providers"] == ["manual"]
+    assert sources["web_search"]["enabled"] is False
+    assert sources["web_search"]["mode"] == "disabled"
+
+
+def test_new_report_pack_workspace_overrides_are_written_to_report_spec(
+    tmp_path: Path,
+    capsys,
+) -> None:
+    workspace = tmp_path / "custom-weekly"
+
+    assert main(
+        [
+            "new",
+            "market-weekly",
+            str(workspace),
+            "--title",
+            "Custom Weekly",
+            "--audience",
+            "投资委员会",
+            "--language",
+            "zh-CN",
+        ]
+    ) == 0
+    capsys.readouterr()
+
+    config = yaml.safe_load((workspace / "config.yaml").read_text(encoding="utf-8"))
+    spec = yaml.safe_load((workspace / "report_spec.yaml").read_text(encoding="utf-8"))
+
+    assert config["project"]["name"] == "Custom Weekly"
+    assert config["project"]["audience"] == "投资委员会"
+    assert config["language"]["output"] == "zh-CN"
+    assert spec["title"] == "Custom Weekly"
+    assert spec["audience"]["label"] == "投资委员会"
+    assert spec["audience"]["language"] == "zh-CN"
+
+
+def test_new_report_pack_workspace_rejects_unknown_pack(tmp_path: Path, capsys) -> None:
+    workspace = tmp_path / "missing"
+
+    assert main(["new", "missing-pack", str(workspace)]) == 1
+
+    output = capsys.readouterr().out
+    assert "unknown report pack" in output
+    assert "market_weekly" in output
+    assert not workspace.exists()
+
+
+def test_new_report_pack_workspace_does_not_overwrite_report_spec_without_force(
+    tmp_path: Path,
+    capsys,
+) -> None:
+    workspace = tmp_path / "weekly"
+    workspace.mkdir()
+    (workspace / "report_spec.yaml").write_text("existing: true\n", encoding="utf-8")
+
+    assert main(["new", "market-weekly", str(workspace)]) == 1
+
+    output = capsys.readouterr().out
+    assert "Refusing to overwrite existing file" in output
+    assert (workspace / "report_spec.yaml").read_text(encoding="utf-8") == "existing: true\n"
+
+
+def test_briefloop_alias_help_uses_alias_program_name(monkeypatch) -> None:
+    monkeypatch.setattr(sys, "argv", ["/tmp/briefloop"])
+
+    help_text = build_parser().format_help()
+
+    assert help_text.startswith("usage: briefloop ")
+    assert not help_text.startswith("usage: multi-agent-brief ")

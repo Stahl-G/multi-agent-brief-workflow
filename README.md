@@ -209,6 +209,14 @@ multi-agent-brief claude install --repo-workdir .
 
 Three on-ramps, one spine. There is no lite mode: entry cost drops, the accountability spine does not. Claim Ledger, gates, human delivery, event trace, and frozen snapshots stay present.
 
+For a local-first product skeleton from a packaged experimental report pack:
+
+```bash
+briefloop new market-weekly ./weekly-brief
+```
+
+This creates editable workspace files and `report_spec.yaml`; it does not run agents, render templates, deliver, or approve publication.
+
 | Path | Time | What you do |
 |---|---:|---|
 | Look once | ~5 min | Read the reference runs, run the demos |

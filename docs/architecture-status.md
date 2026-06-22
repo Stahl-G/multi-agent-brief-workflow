@@ -56,12 +56,15 @@ breaking rename.
   This is a proposal surface only, not accepted support truth, adjudication
   queue creation, delivery gating, release authority, or semantic proof.
 - Experimental ReportSpec / ReportPack controls can validate a product-layer
-  `report_spec.yaml` and inspect packaged report pack contracts such as
-  `market_weekly` and `management_monthly`. These contracts describe report
+  `report_spec.yaml`, inspect packaged report pack contracts such as
+  `market_weekly` and `management_monthly`, and create conservative
+  local-first workspace skeletons with `briefloop new <pack> <workspace>` /
+  `multi-agent-brief new <pack> <workspace>`. These contracts describe report
   type metadata over the existing Claim Ledger, artifact registry, gates, event
   log, archive, source appendix, support records, frozen-artifact integrity, and
-  human delivery approval spine. They do not create workspaces, run stages,
-  render templates, bypass gates, deliver reports, or authorize publication.
+  human delivery approval spine. Workspace skeleton creation does not run
+  stages, render templates, bypass gates, deliver reports, or authorize
+  publication.
 - Python commands provide setup, source tooling, validation, audit support, and rendering.
 - Hermes, Claude Code, Codex, OpenCode, and manual fallback are treated as agent runtime surfaces.
 - Input governance can extract supported non-text input documents to Markdown with MinerU, then separates evidence from feedback, instructions, and background context.
