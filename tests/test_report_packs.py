@@ -187,6 +187,38 @@ def test_new_report_pack_workspace_creates_local_first_skeleton(tmp_path: Path, 
     assert sources["web_search"]["mode"] == "disabled"
 
 
+def test_new_report_pack_workspace_overrides_are_written_to_report_spec(
+    tmp_path: Path,
+    capsys,
+) -> None:
+    workspace = tmp_path / "custom-weekly"
+
+    assert main(
+        [
+            "new",
+            "market-weekly",
+            str(workspace),
+            "--title",
+            "Custom Weekly",
+            "--audience",
+            "投资委员会",
+            "--language",
+            "zh-CN",
+        ]
+    ) == 0
+    capsys.readouterr()
+
+    config = yaml.safe_load((workspace / "config.yaml").read_text(encoding="utf-8"))
+    spec = yaml.safe_load((workspace / "report_spec.yaml").read_text(encoding="utf-8"))
+
+    assert config["project"]["name"] == "Custom Weekly"
+    assert config["project"]["audience"] == "投资委员会"
+    assert config["language"]["output"] == "zh-CN"
+    assert spec["title"] == "Custom Weekly"
+    assert spec["audience"]["label"] == "投资委员会"
+    assert spec["audience"]["language"] == "zh-CN"
+
+
 def test_new_report_pack_workspace_rejects_unknown_pack(tmp_path: Path, capsys) -> None:
     workspace = tmp_path / "missing"
 

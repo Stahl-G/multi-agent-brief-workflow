@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+from copy import deepcopy
 from pathlib import Path
 from typing import Any
 
@@ -219,11 +220,15 @@ def _normalize_pack_id(value: str) -> str:
 def _create_report_pack_workspace(*, target: Path, pack: Any, args: argparse.Namespace) -> None:
     from multi_agent_brief.cli.init_wizard import InitProfile, create_workspace
 
-    spec = dict(pack.default_report_spec)
+    spec = deepcopy(dict(pack.default_report_spec))
     audience = spec.get("audience") if isinstance(spec.get("audience"), dict) else {}
     title = args.title or str(spec.get("title") or pack.display_name or "BriefLoop Report")
     language = args.language or str(audience.get("language") or "en-US")
     reader_label = args.audience or str(audience.get("label") or "business reader")
+    spec["title"] = title
+    spec["audience"] = dict(audience)
+    spec["audience"]["label"] = reader_label
+    spec["audience"]["language"] = language
     cadence = str(spec.get("cadence") or "weekly")
     outputs = (
         spec.get("outputs")
