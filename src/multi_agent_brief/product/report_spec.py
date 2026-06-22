@@ -30,8 +30,22 @@ class ReportSpecValidationResult:
         }
 
 
+class ReportSpecLoadError(ValueError):
+    """Controlled error for unreadable or malformed ReportSpec payloads."""
+
+    def __init__(self, *, path: Path, message: str) -> None:
+        super().__init__(message)
+        self.path = path
+        self.message = message
+
+
 def load_report_spec(path: str | Path) -> dict[str, Any]:
-    data = yaml.safe_load(Path(path).read_text(encoding="utf-8"))
+    spec_path = Path(path)
+    text = spec_path.read_text(encoding="utf-8")
+    try:
+        data = yaml.safe_load(text)
+    except yaml.YAMLError as exc:
+        raise ReportSpecLoadError(path=spec_path, message=f"invalid YAML: {exc}") from exc
     if not isinstance(data, dict):
         return {}
     return data

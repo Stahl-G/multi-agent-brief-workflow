@@ -138,3 +138,22 @@ def test_validate_report_spec_cli_rejects_disabled_spine(tmp_path: Path, capsys)
     payload = json.loads(capsys.readouterr().out)
     assert payload["ok"] is False
     assert any(item["field"] == "control_spine.event_log" for item in payload["errors"])
+
+
+def test_validate_report_spec_cli_rejects_malformed_yaml_without_traceback(
+    tmp_path: Path,
+    capsys,
+) -> None:
+    spec_path = tmp_path / "report_spec.yaml"
+    spec_path.write_text("schema_version: [\n", encoding="utf-8")
+
+    assert main(["validate-report-spec", str(spec_path), "--json"]) == 1
+
+    captured = capsys.readouterr()
+    payload = json.loads(captured.out)
+    assert payload["ok"] is False
+    assert payload["errors"][0]["field"] == str(spec_path)
+    assert payload["errors"][0]["severity"] == "error"
+    assert "invalid YAML" in payload["errors"][0]["error"]
+    assert "Traceback" not in captured.out
+    assert "Traceback" not in captured.err

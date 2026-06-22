@@ -8,7 +8,11 @@ from pathlib import Path
 from typing import Any
 
 from multi_agent_brief.product.report_registry import ReportPackRegistry
-from multi_agent_brief.product.report_spec import load_report_spec, validate_report_spec_payload
+from multi_agent_brief.product.report_spec import (
+    ReportSpecLoadError,
+    load_report_spec,
+    validate_report_spec_payload,
+)
 
 
 def register_packs(subparsers: argparse._SubParsersAction) -> None:
@@ -70,6 +74,13 @@ def handle_validate_report_spec(args: argparse.Namespace) -> int:
         payload = load_report_spec(path)
     except OSError as exc:
         result = {"ok": False, "errors": [{"field": str(path), "error": str(exc), "severity": "error"}]}
+        _print_payload("validate-report-spec", result, as_json=getattr(args, "json", False))
+        return 1
+    except ReportSpecLoadError as exc:
+        result = {
+            "ok": False,
+            "errors": [{"field": str(exc.path), "error": exc.message, "severity": "error"}],
+        }
         _print_payload("validate-report-spec", result, as_json=getattr(args, "json", False))
         return 1
 
