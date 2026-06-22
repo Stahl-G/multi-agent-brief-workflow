@@ -249,7 +249,7 @@ Public scope:
   and adjudication needs, but they do not mutate the Claim-Support Matrix,
   create adjudication queue items, gate delivery, decide release eligibility, or
   prove truth.
-- Keep `multi-agent-brief`, `/mabw`, Python package/module paths, artifact names, workspace formats, and MABW experiment IDs compatible during the v0.9 period.
+- Keep `multi-agent-brief`, the `briefloop` shell alias, `/briefloop`, `/mabw`, Python package/module paths, artifact names, workspace formats, and MABW experiment IDs compatible during the v0.9 period.
 - Keep unsupported channels clearly labeled as experimental, interface-only, or CLI-only.
 
 Deferred semantic-governance surfaces:
@@ -276,7 +276,8 @@ Public scope:
 - Introduce initial report packs such as `market_weekly`,
   `management_monthly`, and later `evidence_extract`.
 - Improve zero-config workspace creation while keeping `multi-agent-brief` as
-  the stable engine CLI and `/mabw` as the compatibility writer command.
+  the stable engine CLI, `briefloop` as its shell alias, `/briefloop` as the
+  writer command, and `/mabw` as the compatibility writer command.
 - Separate reader-facing delivery bundles from audit/control bundles as an
   export/projection layer, without silently moving or deleting existing control
   artifacts.
@@ -292,7 +293,8 @@ Non-goals:
 - no IR/disclosure readiness claim
 - no report pack that bypasses Claim Ledger, gates, event log, archive,
   reader-final gate, source appendix, or human delivery
-- no `/briefloop` slash-command conflict with the BriefLoop skill surface
+- no confusion between the `/briefloop` writer command and the BriefLoop skill
+  operator protocol surface
 - no automatic public release or external publication command
 
 ### v1.0 — Stable Weekly/Monthly Brief Product

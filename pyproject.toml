@@ -28,6 +28,7 @@ dev = [
 
 [project.scripts]
 multi-agent-brief = "multi_agent_brief.cli.main:main"
+briefloop = "multi_agent_brief.cli.main:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]

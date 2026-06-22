@@ -16,6 +16,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and `multi-agent-brief validate-report-spec <report_spec.yaml>`. These are
   contract/registry surfaces only; they do not create workspaces, run stages,
   render templates, bypass gates, deliver reports, or authorize publication.
+- **BriefLoop compatibility aliases**: added `briefloop` as a shell CLI alias
+  for `multi-agent-brief`, and `/briefloop` as a Claude writer command alias
+  for the existing five-verb `/mabw` surface. The original CLI and `/mabw`
+  command remain supported.
 
 ## [0.9.4] — 2026-06-22
 

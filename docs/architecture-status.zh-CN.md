@@ -3,8 +3,8 @@
 本页用于区分当前实现状态和 roadmap 目标。按 roadmap 做开发前，先读这里。
 
 公开命名说明：BriefLoop 是 v0.9 兼容期的公开项目名。MABW 仍是实现血统和兼容面，
-包括 `multi-agent-brief`、`/mabw`、Python package/module 路径、artifact 名称、
-workspace 格式和实验 ID。本页描述当前已实现 runtime 能力，不代表 breaking rename。
+包括 `multi-agent-brief`、`briefloop` shell alias、`/briefloop`、`/mabw`、
+Python package/module 路径、artifact 名称、workspace 格式和实验 ID。本页描述当前已实现 runtime 能力，不代表 breaking rename。
 
 ## 已实现的公开基线
 

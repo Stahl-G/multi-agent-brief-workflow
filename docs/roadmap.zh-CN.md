@@ -244,7 +244,7 @@ Non-goals:
   - Evidence Span Registry
   - Claim-Support Matrix
 - 保持 Semantic Assessment Report 为 proposal-only 实验面：semantic assessment 可以提出 support labels、uncertainty、disagreement 和 adjudication needs，但不能修改 Claim-Support Matrix、创建 adjudication queue items、阻断 delivery、决定 release eligibility 或证明真理。
-- v0.9 兼容期内保留 `multi-agent-brief`、`/mabw`、Python package/module paths、artifact names、workspace formats 和 MABW experiment IDs。
+- v0.9 兼容期内保留 `multi-agent-brief`、`briefloop` shell alias、`/briefloop`、`/mabw`、Python package/module paths、artifact names、workspace formats 和 MABW experiment IDs。
 - 对不稳定能力继续标注 experimental、interface-only 或 CLI-only。
 
 延后处理的 semantic-governance surfaces：
@@ -266,7 +266,7 @@ Non-goals:
 
 - 新增 ReportSpec 和 ReportPack 契约，让 BriefLoop 知道正在生产哪类报告。
 - 引入初始 report packs，例如 `market_weekly`、`management_monthly`，以及后续 `evidence_extract`。
-- 改善 zero-config workspace 创建，同时保留 `multi-agent-brief` 作为稳定 engine CLI，保留 `/mabw` 作为兼容 writer command。
+- 改善 zero-config workspace 创建，同时保留 `multi-agent-brief` 作为稳定 engine CLI，保留 `briefloop` 作为 shell alias，保留 `/briefloop` 作为 writer command，保留 `/mabw` 作为兼容 writer command。
 - 把 reader-facing delivery bundle 和 audit/control bundle 分成 export/projection 层，但不静默移动或删除现有控制 artifacts。
 - 本地文件和简单来源配置继续是一等路径；大范围 connector 和 UI 工作放到后面。
 - 为内部 review workflow 增加 release modes 和 human approval records，但不声称外部发布授权。
@@ -277,7 +277,7 @@ Non-goals：
 - CLI product path 跑通前，不做 heavy UI。
 - 不声称 IR/disclosure readiness。
 - 不允许 report pack 绕过 Claim Ledger、gates、event log、archive、reader-final gate、source appendix 或 human delivery。
-- 不引入和 BriefLoop skill surface 冲突的 `/briefloop` slash command。
+- 不混淆 `/briefloop` writer command 和 BriefLoop skill operator protocol surface。
 - 不做自动 external publication 或 public release command。
 
 ### v1.0 — Stable Weekly/Monthly Brief Product

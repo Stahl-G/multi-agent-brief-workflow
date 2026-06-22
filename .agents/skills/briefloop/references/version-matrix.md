@@ -8,8 +8,11 @@ Historical implementation name: MABW
 ## Supported Current Surfaces
 
 - CLI: `multi-agent-brief`
-- Claude command: `/mabw`
-- No `/briefloop` user command; BriefLoop skill is an agent protocol surface.
+- Shell CLI alias: `briefloop`
+- Claude writer command: `/briefloop`
+- Compatibility Claude command: `/mabw`
+- BriefLoop skill is an agent protocol surface, not the `/briefloop` slash
+  command implementation.
 - Python package/module path: `multi_agent_brief`
 - Distribution package name: `multi-agent-brief-workflow`
 - Assessment targets:
@@ -32,7 +35,7 @@ Historical implementation name: MABW
   - `multi-agent-brief validate-report-spec <report_spec.yaml>`
   - packaged ReportPacks: `market_weekly`, `management_monthly`
   - no workspace creation, template rendering, delivery, publication approval,
-    or `/briefloop` slash command
+    or gate bypass
 - MABW-080 experiment operations:
   - `validate-case`
   - `scaffold-condition`
@@ -46,6 +49,8 @@ Historical implementation name: MABW
 
 - Do not rename runtime surfaces unless the task is explicitly a compatibility
   migration.
+- Keep `multi-agent-brief`, `briefloop`, `/briefloop`, and `/mabw` as
+  compatibility surfaces unless the task is explicitly a breaking migration.
 - Do not describe deferred semantic-governance surfaces or v0.10 Product OS
   roadmap goals as completed unless the support matrix and current CLI expose
   the exact surface.

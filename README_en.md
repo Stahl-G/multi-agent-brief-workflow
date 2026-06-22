@@ -17,8 +17,8 @@ Formerly **MABW — Multi-Agent Brief Workflow**.
 
 Current version: **v0.9.4**
 Public framing: **BriefLoop / MABW compatibility period**
-Current CLI: `multi-agent-brief`
-Current Claude command: `/mabw` (BriefLoop writer command)
+Current CLI: `multi-agent-brief` (`briefloop` shell alias also works)
+Current Claude command: `/briefloop` (`/mabw` compatibility alias also works)
 
 ## AI briefs that can answer "where did this number come from?"
 
@@ -84,7 +84,7 @@ The writer-facing model is not "how many control surfaces exist." Each run is me
 
 | Question | What it records | Where you see it |
 |---|---|---|
-| What stage this run is in | Current stage, missing artifacts, blockers, and the next safe action | `/mabw status`, `workflow_state.json`, `agent_handoff.md` |
+| What stage this run is in | Current stage, missing artifacts, blockers, and the next safe action | `/briefloop status`, `workflow_state.json`, `agent_handoff.md` |
 | Where each number came from | Claim Ledger records, source dates, audit results, and stage-scoped gate findings | `claim_ledger.json`, `gates/*_quality_gate_report.json`, `source_appendix.md` |
 | What reader preferences were approved | Human-approved reader guidance only; unapproved suggestions do not take effect | `improvement/ledger.jsonl`, `improvement_memory_snapshot.md` |
 | What checks are guarding delivery | Completion transactions, reader-final gate, source appendix, and delivery checks | `finalize_report.json`, `reader_clean`, `state finalize-complete` |
@@ -202,12 +202,14 @@ multi-agent-brief claude install --repo-workdir .
 Then use the five writer verbs inside Claude Code CLI or the Claude Desktop Code tab:
 
 ```text
-/mabw new
-/mabw run <workspace>
-/mabw status <workspace>
-/mabw feedback <workspace> [text-or-file]
-/mabw deliver <workspace>
+/briefloop new
+/briefloop run <workspace>
+/briefloop status <workspace>
+/briefloop feedback <workspace> [text-or-file]
+/briefloop deliver <workspace>
 ```
+
+`/mabw` remains a compatibility alias for the same five writer verbs.
 
 See [docs/claude-code-quickstart.md](docs/claude-code-quickstart.md) for the full Claude Code path. Writer-facing operator notes are available in [docs/golden-path.md](docs/golden-path.md) and [docs/weekly-use.md](docs/weekly-use.md); Chinese versions are [docs/golden-path.zh-CN.md](docs/golden-path.zh-CN.md) and [docs/weekly-use.zh-CN.md](docs/weekly-use.zh-CN.md).
 
@@ -269,15 +271,15 @@ Then use the five writer verbs inside Claude Code CLI or the Claude Desktop Code
 tab:
 
 ```text
-/mabw new
-/mabw run <workspace>
-/mabw status <workspace>
-/mabw feedback <workspace> [text-or-file]
-/mabw deliver <workspace>
+/briefloop new
+/briefloop run <workspace>
+/briefloop status <workspace>
+/briefloop feedback <workspace> [text-or-file]
+/briefloop deliver <workspace>
 ```
 
-`/mabw` is the BriefLoop writer command. The name is retained for compatibility
-during the BriefLoop transition. `status` calls the read-only
+`/briefloop` is the BriefLoop writer command. `/mabw` is retained as a
+compatibility alias during the BriefLoop transition. `status` calls the read-only
 `multi-agent-brief status` helper, `feedback` records and triages without
 acting downstream, and `deliver` must go through gates, the reader-final gate,
 and `state finalize-complete`. `/generate-brief <workspace>` remains an
