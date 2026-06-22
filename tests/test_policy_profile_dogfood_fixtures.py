@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 from copy import deepcopy
 from pathlib import Path
 from typing import Any
@@ -21,6 +22,7 @@ from multi_agent_brief.quality_gates import state as quality_gate_state
 
 ROOT = Path(__file__).resolve().parent.parent
 FIXTURE_PATH = ROOT / "tests" / "fixtures" / "policy_profile_dogfood" / "cases.json"
+_URL_RE = re.compile(r"https?://[^\s\"'<>]+")
 
 
 def _load_fixture_bundle() -> dict[str, Any]:
@@ -82,8 +84,16 @@ def test_policy_profile_dogfood_fixture_bundle_is_public_safe_and_bounded() -> N
     assert "file://" not in rendered.lower()
     assert "truth proof" in bundle["metadata"]["boundary"]
     assert "release readiness" in bundle["metadata"]["boundary"]
-    for url in _urls_from_fixture(rendered):
+    urls = _urls_from_fixture(bundle)
+    assert urls
+    for url in urls:
         assert urlparse(url).hostname == "example.com"
+
+
+def test_policy_profile_dogfood_url_guard_extracts_json_string_values() -> None:
+    payload = {"source_url": "https://example.com/targetco-demo", "note": "synthetic URL"}
+
+    assert _urls_from_fixture(payload) == ["https://example.com/targetco-demo"]
 
 
 @pytest.mark.parametrize("case", _fixture_cases(), ids=lambda case: case["case_id"])
@@ -175,5 +185,17 @@ def test_policy_profile_dogfood_finalize_reader_forbidden_phrase(
     assert report["reader_clean"]["sample_findings"][0]["kind"] == expected["reader_clean_finding_kind"]
 
 
-def _urls_from_fixture(rendered: str) -> list[str]:
-    return [part.strip('",') for part in rendered.split() if part.startswith("https://")]
+def _urls_from_fixture(value: Any) -> list[str]:
+    if isinstance(value, str):
+        return [match.rstrip(".,);]") for match in _URL_RE.findall(value)]
+    if isinstance(value, dict):
+        urls: list[str] = []
+        for item in value.values():
+            urls.extend(_urls_from_fixture(item))
+        return urls
+    if isinstance(value, list):
+        urls = []
+        for item in value:
+            urls.extend(_urls_from_fixture(item))
+        return urls
+    return []
