@@ -20,6 +20,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   for `multi-agent-brief`, and `/briefloop` as a Claude writer command alias
   for the existing five-verb `/mabw` surface. The original CLI and `/mabw`
   command remain supported.
+- **Experimental product workspace skeletons**: added
+  `multi-agent-brief new <report-pack> <workspace>` / `briefloop new
+  <report-pack> <workspace>` to create conservative local-first workspaces
+  from packaged ReportPacks, including `report_spec.yaml`, workspace config,
+  source config, user instructions, and input folders. This is setup only; it
+  does not run stages, render templates, deliver reports, approve publication,
+  or bypass gates.
+- **BriefLoop alias help polish**: `briefloop --help` now displays
+  `usage: briefloop` while `multi-agent-brief --help` keeps the stable engine
+  CLI name.
 
 ## [0.9.4] — 2026-06-22
 

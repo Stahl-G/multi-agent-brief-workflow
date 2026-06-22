@@ -7,12 +7,39 @@ import json
 from pathlib import Path
 from typing import Any
 
+import yaml
+
 from multi_agent_brief.product.report_registry import ReportPackRegistry
 from multi_agent_brief.product.report_spec import (
     ReportSpecLoadError,
     load_report_spec,
     validate_report_spec_payload,
 )
+
+
+def register_new_workspace(subparsers: argparse._SubParsersAction) -> None:
+    parser = subparsers.add_parser(
+        "new",
+        help="Create a conservative zero-config workspace from an experimental ReportPack.",
+    )
+    parser.add_argument("report_pack", help="ReportPack id, for example market-weekly.")
+    parser.add_argument("workspace", help="Target workspace directory.")
+    parser.add_argument("--force", action="store_true", help="Overwrite existing init files.")
+    parser.add_argument(
+        "--company",
+        default="Your Organization",
+        help="Organization name placeholder.",
+    )
+    parser.add_argument("--title", help="Brief title. Defaults to the pack title.")
+    parser.add_argument(
+        "--audience",
+        help="Target reader label. Defaults to the pack audience label.",
+    )
+    parser.add_argument(
+        "--language",
+        choices=["en-US", "zh-CN", "bilingual"],
+        help="Brief language. Defaults to the pack audience language.",
+    )
 
 
 def register_packs(subparsers: argparse._SubParsersAction) -> None:
@@ -37,6 +64,43 @@ def register_validate_report_spec(subparsers: argparse._SubParsersAction) -> Non
     )
     parser.add_argument("report_spec", help="Path to report_spec.yaml.")
     parser.add_argument("--json", action="store_true", help="Emit machine-readable JSON.")
+
+
+def handle_new_workspace(args: argparse.Namespace) -> int:
+    registry = ReportPackRegistry.from_package()
+    requested_pack_id = _normalize_pack_id(args.report_pack)
+    pack = registry.get(requested_pack_id)
+    if pack is None:
+        payload = {
+            "ok": False,
+            "error": f"unknown report pack: {args.report_pack}",
+            "available_packs": sorted(registry.pack_ids()),
+        }
+        _print_payload("new", payload, as_json=False)
+        return 1
+
+    target = Path(args.workspace)
+    try:
+        _create_report_pack_workspace(target=target, pack=pack, args=args)
+    except (FileExistsError, OSError) as exc:
+        payload = {
+            "ok": False,
+            "error": str(exc),
+            "workspace": str(target),
+            "report_pack": pack.pack_id,
+        }
+        _print_payload("new", payload, as_json=False)
+        return 1
+
+    payload = {
+        "ok": True,
+        "workspace": str(target),
+        "report_pack": pack.pack_id,
+        "report_spec": str(target / "report_spec.yaml"),
+        "boundary": "zero_config_workspace_skeleton_only",
+    }
+    _print_payload("new", payload, as_json=False)
+    return 0
 
 
 def handle_packs(args: argparse.Namespace) -> int:
@@ -73,7 +137,10 @@ def handle_validate_report_spec(args: argparse.Namespace) -> int:
     try:
         payload = load_report_spec(path)
     except OSError as exc:
-        result = {"ok": False, "errors": [{"field": str(path), "error": str(exc), "severity": "error"}]}
+        result = {
+            "ok": False,
+            "errors": [{"field": str(path), "error": str(exc), "severity": "error"}],
+        }
         _print_payload("validate-report-spec", result, as_json=getattr(args, "json", False))
         return 1
     except ReportSpecLoadError as exc:
@@ -115,6 +182,27 @@ def _print_payload(label: str, payload: dict[str, Any], *, as_json: bool) -> Non
             print("boundary: experimental product-layer contract only")
         else:
             print(payload.get("error"))
+    elif label == "new":
+        if payload.get("ok"):
+            workspace = payload.get("workspace")
+            print(f"Created BriefLoop workspace: {workspace}")
+            print(f"report_pack: {payload.get('report_pack')}")
+            print(f"report_spec: {payload.get('report_spec')}")
+            print(
+                "boundary: product workspace skeleton only; no stages, gates,"
+                " rendering, or delivery were run"
+            )
+            print()
+            print("Next:")
+            print(f"  Add local evidence files under {workspace}/input/sources/")
+            print(f"  briefloop doctor --config {workspace}/config.yaml")
+            print(f"  briefloop run --workspace {workspace}")
+        else:
+            print(f"[new] ok: {payload.get('ok')}")
+            print(payload.get("error"))
+            available = payload.get("available_packs") or []
+            if available:
+                print(f"available_packs: {', '.join(available)}")
     else:
         print(f"report_pack: {payload.get('report_pack')}")
         print(f"report_type: {payload.get('report_type')}")
@@ -122,3 +210,62 @@ def _print_payload(label: str, payload: dict[str, Any], *, as_json: bool) -> Non
             print(f"[error] {error.get('field')}: {error.get('error')}")
         for warning in payload.get("warnings", []):
             print(f"[warning] {warning.get('field')}: {warning.get('error')}")
+
+
+def _normalize_pack_id(value: str) -> str:
+    return value.strip().replace("-", "_")
+
+
+def _create_report_pack_workspace(*, target: Path, pack: Any, args: argparse.Namespace) -> None:
+    from multi_agent_brief.cli.init_wizard import InitProfile, create_workspace
+
+    spec = dict(pack.default_report_spec)
+    audience = spec.get("audience") if isinstance(spec.get("audience"), dict) else {}
+    title = args.title or str(spec.get("title") or pack.display_name or "BriefLoop Report")
+    language = args.language or str(audience.get("language") or "en-US")
+    reader_label = args.audience or str(audience.get("label") or "business reader")
+    cadence = str(spec.get("cadence") or "weekly")
+    outputs = (
+        spec.get("outputs")
+        if isinstance(spec.get("outputs"), list)
+        else ["markdown", "docx"]
+    )
+
+    profile = InitProfile(
+        interface_language=language,
+        output_language=language,
+        company=args.company,
+        role="report_owner",
+        industry=pack.report_type,
+        industry_text=pack.display_name,
+        brief_title=title,
+        audience=reader_label,
+        audience_profile="management",
+        focus_areas=[pack.display_name, "source-backed claims", "reader-ready brief"],
+        task_objective=(
+            f"Prepare a {pack.display_name} using local-first sources and the "
+            "BriefLoop control spine."
+        ),
+        forbidden_sources=[
+            "confidential material not approved for this workspace",
+            "private messages",
+            "credentials",
+            "material non-public information",
+        ],
+        cadence=cadence,
+        selector_max_items=12,
+        output_formats=[str(item) for item in outputs],
+        source_profile="conservative",
+        web_search_enabled=False,
+        web_search_mode="disabled",
+    )
+    spec_path = target / "report_spec.yaml"
+    if spec_path.exists() and not getattr(args, "force", False):
+        raise FileExistsError(
+            f"Refusing to overwrite existing file: {spec_path}. Use --force to overwrite."
+        )
+    create_workspace(target, profile, force=bool(getattr(args, "force", False)))
+    spec_path.write_text(
+        yaml.safe_dump(spec, sort_keys=False, allow_unicode=True),
+        encoding="utf-8",
+    )

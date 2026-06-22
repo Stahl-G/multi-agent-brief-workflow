@@ -211,6 +211,14 @@ Then use the five writer verbs inside Claude Code CLI or the Claude Desktop Code
 
 `/mabw` remains a compatibility alias for the same five writer verbs.
 
+For a shell-level local-first product skeleton from a packaged experimental report pack:
+
+```bash
+briefloop new market-weekly ./weekly-brief
+```
+
+This creates editable workspace files and `report_spec.yaml`; it does not run agents, render templates, deliver, or approve publication.
+
 See [docs/claude-code-quickstart.md](docs/claude-code-quickstart.md) for the full Claude Code path. Writer-facing operator notes are available in [docs/golden-path.md](docs/golden-path.md) and [docs/weekly-use.md](docs/weekly-use.md); Chinese versions are [docs/golden-path.zh-CN.md](docs/golden-path.zh-CN.md) and [docs/weekly-use.zh-CN.md](docs/weekly-use.zh-CN.md).
 
 ## Product Boundary 🧱

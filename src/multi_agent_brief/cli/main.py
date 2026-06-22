@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import argparse
 import sys
+from pathlib import Path
 
 from multi_agent_brief import __version__
 from multi_agent_brief.cli import (
@@ -40,8 +41,13 @@ from multi_agent_brief.cli import (
 )
 
 
-def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(prog="multi-agent-brief")
+def _default_prog() -> str:
+    executable = Path(sys.argv[0]).stem
+    return "briefloop" if executable == "briefloop" else "multi-agent-brief"
+
+
+def build_parser(*, prog: str | None = None) -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(prog=prog or _default_prog())
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     # Runtime handoff launchers
@@ -108,6 +114,7 @@ def build_parser() -> argparse.ArgumentParser:
     runtime_commands.register(subparsers)
 
     # Experimental product-layer report contracts
+    product_commands.register_new_workspace(subparsers)
     product_commands.register_packs(subparsers)
     product_commands.register_validate_report_spec(subparsers)
 
@@ -219,6 +226,9 @@ def _dispatch(args: argparse.Namespace) -> int:
 
     if cmd == "packs":
         return product_commands.handle_packs(args)
+
+    if cmd == "new":
+        return product_commands.handle_new_workspace(args)
 
     if cmd == "validate-report-spec":
         return product_commands.handle_validate_report_spec(args)

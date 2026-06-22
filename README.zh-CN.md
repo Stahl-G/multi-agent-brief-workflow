@@ -209,6 +209,14 @@ multi-agent-brief claude install --repo-workdir .
 
 `/mabw` 保留为同一组五个 writer 动词的兼容 alias。
 
+如果你想从 packaged experimental report pack 创建一个 local-first 产品骨架：
+
+```bash
+briefloop new market-weekly ./weekly-brief
+```
+
+这只会创建可编辑的 workspace 文件和 `report_spec.yaml`；不会运行 agents、渲染模板、交付报告或批准发布。
+
 详细流程见 [docs/claude-code-quickstart.md](docs/claude-code-quickstart.md)。中文写作者可直接看 [BriefLoop 黄金路径](docs/golden-path.zh-CN.md) 和 [我每周怎么用 BriefLoop](docs/weekly-use.zh-CN.md)。
 
 ## 产品承诺与边界 🧱

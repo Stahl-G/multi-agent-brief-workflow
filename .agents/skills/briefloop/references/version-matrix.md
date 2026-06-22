@@ -33,9 +33,10 @@ Historical implementation name: MABW
   - `multi-agent-brief packs list`
   - `multi-agent-brief packs show <pack_id>`
   - `multi-agent-brief validate-report-spec <report_spec.yaml>`
+  - `multi-agent-brief new <pack> <workspace>` / `briefloop new <pack> <workspace>`
+    for conservative local-first workspace skeletons
   - packaged ReportPacks: `market_weekly`, `management_monthly`
-  - no workspace creation, template rendering, delivery, publication approval,
-    or gate bypass
+  - no template rendering, delivery, publication approval, or gate bypass
 - MABW-080 experiment operations:
   - `validate-case`
   - `scaffold-condition`
