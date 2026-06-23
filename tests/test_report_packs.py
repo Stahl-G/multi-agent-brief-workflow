@@ -390,6 +390,36 @@ def test_new_report_pack_workspace_resolves_solar_industry_hint_to_solar_profile
     }
 
 
+def test_new_report_pack_workspace_does_not_treat_generic_wafer_as_solar(
+    tmp_path: Path,
+    capsys,
+) -> None:
+    workspace = tmp_path / "semiconductor-weekly"
+
+    assert main(
+        [
+            "new",
+            "market-weekly",
+            str(workspace),
+            "--industry",
+            "semiconductor wafer manufacturing",
+        ]
+    ) == 0
+    capsys.readouterr()
+
+    spec = yaml.safe_load((workspace / "report_spec.yaml").read_text(encoding="utf-8"))
+
+    assert spec["policy_profile"] == "manufacturing_default"
+    assert spec["policy_profile_resolution"] == {
+        "policy_profile": "manufacturing_default",
+        "source": "industry_resolver",
+        "input": "semiconductor wafer manufacturing",
+        "matched_rule": "manufacturing_keywords",
+        "confidence": "deterministic_exact_or_keyword",
+        "alternatives": [],
+    }
+
+
 def test_new_report_pack_workspace_uses_pack_default_for_ambiguous_industry(
     tmp_path: Path,
     capsys,
