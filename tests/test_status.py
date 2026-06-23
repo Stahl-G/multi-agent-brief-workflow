@@ -218,6 +218,92 @@ def test_status_projects_report_template_section_order_without_writes(tmp_path: 
     assert "runtime_effect=none" in formatted
 
 
+def test_status_projects_report_template_conformance_for_audited_brief(tmp_path: Path) -> None:
+    ws = tmp_path / "ws"
+    intermediate = ws / "output" / "intermediate"
+    intermediate.mkdir(parents=True)
+    (ws / "report_spec.yaml").write_text(
+        yaml.safe_dump(_solar_report_spec(), sort_keys=False),
+        encoding="utf-8",
+    )
+    (intermediate / "audited_brief.md").write_text(
+        "\n".join([
+            "# Cover",
+            "Intro.",
+            "## Executive Summary",
+            "Summary.",
+            "## Supply Chain Price Tracker",
+            "Prices.",
+            "## Demand Installation Outlook",
+            "Demand.",
+            "## Policy Tax Financing",
+            "Policy.",
+            "## FX Rates Tracker",
+            "Rates.",
+            "## Company Implications",
+            "Implications.",
+            "## Source Appendix",
+            "Sources.",
+        ]),
+        encoding="utf-8",
+    )
+
+    status = build_workspace_status(ws)
+    formatted = format_workspace_status(status)
+
+    projection = status["report_template_conformance"]
+    assert projection["status"] == "pass"
+    assert projection["runtime_effect"] == "none"
+    target = next(
+        item for item in projection["targets"]
+        if item["target_artifact"] == "output/intermediate/audited_brief.md"
+    )
+    assert target["status"] == "pass"
+    assert target["missing_sections"] == []
+    assert target["out_of_order_sections"] == []
+    assert target["extra_headings"] == []
+    assert "[status] report_template_conformance: pass" in formatted
+    assert "runtime_effect=none" in formatted
+
+
+def test_status_reports_report_template_conformance_warnings(tmp_path: Path) -> None:
+    ws = tmp_path / "ws"
+    intermediate = ws / "output" / "intermediate"
+    intermediate.mkdir(parents=True)
+    (ws / "report_spec.yaml").write_text(
+        yaml.safe_dump(_solar_report_spec(), sort_keys=False),
+        encoding="utf-8",
+    )
+    (intermediate / "audited_brief.md").write_text(
+        "\n".join([
+            "## Executive Summary",
+            "Summary.",
+            "## Cover",
+            "Cover.",
+            "## Unplanned Commentary",
+            "Extra.",
+        ]),
+        encoding="utf-8",
+    )
+
+    status = build_workspace_status(ws)
+    formatted = format_workspace_status(status)
+
+    projection = status["report_template_conformance"]
+    assert projection["status"] == "warning"
+    target = next(
+        item for item in projection["targets"]
+        if item["target_artifact"] == "output/intermediate/audited_brief.md"
+    )
+    assert target["status"] == "warning"
+    assert "cover" in target["out_of_order_sections"]
+    assert "supply_chain_price_tracker" in target["missing_sections"]
+    assert "Unplanned Commentary" in target["extra_headings"]
+    assert "[status] report_template_conformance: warning" in formatted
+    assert "missing_sections=" in formatted
+    assert "boundary=projection_only" in formatted
+
+
 def test_status_derives_atomic_reader_projection_without_writes(tmp_path: Path) -> None:
     ws = tmp_path / "ws"
     intermediate = ws / "output" / "intermediate"
