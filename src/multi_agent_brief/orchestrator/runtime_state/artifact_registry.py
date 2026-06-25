@@ -17,6 +17,7 @@ from multi_agent_brief.contracts.schemas.claim_draft import ClaimDraftContract
 from multi_agent_brief.contracts.schemas.claim_support_matrix import ClaimSupportMatrixContract
 from multi_agent_brief.contracts.schemas.evidence_span_registry import EvidenceSpanRegistryContract
 from multi_agent_brief.contracts.schemas.semantic_assessment_report import SemanticAssessmentReportContract
+from multi_agent_brief.contracts.schemas.source_evidence_pack_manifest import SourceEvidencePackManifestContract
 from multi_agent_brief.contracts.source_metadata import (
     local_file_without_url_missing_identity,
     source_category_error,
@@ -41,6 +42,10 @@ from multi_agent_brief.orchestrator.runtime_state.evidence_span_registry import 
 from multi_agent_brief.orchestrator.runtime_state.semantic_assessment_report import (
     SEMANTIC_ASSESSMENT_REPORT_VALIDATION_PREFIX,
     validate_semantic_assessment_report_against_artifacts,
+)
+from multi_agent_brief.orchestrator.runtime_state.source_evidence_pack import (
+    SOURCE_EVIDENCE_PACK_VALIDATION_PREFIX,
+    validate_source_evidence_pack_manifest,
 )
 from multi_agent_brief.orchestrator.runtime_state.errors import (
     E_TRANSACTION_INTEGRITY,
@@ -148,6 +153,8 @@ def _validate_artifact(path: Path, fmt: str, artifact_id: str = "") -> tuple[str
                 return _validate_screened_candidates_payload(payload)
             if artifact_id == "input_classification":
                 return _validate_input_classification_payload(payload, artifact_path=path)
+            if artifact_id == "source_evidence_pack_manifest":
+                return _validate_source_evidence_pack_manifest_payload(payload, artifact_path=path)
         elif fmt in {"yaml", "yml"}:
             yaml.safe_load(text)
         elif fmt == "markdown":
@@ -383,6 +390,25 @@ def _validate_input_classification_payload(payload: Any, *, artifact_path: Path)
                     return ARTIFACT_INVALID, f"input_classification_schema_error:{bucket}[{idx}].{key}"
 
     return ARTIFACT_VALID, "valid_input_classification_schema"
+
+
+def _validate_source_evidence_pack_manifest_payload(payload: Any, *, artifact_path: Path) -> tuple[str, str]:
+    if not isinstance(payload, dict):
+        return ARTIFACT_INVALID, "source_evidence_pack_manifest_schema_error:not_object"
+    violations = SourceEvidencePackManifestContract.validate(payload)
+    errors = [violation for violation in violations if violation.severity == "error"]
+    if errors:
+        first = errors[0]
+        return ARTIFACT_INVALID, f"source_evidence_pack_manifest_schema_error:{first.field}"
+
+    workspace = artifact_path.parents[2]
+    reason = validate_source_evidence_pack_manifest(
+        manifest_payload=payload,
+        workspace=workspace,
+    )
+    if reason:
+        return ARTIFACT_INVALID, f"{SOURCE_EVIDENCE_PACK_VALIDATION_PREFIX}:{reason}"
+    return ARTIFACT_VALID, "experimental_source_evidence_pack_manifest"
 
 
 def _workspace_root_for_input_classification(artifact_path: Path) -> Path | None:

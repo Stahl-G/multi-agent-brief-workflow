@@ -56,6 +56,25 @@ artifacts:
       - request_human_review
       - block_run
     retry_or_human_review_decision: retry_stage
+  - artifact_id: source_evidence_pack_manifest
+    path: output/intermediate/source_evidence_pack_manifest.json
+    format: json
+    required: false
+    producer_kind: control_tool
+    producer_stage: source-discovery
+    producer_role: python_tool
+    consumer_stages:
+      - scout
+      - claim-ledger
+      - finalize
+    validation_result: experimental_source_evidence_pack_manifest
+    blocking_reason: ""
+    allowed_decisions:
+      - continue
+      - retry_stage
+      - request_human_review
+      - block_run
+    retry_or_human_review_decision: request_human_review
   - artifact_id: candidate_claims
     path: output/intermediate/candidate_claims.json
     format: json

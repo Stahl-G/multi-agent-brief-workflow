@@ -79,6 +79,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and package-root junk. These archives are deterministic export surfaces only;
   they do not render templates, bypass gates, approve delivery, or authorize
   publication.
+- **Durable source evidence pack materialization**: added experimental
+  `sources materialize-pack` to write explicit manual/cached-package source
+  records into `input/sources/` plus
+  `output/intermediate/source_evidence_pack_manifest.json`. The manifest is
+  optional and hash-validated when present. This materializes source evidence
+  bytes for archive reproducibility only; it does not treat source candidates,
+  search summaries, or model summaries as evidence, and it does not assess
+  semantic support or generate Claim-Support Matrix rows.
 
 ### Fixed
 

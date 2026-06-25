@@ -3,8 +3,13 @@
 from __future__ import annotations
 
 import argparse
+import json
 from pathlib import Path
 
+from multi_agent_brief.sources.evidence_pack import (
+    SourceEvidencePackError,
+    materialize_source_evidence_pack,
+)
 from multi_agent_brief.sources.decider import (
     SourceCandidatesError,
     load_source_discovery,
@@ -67,6 +72,24 @@ def register_sources(subparsers: argparse._SubParsersAction) -> None:
         help="Path to source_candidates.yaml (for --merge).",
     )
 
+    materialize_parser = sources_sub.add_parser(
+        "materialize-pack",
+        help="Materialize explicit durable source records into input/sources/.",
+    )
+    materialize_parser.add_argument(
+        "--config", required=True, help="Path to config.yaml in the workspace."
+    )
+    materialize_parser.add_argument(
+        "--force",
+        action="store_true",
+        help="Replace existing generated source evidence records.",
+    )
+    materialize_parser.add_argument(
+        "--json",
+        action="store_true",
+        help="Emit machine-readable JSON.",
+    )
+
 
 def register_doctor(subparsers: argparse._SubParsersAction) -> None:
     """Register the doctor subparser."""
@@ -82,6 +105,8 @@ def handle_sources(args: argparse.Namespace) -> int:
     """Dispatch sources subcommands."""
     if args.sources_action == "decide":
         return _sources_decide(args)
+    if args.sources_action == "materialize-pack":
+        return _sources_materialize_pack(args)
     return 1
 
 
@@ -372,6 +397,37 @@ def _sources_decide(args: argparse.Namespace) -> int:
     print(
         f"  multi-agent-brief sources decide --config {args.config}"
         " --merge"
+    )
+    return 0
+
+
+def _sources_materialize_pack(args: argparse.Namespace) -> int:
+    try:
+        result = materialize_source_evidence_pack(
+            config_path=args.config,
+            force=bool(args.force),
+        )
+    except SourceEvidencePackError as exc:
+        if args.json:
+            print(json.dumps({"ok": False, "error": str(exc)}, ensure_ascii=False, sort_keys=True))
+        else:
+            print(f"[error] {exc}")
+        return 1
+
+    if args.json:
+        print(json.dumps(result, ensure_ascii=False, indent=2, sort_keys=True))
+        return 0
+
+    print(
+        "[sources] Materialized durable source evidence pack:"
+        f" {result['record_count']} records"
+    )
+    print(f"[sources] Manifest: {result['manifest_path']}")
+    if result.get("error_count"):
+        print(f"[sources] Provider errors recorded: {result['error_count']}")
+    print(
+        "[sources] Boundary: source evidence records are durable inputs, not"
+        " semantic support proof or delivery approval."
     )
     return 0
 

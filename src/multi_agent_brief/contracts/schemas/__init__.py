@@ -15,6 +15,7 @@ from multi_agent_brief.contracts.schemas.evidence_span_registry import EvidenceS
 from multi_agent_brief.contracts.schemas.policy_profile import PolicyProfileContract
 from multi_agent_brief.contracts.schemas.report_spec import ReportSpecContract
 from multi_agent_brief.contracts.schemas.semantic_assessment_report import SemanticAssessmentReportContract
+from multi_agent_brief.contracts.schemas.source_evidence_pack_manifest import SourceEvidencePackManifestContract
 
 __all__ = [
     "AnalysisCardContract",
@@ -29,5 +30,6 @@ __all__ = [
     "PolicyProfileContract",
     "ReportSpecContract",
     "SemanticAssessmentReportContract",
+    "SourceEvidencePackManifestContract",
     "SourceItemContract",
 ]
