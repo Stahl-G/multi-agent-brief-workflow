@@ -7,6 +7,8 @@ import json
 from pathlib import Path, PurePosixPath
 from typing import Any, Mapping
 
+from multi_agent_brief.orchestrator.source_evidence import is_evidence_input_path
+
 SOURCE_EVIDENCE_PACK_VALIDATION_PREFIX = "source_evidence_pack_manifest_validation_error"
 
 
@@ -44,6 +46,8 @@ def validate_source_evidence_pack_manifest(
         assert path is not None
         if not path.exists() or not path.is_file():
             return f"source_file_missing:{source_id}"
+        if not is_evidence_input_path(path, workspace):
+            return f"source_file_not_evidence:{source_id}"
 
         expected_sha = _text(record.get("sha256"))
         if not _valid_sha(expected_sha):

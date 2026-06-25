@@ -87,6 +87,9 @@ def materialize_source_evidence_pack(
             "size_bytes": target.stat().st_size,
             "source_url": payload.get("source_url", ""),
             "source_title": payload.get("source_title", ""),
+            "publisher": payload.get("publisher", ""),
+            "source_type": payload.get("source_type", ""),
+            "source_category": payload.get("source_category", ""),
             "retrieval_source_type": payload.get("retrieval_source_type", ""),
             "underlying_evidence_type": payload.get("underlying_evidence_type", ""),
         })
@@ -171,16 +174,21 @@ def _source_item_payload(item: SourceItem) -> dict[str, Any]:
         "source_category",
         "category",
     ) or "unknown"
+    retrieval_source_type = item.source_type.strip() or "unknown"
     return {
         "schema_version": SOURCE_EVIDENCE_RECORD_SCHEMA,
         "source_id": item.source_id.strip(),
         "source_url": source_url,
         "source_title": source_title,
         "source_name": source_name,
+        "publisher": publisher,
         "publisher_or_institution": publisher,
         "published_at": item.published_at.strip(),
         "retrieved_at": item.retrieved_at.strip() or _utc_now_iso(),
-        "retrieval_source_type": item.source_type.strip() or "unknown",
+        "source_type": retrieval_source_type,
+        "retrieval_source_type": retrieval_source_type,
+        "source_category": underlying_evidence_type,
+        "evidence_category": underlying_evidence_type,
         "underlying_evidence_type": underlying_evidence_type,
         "raw_excerpt": content[:SOURCE_EXCERPT_LIMIT],
         "content": content,

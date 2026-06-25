@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 from pathlib import Path
 
@@ -9,6 +10,7 @@ from multi_agent_brief.cli.main import main
 from multi_agent_brief.orchestrator.runtime_state.operations import (
     check_runtime_state,
     initialize_runtime_state,
+    _source_evidence_metadata_from_file,
 )
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -72,10 +74,21 @@ def test_sources_materialize_pack_writes_durable_source_records_and_manifest(
     assert record_payload["schema_version"] == "mabw.source_evidence_record.v1"
     assert record_payload["source_id"] == "SOURCE_001"
     assert record_payload["source_title"] == "Source 001"
+    assert record_payload["publisher"] == "Regulator Bulletin"
     assert record_payload["publisher_or_institution"] == "Regulator Bulletin"
+    assert record_payload["source_type"] == "local_file"
     assert record_payload["retrieval_source_type"] == "local_file"
+    assert record_payload["source_category"] == "regulator_record"
+    assert record_payload["evidence_category"] == "regulator_record"
     assert record_payload["underlying_evidence_type"] == "regulator_record"
     assert "Durable evidence text." in record_payload["content"]
+    extracted_metadata = _source_evidence_metadata_from_file(
+        record_path,
+        workspace_path=record["path"],
+    )
+    assert extracted_metadata["publisher"] == "Regulator Bulletin"
+    assert extracted_metadata["source_type"] == "local_file"
+    assert extracted_metadata["source_category"] == "regulator_record"
     assert "semantic_support_assessment" in json.loads(
         manifest_path.read_text(encoding="utf-8")
     )["non_goals"]
@@ -153,3 +166,125 @@ def test_source_evidence_pack_manifest_invalid_when_source_record_changes(
         registry_record["validation_result"]
         == "source_evidence_pack_manifest_validation_error:source_sha_mismatch:SOURCE_001"
     )
+
+
+def test_source_evidence_pack_manifest_rejects_non_evidence_placeholder(
+    tmp_path: Path,
+) -> None:
+    ws = _workspace(tmp_path)
+    initialize_runtime_state(workspace=ws, repo_workdir=ROOT)
+    source_dir = ws / "input" / "sources"
+    source_dir.mkdir(parents=True)
+    placeholder = source_dir / "README.md"
+    placeholder.write_text("This file documents the source directory.\n", encoding="utf-8")
+    record = {
+        "source_id": "SOURCE_001",
+        "path": "input/sources/README.md",
+        "sha256": _sha256_file(placeholder),
+        "size_bytes": placeholder.stat().st_size,
+    }
+    _write_manifest(ws, records=[record])
+
+    state = check_runtime_state(workspace=ws, repo_workdir=ROOT)
+    registry_record = state["artifact_registry"]["artifacts"]["source_evidence_pack_manifest"]
+    assert registry_record["status"] == "invalid"
+    assert (
+        registry_record["validation_result"]
+        == "source_evidence_pack_manifest_validation_error:source_file_not_evidence:SOURCE_001"
+    )
+
+
+def test_source_evidence_pack_manifest_rejects_inconsistent_summary_counts(
+    tmp_path: Path,
+    capsys,
+) -> None:
+    ws = _workspace(tmp_path)
+    source = ws / "input" / "raw" / "source-001.md"
+    source.write_text("# Source 001\n\nDurable evidence text.\n", encoding="utf-8")
+    (ws / "sources.yaml").write_text(
+        "source_strategy:\n"
+        "  enabled_providers:\n"
+        "    - manual\n"
+        "manual:\n"
+        "  sources:\n"
+        "    - name: Regulator Bulletin\n"
+        "      path: input/raw/source-001.md\n",
+        encoding="utf-8",
+    )
+    initialize_runtime_state(workspace=ws, repo_workdir=ROOT)
+    assert main([
+        "sources",
+        "materialize-pack",
+        "--config",
+        str(ws / "config.yaml"),
+        "--json",
+    ]) == 0
+    payload = json.loads(capsys.readouterr().out)
+    manifest_path = ws / payload["manifest_path"]
+    manifest_payload = json.loads(manifest_path.read_text(encoding="utf-8"))
+    manifest_payload["record_count"] = 999
+    manifest_payload["error_count"] = 123
+    manifest_path.write_text(
+        json.dumps(manifest_payload, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+
+    state = check_runtime_state(workspace=ws, repo_workdir=ROOT)
+    registry_record = state["artifact_registry"]["artifacts"]["source_evidence_pack_manifest"]
+    assert registry_record["status"] == "invalid"
+    assert registry_record["validation_result"] == "source_evidence_pack_manifest_schema_error:record_count"
+
+    manifest_payload["record_count"] = len(manifest_payload["records"])
+    manifest_payload["error_count"] = 123
+    manifest_path.write_text(
+        json.dumps(manifest_payload, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+    state = check_runtime_state(workspace=ws, repo_workdir=ROOT)
+    registry_record = state["artifact_registry"]["artifacts"]["source_evidence_pack_manifest"]
+    assert registry_record["status"] == "invalid"
+    assert registry_record["validation_result"] == "source_evidence_pack_manifest_schema_error:error_count"
+
+
+def _write_manifest(ws: Path, *, records: list[dict]) -> Path:
+    manifest_path = ws / "output" / "intermediate" / "source_evidence_pack_manifest.json"
+    manifest_path.parent.mkdir(parents=True, exist_ok=True)
+    provider_errors: list[dict] = []
+    manifest = {
+        "schema_version": "mabw.source_evidence_pack_manifest.v1",
+        "source": "test",
+        "source_config_path": "sources.yaml",
+        "durable_provider_names": ["manual"],
+        "record_count": len(records),
+        "error_count": len(provider_errors),
+        "records": records,
+        "provider_errors": provider_errors,
+        "pack_sha256": _sha256_json([
+            {
+                "path": record["path"],
+                "sha256": record["sha256"],
+                "size_bytes": record["size_bytes"],
+                "source_id": record["source_id"],
+            }
+            for record in records
+        ]),
+        "non_goals": ["semantic_support_assessment"],
+    }
+    manifest_path.write_text(
+        json.dumps(manifest, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+    return manifest_path
+
+
+def _sha256_file(path: Path) -> str:
+    h = hashlib.sha256()
+    with path.open("rb") as f:
+        for chunk in iter(lambda: f.read(1024 * 1024), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+
+def _sha256_json(payload: object) -> str:
+    raw = json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+    return hashlib.sha256(raw.encode("utf-8")).hexdigest()

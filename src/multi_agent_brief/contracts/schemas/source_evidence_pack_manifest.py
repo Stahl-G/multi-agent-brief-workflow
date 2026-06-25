@@ -55,6 +55,9 @@ class SourceEvidencePackManifestContract(Contract):
                             "size_bytes": {"type": "integer", "minimum": 1},
                             "source_url": {"type": "string"},
                             "source_title": {"type": "string"},
+                            "publisher": {"type": "string"},
+                            "source_type": {"type": "string"},
+                            "source_category": {"type": "string"},
                             "retrieval_source_type": {"type": "string"},
                             "underlying_evidence_type": {"type": "string"},
                         },
@@ -105,6 +108,14 @@ class SourceEvidencePackManifestContract(Contract):
                         seen_source_ids=seen_source_ids,
                     )
                 )
+            record_count = data.get("record_count")
+            if record_count is not None and record_count != len(records):
+                violations.append(
+                    FieldViolation(
+                        field="record_count",
+                        error=f"must equal records length:{len(records)}",
+                    )
+                )
 
         pack_sha = data.get("pack_sha256")
         if not _valid_sha256(pack_sha):
@@ -118,6 +129,15 @@ class SourceEvidencePackManifestContract(Contract):
         provider_errors = data.get("provider_errors")
         if provider_errors is not None and not isinstance(provider_errors, list):
             violations.append(FieldViolation(field="provider_errors", error="must be a list"))
+        elif provider_errors is not None:
+            error_count = data.get("error_count")
+            if error_count is not None and error_count != len(provider_errors):
+                violations.append(
+                    FieldViolation(
+                        field="error_count",
+                        error=f"must equal provider_errors length:{len(provider_errors)}",
+                    )
+                )
 
         return violations
 
@@ -165,7 +185,14 @@ def _validate_record(
     if type(size) is not int or size <= 0:
         violations.append(FieldViolation(field=f"{prefix}.size_bytes", error="must be a positive integer"))
 
-    for field in ("source_title", "retrieval_source_type", "underlying_evidence_type"):
+    for field in (
+        "source_title",
+        "publisher",
+        "source_type",
+        "source_category",
+        "retrieval_source_type",
+        "underlying_evidence_type",
+    ):
         value = record.get(field)
         if value is not None and not _non_empty_string(value):
             violations.append(FieldViolation(field=f"{prefix}.{field}", error="must be a non-empty string"))
