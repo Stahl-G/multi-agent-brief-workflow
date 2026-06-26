@@ -177,6 +177,7 @@ def test_sources_materialize_pack_infers_cached_retrieval_from_legacy_category(
                 "metadata": {
                     "category": "industry_media",
                     "publisher": "Example Trade Press",
+                    "storage_type": "cached_package",
                 },
             },
             ensure_ascii=False,
