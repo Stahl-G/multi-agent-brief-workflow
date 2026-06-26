@@ -87,6 +87,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   bytes for archive reproducibility only; it does not treat source candidates,
   search summaries, or model summaries as evidence, and it does not assess
   semantic support or generate Claim-Support Matrix rows.
+- **Source taxonomy normalization**: durable source evidence records and Claim
+  Ledger source metadata now preserve separate provider/storage
+  `source_type`, retrieval/page `retrieval_source_type`, reader-facing
+  `source_category`, and `underlying_evidence_type` fields. This clarifies
+  cases such as a news article about a paper versus the paper itself; it is not
+  source trust scoring, semantic support assessment, or a source-policy gate.
 
 ### Fixed
 

@@ -38,7 +38,7 @@ validation unless that is stated separately.
 | Stage-scoped quality gate control files (`gates/auditor_quality_gate_report.json`, `gates/finalize_quality_gate_report.json`; legacy latest projection `quality_gate_report.json`) | Supported |
 | Atomic Claim Graph (`atomic_claim_graph.json` schema, coverage/type validation, Analyst/Editor contract boundary, and reader-residue projection) | Experimental |
 | Evidence Span Registry (`evidence_span_registry.json` schema, source-pack byte binding, archive projection, and Source Appendix trace view) | Experimental |
-| Durable Source Evidence Pack materialization (`sources materialize-pack`, `input/sources/*.json`, and optional `source_evidence_pack_manifest.json` hash validation) | Experimental |
+| Durable Source Evidence Pack materialization (`sources materialize-pack`, `input/sources/*.json`, optional `source_evidence_pack_manifest.json` hash validation, and source taxonomy normalization) | Experimental |
 | Claim-Support Matrix (`claim_support_matrix.json` schema, cross-artifact validation, and gate/status projection from explicit support records) | Experimental |
 | Semantic Assessment Report (`semantic_assessment_report.json` schema, reference validation, proposal projection, and status visibility) | Experimental |
 | ReportSpec / ReportPack / ReportTemplate / PolicyProfile registry, workspace skeletons, and bundle projection (`report_spec.yaml` contract, packaged `market_weekly`, `management_monthly`, and `solar_industry_periodic` pack/template registry, packaged `manufacturing_default`, `solar_manufacturing_default`, `finance_default`, and `internet_default` policy profiles, `packs` / `validate-report-spec` CLI, `new <pack> <workspace>` local-first setup, and `packs bundle` delivery/audit manifest projection) | Experimental |
@@ -182,6 +182,11 @@ recurring reports archive reproducible source bytes. It does not upgrade
 `source_candidates.yaml`, search summaries, model summaries, or source plans
 into evidence; it does not assess semantic support, generate Claim-Support
 Matrix rows, or authorize delivery.
+Generated source evidence records preserve separate provider/storage
+`source_type`, retrieval/page `retrieval_source_type`, reader-facing
+`source_category`, and `underlying_evidence_type` metadata. This taxonomy is
+identity normalization only; it is not trust scoring, source-policy gating,
+semantic support judgment, or compliance review.
 
 Fast-rerun fact-layer import is an experimental control transaction. It can
 import a complete, clean, archived frozen fact layer into a new runtime run for

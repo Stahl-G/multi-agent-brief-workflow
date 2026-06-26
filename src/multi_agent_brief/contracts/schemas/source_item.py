@@ -6,7 +6,14 @@ from typing import Any, ClassVar
 
 from multi_agent_brief.contracts.base import Contract, SchemaRegistry
 from multi_agent_brief.contracts.errors import FieldViolation
-from multi_agent_brief.contracts.source_metadata import VALID_SOURCE_CATEGORIES, source_category_error
+from multi_agent_brief.contracts.source_metadata import (
+    VALID_RETRIEVAL_SOURCE_TYPES,
+    VALID_SOURCE_CATEGORIES,
+    VALID_UNDERLYING_EVIDENCE_TYPES,
+    retrieval_source_type_error,
+    source_category_error,
+    underlying_evidence_type_error,
+)
 
 REQUIRED_FIELDS = {"source_id", "source_name", "source_type", "title", "content"}
 OPTIONAL_FIELDS = {
@@ -17,6 +24,9 @@ OPTIONAL_FIELDS = {
     "reliability",
     "dedupe_key",
     "source_category",
+    "retrieval_source_type",
+    "underlying_evidence_type",
+    "raw_underlying_evidence_type",
     "metadata",
 }
 ALL_FIELDS = REQUIRED_FIELDS | OPTIONAL_FIELDS
@@ -45,6 +55,15 @@ class SourceItemContract(Contract):
                 "reliability": {"type": "string", "enum": ["low", "medium", "high"]},
                 "dedupe_key": {"type": "string"},
                 "source_category": {"type": "string", "enum": sorted(VALID_SOURCE_CATEGORIES)},
+                "retrieval_source_type": {
+                    "type": "string",
+                    "enum": sorted(VALID_RETRIEVAL_SOURCE_TYPES),
+                },
+                "underlying_evidence_type": {
+                    "type": "string",
+                    "enum": sorted(VALID_UNDERLYING_EVIDENCE_TYPES),
+                },
+                "raw_underlying_evidence_type": {"type": "string"},
                 "metadata": {"type": "object"},
             },
             "additionalProperties": True,
@@ -60,6 +79,12 @@ class SourceItemContract(Contract):
         category_error = source_category_error(data.get("source_category"))
         if category_error:
             violations.append(FieldViolation(field="source_category", error=category_error))
+        retrieval_error = retrieval_source_type_error(data.get("retrieval_source_type"))
+        if retrieval_error:
+            violations.append(FieldViolation(field="retrieval_source_type", error=retrieval_error))
+        underlying_error = underlying_evidence_type_error(data.get("underlying_evidence_type"))
+        if underlying_error:
+            violations.append(FieldViolation(field="underlying_evidence_type", error=underlying_error))
         # Unknown fields as warnings
         unknown = set(data.keys()) - ALL_FIELDS
         for field in sorted(unknown):

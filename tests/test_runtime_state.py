@@ -2862,6 +2862,9 @@ def test_freeze_claim_ledger_preserves_draft_provenance_metadata(tmp_path):
                         "source_name": "Example Wire",
                         "publisher": "Example Publisher",
                         "source_category": "news_media",
+                        "retrieval_source_type": "news_media",
+                        "underlying_evidence_type": "media_report",
+                        "raw_underlying_evidence_type": "industry_media",
                         "topic": "demo market",
                     }
                 ],
@@ -2885,6 +2888,9 @@ def test_freeze_claim_ledger_preserves_draft_provenance_metadata(tmp_path):
     assert claim["metadata"]["source_url"] == "https://example.com/news"
     assert claim["metadata"]["source_type"] == "public_web"
     assert claim["metadata"]["source_category"] == "news_media"
+    assert claim["metadata"]["retrieval_source_type"] == "news_media"
+    assert claim["metadata"]["underlying_evidence_type"] == "media_report"
+    assert claim["metadata"]["raw_underlying_evidence_type"] == "industry_media"
     assert claim["metadata"]["topic"] == "demo market"
 
 
@@ -2981,6 +2987,9 @@ def test_enrich_claim_metadata_uses_imported_source_evidence(tmp_path):
             "source_url": "https://example.com/news",
             "source_type": "web_search",
             "source_category": "news_media",
+            "retrieval_source_type": "news_media",
+            "underlying_evidence_type": "media_report",
+            "raw_underlying_evidence_type": "industry_media",
             "topic": "demo market",
         },
     )
@@ -3001,6 +3010,9 @@ def test_enrich_claim_metadata_uses_imported_source_evidence(tmp_path):
     assert claim["metadata"]["source_url"] == "https://example.com/news"
     assert claim["metadata"]["source_type"] == "web_search"
     assert claim["metadata"]["source_category"] == "news_media"
+    assert claim["metadata"]["retrieval_source_type"] == "news_media"
+    assert claim["metadata"]["underlying_evidence_type"] == "media_report"
+    assert claim["metadata"]["raw_underlying_evidence_type"] == "industry_media"
     assert claim["metadata"]["topic"] == "demo market"
     assert claim["source_url"] == "https://example.com/news"
     assert claim["source_type"] == "web_search"
@@ -3071,10 +3083,18 @@ def test_enrich_claim_metadata_rerun_mirrors_source_type_from_existing_metadata(
 
     enriched = json.loads(ledger_path.read_text(encoding="utf-8"))[0]
     assert enriched["metadata"]["source_type"] == "web_search"
+    assert enriched["metadata"]["retrieval_source_type"] == "news_media"
+    assert enriched["metadata"]["underlying_evidence_type"] == "media_report"
+    assert enriched["metadata"]["raw_underlying_evidence_type"] == "news_media"
     assert enriched["source_type"] == "web_search"
     enriched_records = state["claim_ledger_metadata_enrichment"]["enriched_claims"]
     claim_record = next(record for record in enriched_records if record["claim_id"] == "CL-0001")
-    assert claim_record["fields"] == ["source_type"]
+    assert claim_record["fields"] == [
+        "raw_underlying_evidence_type",
+        "retrieval_source_type",
+        "source_type",
+        "underlying_evidence_type",
+    ]
     appendix = build_source_appendix(
         audited_markdown="ExampleCo opened a demo facility. [src:CL-0001]",
         ledger_path=ledger_path,

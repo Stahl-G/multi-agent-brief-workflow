@@ -78,7 +78,11 @@ breaking rename.
   `sources materialize-pack` can materialize explicit manual or cached-package
   source records into `input/sources/` plus an optional hash-validated
   `source_evidence_pack_manifest.json`, giving recurring reports a durable
-  source-evidence layer for archive reproducibility.
+  source-evidence layer for archive reproducibility. Source evidence records
+  preserve separate provider/storage `source_type`, retrieval/page
+  `retrieval_source_type`, reader-facing `source_category`, and
+  `underlying_evidence_type` metadata; this is taxonomy normalization, not
+  trust scoring, source-policy gating, or semantic support judgment.
   Resolved PolicyProfiles may tighten existing deterministic quality-gate
   strictness and reader-final forbidden-phrase checks through a limited adapter.
   These contracts describe report type metadata over the existing Claim Ledger,

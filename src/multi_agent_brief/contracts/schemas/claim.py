@@ -9,9 +9,11 @@ from multi_agent_brief.contracts.errors import FieldViolation
 from multi_agent_brief.contracts.source_metadata import (
     SOURCE_CATEGORY_FIELD,
     local_file_without_url_missing_identity,
+    retrieval_source_type_error,
     source_category_error,
     source_category_missing,
     source_url_error,
+    underlying_evidence_type_error,
 )
 
 REQUIRED_FIELDS = {"claim_id", "statement", "source_id", "evidence_text"}
@@ -132,6 +134,21 @@ class ClaimContract(Contract):
                     field=f"metadata.{SOURCE_CATEGORY_FIELD}",
                     error="recommended reader-facing source category is missing",
                     severity="warning",
+                )
+            )
+        metadata_retrieval_error = retrieval_source_type_error(metadata.get("retrieval_source_type"))
+        if metadata_retrieval_error:
+            violations.append(
+                FieldViolation(field="metadata.retrieval_source_type", error=metadata_retrieval_error)
+            )
+        metadata_underlying_error = underlying_evidence_type_error(
+            metadata.get("underlying_evidence_type")
+        )
+        if metadata_underlying_error:
+            violations.append(
+                FieldViolation(
+                    field="metadata.underlying_evidence_type",
+                    error=metadata_underlying_error,
                 )
             )
         metadata_record = {
