@@ -6,6 +6,8 @@ import hashlib
 import json
 from pathlib import Path
 
+import pytest
+
 from multi_agent_brief.cli.main import main
 from multi_agent_brief.orchestrator.runtime_state.operations import (
     check_runtime_state,
@@ -82,6 +84,7 @@ def test_sources_materialize_pack_writes_durable_source_records_and_manifest(
     assert record_payload["source_category"] == "regulator"
     assert record_payload["evidence_category"] == "regulator"
     assert record_payload["underlying_evidence_type"] == "regulator_record"
+    assert record_payload["raw_underlying_evidence_type"] == "regulator_record"
     assert "Durable evidence text." in record_payload["content"]
     extracted_metadata = _source_evidence_metadata_from_file(
         record_path,
@@ -89,7 +92,10 @@ def test_sources_materialize_pack_writes_durable_source_records_and_manifest(
     )
     assert extracted_metadata["publisher"] == "Regulator Bulletin"
     assert extracted_metadata["source_type"] == "local_file"
+    assert extracted_metadata["retrieval_source_type"] == "local_file"
     assert extracted_metadata["source_category"] == "regulator"
+    assert extracted_metadata["underlying_evidence_type"] == "regulator_record"
+    assert extracted_metadata["raw_underlying_evidence_type"] == "regulator_record"
     assert "semantic_support_assessment" in json.loads(
         manifest_path.read_text(encoding="utf-8")
     )["non_goals"]
@@ -99,6 +105,150 @@ def test_sources_materialize_pack_writes_durable_source_records_and_manifest(
     assert registry_record["status"] == "valid"
     assert registry_record["required"] is False
     assert registry_record["validation_result"] == "experimental_source_evidence_pack_manifest"
+
+
+def test_sources_materialize_pack_separates_retrieval_and_underlying_evidence_types(
+    tmp_path: Path,
+    capsys,
+) -> None:
+    ws = _workspace(tmp_path)
+    cache_dir = ws / "input" / "raw" / "cache"
+    cache_dir.mkdir(parents=True)
+    (cache_dir / "news.json").write_text(
+        json.dumps(
+            {
+                "source_id": "NEWS_001",
+                "source_name": "Example News",
+                "title": "Article about a published paper",
+                "content": "A media article summarizes a paper but is not itself the paper.",
+                "metadata": {
+                    "retrieval_source_type": "news_media",
+                    "category": "industry_media",
+                    "publisher": "Example News",
+                },
+            },
+            ensure_ascii=False,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    (ws / "sources.yaml").write_text(
+        "source_strategy:\n"
+        "  enabled_providers:\n"
+        "    - cached_package\n"
+        "cached_package:\n"
+        "  enabled: true\n"
+        "  paths:\n"
+        "    - input/raw/cache\n",
+        encoding="utf-8",
+    )
+
+    assert main([
+        "sources",
+        "materialize-pack",
+        "--config",
+        str(ws / "config.yaml"),
+        "--json",
+    ]) == 0
+    payload = json.loads(capsys.readouterr().out)
+
+    record_payload = json.loads((ws / payload["records"][0]["path"]).read_text(encoding="utf-8"))
+    assert record_payload["source_type"] == "cached_package"
+    assert record_payload["retrieval_source_type"] == "news_media"
+    assert record_payload["underlying_evidence_type"] == "media_report"
+    assert record_payload["source_category"] == "news_media"
+    assert record_payload["raw_underlying_evidence_type"] == "industry_media"
+
+
+def test_sources_materialize_pack_unknown_category_stays_explicit_unknown(
+    tmp_path: Path,
+    capsys,
+) -> None:
+    ws = _workspace(tmp_path)
+    source = ws / "input" / "raw" / "source-unknown.md"
+    source.write_text("# Unknown source\n\nDurable evidence text.\n", encoding="utf-8")
+    (ws / "sources.yaml").write_text(
+        "source_strategy:\n"
+        "  enabled_providers:\n"
+        "    - manual\n"
+        "manual:\n"
+        "  sources:\n"
+        "    - name: Example Unknown\n"
+        "      path: input/raw/source-unknown.md\n"
+        "      category: handwritten_note\n",
+        encoding="utf-8",
+    )
+
+    assert main([
+        "sources",
+        "materialize-pack",
+        "--config",
+        str(ws / "config.yaml"),
+        "--json",
+    ]) == 0
+    payload = json.loads(capsys.readouterr().out)
+
+    record_payload = json.loads((ws / payload["records"][0]["path"]).read_text(encoding="utf-8"))
+    assert record_payload["source_category"] == "other"
+    assert record_payload["underlying_evidence_type"] == "unknown"
+    assert record_payload["raw_underlying_evidence_type"] == "handwritten_note"
+
+
+def test_sources_materialize_pack_rejects_duplicate_source_ids_before_writing(
+    tmp_path: Path,
+    capsys,
+) -> None:
+    ws = _workspace(tmp_path)
+    cache_dir = ws / "input" / "raw" / "cache"
+    cache_dir.mkdir(parents=True)
+    (cache_dir / "duplicates.json").write_text(
+        json.dumps(
+            {
+                "items": [
+                    {
+                        "source_id": "DUP_001",
+                        "source_name": "Example News",
+                        "title": "First record",
+                        "content": "First durable evidence text.",
+                    },
+                    {
+                        "source_id": "DUP_001",
+                        "source_name": "Example News",
+                        "title": "Second record",
+                        "content": "Second durable evidence text.",
+                    },
+                ],
+            },
+            ensure_ascii=False,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    (ws / "sources.yaml").write_text(
+        "source_strategy:\n"
+        "  enabled_providers:\n"
+        "    - cached_package\n"
+        "cached_package:\n"
+        "  enabled: true\n"
+        "  paths:\n"
+        "    - input/raw/cache\n",
+        encoding="utf-8",
+    )
+
+    assert main([
+        "sources",
+        "materialize-pack",
+        "--config",
+        str(ws / "config.yaml"),
+        "--json",
+    ]) == 1
+    payload = json.loads(capsys.readouterr().out)
+
+    assert payload["ok"] is False
+    assert "duplicate source_id" in payload["error"]
+    assert "DUP_001" in payload["error"]
+    assert not (ws / "input" / "sources").exists()
+    assert not (ws / "output" / "intermediate" / "source_evidence_pack_manifest.json").exists()
 
 
 def test_sources_materialize_pack_refuses_search_only_sources(
@@ -407,6 +557,59 @@ def test_source_evidence_pack_manifest_rejects_noncanonical_source_category(
     assert (
         registry_record["validation_result"]
         == "source_evidence_pack_manifest_schema_error:records[0].source_category"
+    )
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("retrieval_source_type", "magazine_page"),
+        ("underlying_evidence_type", "blog_opinion"),
+    ],
+)
+def test_source_evidence_pack_manifest_rejects_noncanonical_taxonomy_fields(
+    tmp_path: Path,
+    field: str,
+    value: str,
+) -> None:
+    ws = _workspace(tmp_path)
+    initialize_runtime_state(workspace=ws, repo_workdir=ROOT)
+    source_dir = ws / "input" / "sources"
+    source_dir.mkdir(parents=True)
+    source = source_dir / "source-001.json"
+    source.write_text(
+        json.dumps(
+            {
+                "schema_version": "mabw.source_evidence_record.v1",
+                "source": "sources.materialize-pack",
+                "source_id": "SOURCE_001",
+                "content": "Durable evidence text.",
+            },
+            ensure_ascii=False,
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    record = {
+        "source_id": "SOURCE_001",
+        "path": "input/sources/source-001.json",
+        "sha256": _sha256_file(source),
+        "size_bytes": source.stat().st_size,
+        "source_category": "regulator",
+        "retrieval_source_type": "local_file",
+        "underlying_evidence_type": "regulator_record",
+        field: value,
+    }
+    _write_manifest(ws, records=[record])
+
+    state = check_runtime_state(workspace=ws, repo_workdir=ROOT)
+
+    registry_record = state["artifact_registry"]["artifacts"]["source_evidence_pack_manifest"]
+    assert registry_record["status"] == "invalid"
+    assert (
+        registry_record["validation_result"]
+        == f"source_evidence_pack_manifest_schema_error:records[0].{field}"
     )
 
 

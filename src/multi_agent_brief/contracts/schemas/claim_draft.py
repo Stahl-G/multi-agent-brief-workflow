@@ -8,11 +8,15 @@ from multi_agent_brief.contracts.base import Contract, SchemaRegistry
 from multi_agent_brief.contracts.errors import FieldViolation
 from multi_agent_brief.contracts.source_metadata import (
     SOURCE_CATEGORY_FIELD,
+    VALID_RETRIEVAL_SOURCE_TYPES,
     VALID_SOURCE_CATEGORIES,
+    VALID_UNDERLYING_EVIDENCE_TYPES,
     local_file_without_url_missing_identity,
+    retrieval_source_type_error,
     source_category_error,
     source_category_missing,
     source_url_error,
+    underlying_evidence_type_error,
 )
 from multi_agent_brief.contracts.schemas.claim import (
     VALID_CLAIM_TYPES,
@@ -39,6 +43,9 @@ DRAFT_KNOWN_FIELDS = DRAFT_REQUIRED_FIELDS | {
     "topic",
     "source_url",
     "source_type",
+    "retrieval_source_type",
+    "underlying_evidence_type",
+    "raw_underlying_evidence_type",
     "claim_type",
     "confidence",
     "requires_audit",
@@ -63,6 +70,9 @@ DRAFT_OPTIONAL_STRING_FIELDS = {
     "topic",
     "source_url",
     "source_type",
+    "retrieval_source_type",
+    "underlying_evidence_type",
+    "raw_underlying_evidence_type",
     "claim_type",
     "confidence",
     "created_by",
@@ -77,7 +87,9 @@ CLAIM_DRAFT_ALLOWED_VALUES = {
     "confidence": sorted(VALID_CONFIDENCE),
     "epistemic_type": sorted(VALID_EPISTEMIC),
     "evidence_relation": sorted(VALID_EVIDENCE_RELATION),
+    "retrieval_source_type": sorted(VALID_RETRIEVAL_SOURCE_TYPES),
     SOURCE_CATEGORY_FIELD: sorted(VALID_SOURCE_CATEGORIES),
+    "underlying_evidence_type": sorted(VALID_UNDERLYING_EVIDENCE_TYPES),
 }
 CLAIM_DRAFT_FORBIDDEN_FIELDS = sorted(RESERVED_ID_KEYS)
 
@@ -146,6 +158,15 @@ class ClaimDraftContract(Contract):
                             "topic": {"type": "string"},
                             "source_url": {"type": "string"},
                             "source_type": {"type": "string"},
+                            "retrieval_source_type": {
+                                "type": "string",
+                                "enum": sorted(VALID_RETRIEVAL_SOURCE_TYPES),
+                            },
+                            "underlying_evidence_type": {
+                                "type": "string",
+                                "enum": sorted(VALID_UNDERLYING_EVIDENCE_TYPES),
+                            },
+                            "raw_underlying_evidence_type": {"type": "string"},
                             "claim_type": {"type": "string", "enum": sorted(VALID_CLAIM_TYPES)},
                             "confidence": {"type": "string", "enum": sorted(VALID_CONFIDENCE)},
                             "requires_audit": {"type": "boolean"},
@@ -262,6 +283,14 @@ def _validate_draft_entry(data: Any, idx: int) -> list[FieldViolation]:
                 error="recommended reader-facing source category is missing",
                 severity="warning",
             )
+        )
+    retrieval_error = retrieval_source_type_error(data.get("retrieval_source_type"))
+    if retrieval_error:
+        violations.append(FieldViolation(field=f"{prefix}.retrieval_source_type", error=retrieval_error))
+    underlying_error = underlying_evidence_type_error(data.get("underlying_evidence_type"))
+    if underlying_error:
+        violations.append(
+            FieldViolation(field=f"{prefix}.underlying_evidence_type", error=underlying_error)
         )
     missing_local_identity = local_file_without_url_missing_identity(
         data,

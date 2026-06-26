@@ -71,6 +71,28 @@ class TestSourceItemContract:
         violations = SourceItemContract.validate(data)
         assert any(v.field == "source_category" for v in violations)
 
+    @pytest.mark.parametrize(
+        ("field", "value"),
+        [
+            ("retrieval_source_type", "magazine_page"),
+            ("underlying_evidence_type", "blog_opinion"),
+        ],
+    )
+    def test_invalid_source_taxonomy_fails(self, field, value):
+        data = {
+            "source_id": "S1",
+            "source_name": "Test",
+            "source_type": "local_file",
+            "title": "T",
+            "content": "C",
+            "source_category": "news_media",
+            field: value,
+        }
+
+        violations = SourceItemContract.validate(data)
+
+        assert any(v.field == field for v in violations)
+
     def test_missing_required_field_fails(self):
         data = {"source_id": "S1"}  # missing source_name, source_type, title, content
         violations = SourceItemContract.validate(data)
@@ -166,6 +188,29 @@ class TestClaimContract:
     @pytest.mark.parametrize("source_url", ["https://", "http://", "https:///source", "https://[::1"])
     def test_source_url_requires_network_location(self, source_url):
         assert source_url_error(source_url) == "must be an http(s) URL"
+
+    @pytest.mark.parametrize(
+        ("field", "value"),
+        [
+            ("retrieval_source_type", "magazine_page"),
+            ("underlying_evidence_type", "blog_opinion"),
+        ],
+    )
+    def test_invalid_claim_metadata_taxonomy_fails(self, field, value):
+        data = {
+            "claim_id": "X",
+            "statement": "s",
+            "source_id": "S",
+            "evidence_text": "e",
+            "metadata": {
+                "source_category": "news_media",
+                field: value,
+            },
+        }
+
+        violations = ClaimContract.validate(data)
+
+        assert any(v.field == f"metadata.{field}" for v in violations)
 
 
 # ── AtomicClaimGraphContract ──
@@ -841,6 +886,9 @@ class TestClaimDraftContract:
                     "source_name": "Example Wire",
                     "publisher": "Example Publisher",
                     "source_category": "news_media",
+                    "retrieval_source_type": "news_media",
+                    "underlying_evidence_type": "media_report",
+                    "raw_underlying_evidence_type": "industry_media",
                     "topic": "demo market",
                 }
             ],
@@ -849,6 +897,33 @@ class TestClaimDraftContract:
 
         assert ClaimDraftContract.is_valid(data)
         assert ClaimDraftContract.validate(data) == []
+
+    @pytest.mark.parametrize(
+        ("field", "value"),
+        [
+            ("retrieval_source_type", "magazine_page"),
+            ("underlying_evidence_type", "blog_opinion"),
+        ],
+    )
+    def test_claim_drafts_reject_invalid_source_taxonomy(self, field, value):
+        data = {
+            "schema_version": "mabw.claim_drafts.v1",
+            "drafts": [
+                {
+                    "statement": "ExampleCo opened a demo facility.",
+                    "source_id": "SRC-001",
+                    "evidence_text": "Example evidence.",
+                    "source_url": "https://example.com/source",
+                    "source_category": "news_media",
+                    field: value,
+                }
+            ],
+        }
+
+        violations = ClaimDraftContract.validate(data)
+
+        assert any(v.field == f"drafts[0].{field}" for v in violations)
+        assert not ClaimDraftContract.is_valid(data)
 
     def test_claim_drafts_reject_plain_text_source_url(self):
         data = {

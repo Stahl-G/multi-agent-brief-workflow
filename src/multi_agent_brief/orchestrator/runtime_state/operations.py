@@ -22,6 +22,11 @@ from multi_agent_brief.feedback.feedback_contract import (
     current_stage_feedback_blocking_reasons,
 )
 from multi_agent_brief.contracts.schemas.claim_draft import ClaimDraftContract, claim_draft_diagnostics
+from multi_agent_brief.contracts.source_metadata import (
+    normalize_retrieval_source_type,
+    normalize_source_category,
+    normalize_underlying_evidence_type,
+)
 from multi_agent_brief.core.claim_ledger import ClaimLedger
 from multi_agent_brief.quality_gates.contract import (
     current_stage_quality_gate_blocking_reasons,
@@ -211,9 +216,17 @@ CLAIM_DRAFT_PROVENANCE_METADATA_FIELDS = (
     "source_url",
     "source_type",
     "source_category",
+    "retrieval_source_type",
+    "underlying_evidence_type",
+    "raw_underlying_evidence_type",
     "topic",
 )
 CLAIM_METADATA_ENRICHMENT_ALLOWED_FIELDS = CLAIM_DRAFT_PROVENANCE_METADATA_FIELDS
+CLAIM_METADATA_REPLACEABLE_DEFAULTS = {
+    "retrieval_source_type": {"other"},
+    "source_category": {"other"},
+    "underlying_evidence_type": {"unknown"},
+}
 CLAIM_METADATA_ENRICHMENT_FORBIDDEN_FIELDS = (
     "claim_id",
     "statement",
@@ -2304,6 +2317,9 @@ def _source_evidence_metadata_from_file(path: Path, *, workspace_path: str) -> d
         "publisher": ("publisher", "source_publisher"),
         "source_url": ("source_url", "url"),
         "source_type": ("source_type", "provider_type", "storage_type"),
+        "retrieval_source_type": ("retrieval_source_type",),
+        "underlying_evidence_type": ("underlying_evidence_type",),
+        "raw_underlying_evidence_type": ("raw_underlying_evidence_type",),
         "source_category": ("source_category", "evidence_category"),
         "topic": ("topic", "category"),
         "source_id": ("source_id", "id"),
@@ -2314,6 +2330,7 @@ def _source_evidence_metadata_from_file(path: Path, *, workspace_path: str) -> d
             if isinstance(value, str) and value.strip():
                 metadata[field] = value.strip()
                 break
+    _normalize_source_evidence_taxonomy(metadata)
     return metadata
 
 
@@ -2327,6 +2344,9 @@ def _source_evidence_metadata_from_markdown(path: Path, *, workspace_path: str) 
         "publisher": ("publisher", "source_publisher"),
         "source_url": ("source_url", "url"),
         "source_type": ("source_type", "provider_type", "storage_type"),
+        "retrieval_source_type": ("retrieval_source_type",),
+        "underlying_evidence_type": ("underlying_evidence_type",),
+        "raw_underlying_evidence_type": ("raw_underlying_evidence_type",),
         "source_category": ("source_category", "evidence_category"),
         "topic": ("topic", "category"),
         "source_id": ("source_id", "source id", "id"),
@@ -2356,7 +2376,31 @@ def _source_evidence_metadata_from_markdown(path: Path, *, workspace_path: str) 
         value = match.group(2).strip()
         if field and value and field not in metadata:
             metadata[field] = value
+    _normalize_source_evidence_taxonomy(metadata)
     return metadata
+
+
+def _normalize_source_evidence_taxonomy(metadata: dict[str, str]) -> None:
+    raw_underlying = (
+        metadata.get("raw_underlying_evidence_type")
+        or metadata.get("underlying_evidence_type")
+        or metadata.get("source_category")
+        or metadata.get("topic")
+        or ""
+    )
+    metadata["retrieval_source_type"] = normalize_retrieval_source_type(
+        metadata.get("retrieval_source_type"),
+        metadata.get("source_type"),
+        raw_underlying,
+    )
+    if raw_underlying:
+        metadata["underlying_evidence_type"] = normalize_underlying_evidence_type(raw_underlying)
+        metadata["source_category"] = normalize_source_category(
+            metadata.get("source_category"),
+            metadata["underlying_evidence_type"],
+            raw_underlying,
+        )
+        metadata["raw_underlying_evidence_type"] = raw_underlying
 
 
 def _claims_with_enriched_metadata(
@@ -2403,7 +2447,14 @@ def _claims_with_enriched_metadata(
                     },
                     error_code=E_TRANSACTION_INTEGRITY,
                 )
-            if isinstance(existing, str) and existing.strip() and existing.strip() != new_value.strip():
+            existing_text = existing.strip() if isinstance(existing, str) else ""
+            new_text = new_value.strip()
+            if existing_text and existing_text != new_text:
+                replaceable_values = CLAIM_METADATA_REPLACEABLE_DEFAULTS.get(field, set())
+                if existing_text in replaceable_values and new_text not in replaceable_values:
+                    current_metadata[field] = new_text
+                    changed_fields.append(field)
+                    continue
                 raise RuntimeStateError(
                     "Claim metadata enrichment would overwrite existing metadata with a different value.",
                     details={
@@ -2415,7 +2466,7 @@ def _claims_with_enriched_metadata(
                     },
                     error_code=E_TRANSACTION_INTEGRITY,
                 )
-            if not (isinstance(existing, str) and existing.strip()):
+            if not existing_text:
                 current_metadata[field] = new_value.strip()
                 changed_fields.append(field)
         changed_fields.extend(

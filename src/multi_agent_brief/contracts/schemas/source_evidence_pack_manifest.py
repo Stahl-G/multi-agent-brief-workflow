@@ -7,7 +7,14 @@ from typing import Any, ClassVar
 
 from multi_agent_brief.contracts.base import Contract, SchemaRegistry
 from multi_agent_brief.contracts.errors import FieldViolation
-from multi_agent_brief.contracts.source_metadata import source_category_error
+from multi_agent_brief.contracts.source_metadata import (
+    VALID_RETRIEVAL_SOURCE_TYPES,
+    VALID_SOURCE_CATEGORIES,
+    VALID_UNDERLYING_EVIDENCE_TYPES,
+    retrieval_source_type_error,
+    source_category_error,
+    underlying_evidence_type_error,
+)
 
 SOURCE_EVIDENCE_PACK_MANIFEST_SCHEMA_VERSION = "mabw.source_evidence_pack_manifest.v1"
 SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
@@ -58,9 +65,19 @@ class SourceEvidencePackManifestContract(Contract):
                             "source_title": {"type": "string"},
                             "publisher": {"type": "string"},
                             "source_type": {"type": "string"},
-                            "source_category": {"type": "string"},
-                            "retrieval_source_type": {"type": "string"},
-                            "underlying_evidence_type": {"type": "string"},
+                            "source_category": {
+                                "type": "string",
+                                "enum": sorted(VALID_SOURCE_CATEGORIES),
+                            },
+                            "retrieval_source_type": {
+                                "type": "string",
+                                "enum": sorted(VALID_RETRIEVAL_SOURCE_TYPES),
+                            },
+                            "underlying_evidence_type": {
+                                "type": "string",
+                                "enum": sorted(VALID_UNDERLYING_EVIDENCE_TYPES),
+                            },
+                            "raw_underlying_evidence_type": {"type": "string"},
                         },
                         "additionalProperties": True,
                     },
@@ -190,8 +207,7 @@ def _validate_record(
         "source_title",
         "publisher",
         "source_type",
-        "retrieval_source_type",
-        "underlying_evidence_type",
+        "raw_underlying_evidence_type",
     ):
         value = record.get(field)
         if value is not None and not _non_empty_string(value):
@@ -199,6 +215,12 @@ def _validate_record(
     category_error = source_category_error(record.get("source_category"))
     if category_error:
         violations.append(FieldViolation(field=f"{prefix}.source_category", error=category_error))
+    retrieval_error = retrieval_source_type_error(record.get("retrieval_source_type"))
+    if retrieval_error:
+        violations.append(FieldViolation(field=f"{prefix}.retrieval_source_type", error=retrieval_error))
+    underlying_error = underlying_evidence_type_error(record.get("underlying_evidence_type"))
+    if underlying_error:
+        violations.append(FieldViolation(field=f"{prefix}.underlying_evidence_type", error=underlying_error))
 
     return violations
 

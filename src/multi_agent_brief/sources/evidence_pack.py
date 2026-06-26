@@ -4,13 +4,16 @@ from __future__ import annotations
 
 import hashlib
 import json
-import re
 from dataclasses import replace
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from multi_agent_brief.contracts.source_metadata import VALID_SOURCE_CATEGORIES
+from multi_agent_brief.contracts.source_metadata import (
+    normalize_retrieval_source_type,
+    normalize_source_category,
+    normalize_underlying_evidence_type,
+)
 from multi_agent_brief.sources.base import SourceItem, SourceQuery
 from multi_agent_brief.sources.registry import collect_all_sources, load_sources_config
 
@@ -18,29 +21,6 @@ SOURCE_EVIDENCE_RECORD_SCHEMA = "mabw.source_evidence_record.v1"
 SOURCE_EVIDENCE_PACK_MANIFEST_SCHEMA = "mabw.source_evidence_pack_manifest.v1"
 DURABLE_MATERIALIZATION_PROVIDERS = {"manual", "cached_package"}
 SOURCE_EXCERPT_LIMIT = 2000
-SOURCE_CATEGORY_ALIASES = {
-    "company_official": "company_press_release",
-    "company_release": "company_press_release",
-    "company_source": "company_press_release",
-    "government_regulator": "regulator",
-    "official_regulator": "regulator",
-    "regulator_record": "regulator",
-    "regulatory": "regulator",
-    "industry_media": "news_media",
-    "industry_news": "news_media",
-    "media": "news_media",
-    "news": "news_media",
-    "trade_publication": "news_media",
-    "market_data": "industry_database",
-    "market_data_provider": "industry_database",
-    "data_provider": "industry_database",
-    "industry_report": "market_report",
-    "research_report": "market_report",
-    "research_institution": "market_report",
-    "academic_paper": "peer_reviewed_paper",
-    "paper": "peer_reviewed_paper",
-    "clin" + "ical_trial_registry": "clin" + "ical_registry",
-}
 
 
 class SourceEvidencePackError(Exception):
@@ -87,6 +67,13 @@ def materialize_source_evidence_pack(
     source_dir = workspace / "input" / "sources"
     intermediate_dir = workspace / "output" / "intermediate"
     planned = _plan_source_records(items, workspace=workspace, source_dir=source_dir)
+    duplicate_source_ids = _duplicate_source_ids(planned)
+    if duplicate_source_ids:
+        raise SourceEvidencePackError(
+            "Source evidence pack contains duplicate source_id values; "
+            "make source IDs unique before materialization: "
+            + ", ".join(duplicate_source_ids)
+        )
     existing = [
         _workspace_relative(workspace, entry["target"])
         for entry in planned
@@ -133,6 +120,7 @@ def materialize_source_evidence_pack(
             "source_category": payload.get("source_category", ""),
             "retrieval_source_type": payload.get("retrieval_source_type", ""),
             "underlying_evidence_type": payload.get("underlying_evidence_type", ""),
+            "raw_underlying_evidence_type": payload.get("raw_underlying_evidence_type", ""),
         })
 
     manifest = {
@@ -217,6 +205,22 @@ def _plan_source_records(
     return planned
 
 
+def _duplicate_source_ids(planned: list[dict[str, Any]]) -> list[str]:
+    seen: set[str] = set()
+    duplicates: set[str] = set()
+    for entry in planned:
+        payload = entry.get("payload")
+        if not isinstance(payload, dict):
+            continue
+        source_id = str(payload.get("source_id") or "").strip()
+        if not source_id:
+            continue
+        if source_id in seen:
+            duplicates.add(source_id)
+        seen.add(source_id)
+    return sorted(duplicates)
+
+
 def _source_item_payload(item: SourceItem) -> dict[str, Any]:
     metadata = item.metadata if isinstance(item.metadata, dict) else {}
     content = item.content.strip()
@@ -231,14 +235,27 @@ def _source_item_payload(item: SourceItem) -> dict[str, Any]:
         "institution",
         "source_name",
     ) or source_name
-    underlying_evidence_type = _first_text(
+    raw_underlying_evidence_type = _first_text(
         metadata,
         "underlying_evidence_type",
         "source_category",
+        "evidence_category",
         "category",
     ) or "unknown"
-    source_category = _canonical_source_category(underlying_evidence_type)
-    retrieval_source_type = item.source_type.strip() or "unknown"
+    raw_retrieval_source_type = _first_text(
+        metadata,
+        "retrieval_source_type",
+        "provider_type",
+        "storage_type",
+    )
+    provider_source_type = _provider_source_type(item.source_type)
+    retrieval_source_type = normalize_retrieval_source_type(
+        raw_retrieval_source_type,
+        provider_source_type,
+        raw_underlying_evidence_type,
+    )
+    underlying_evidence_type = normalize_underlying_evidence_type(raw_underlying_evidence_type)
+    source_category = normalize_source_category(underlying_evidence_type, raw_underlying_evidence_type)
     return {
         "schema_version": SOURCE_EVIDENCE_RECORD_SCHEMA,
         "source": "sources.materialize-pack",
@@ -250,11 +267,12 @@ def _source_item_payload(item: SourceItem) -> dict[str, Any]:
         "publisher_or_institution": publisher,
         "published_at": item.published_at.strip(),
         "retrieved_at": item.retrieved_at.strip() or _utc_now_iso(),
-        "source_type": retrieval_source_type,
+        "source_type": provider_source_type,
         "retrieval_source_type": retrieval_source_type,
         "source_category": source_category,
         "evidence_category": source_category,
         "underlying_evidence_type": underlying_evidence_type,
+        "raw_underlying_evidence_type": raw_underlying_evidence_type,
         "raw_excerpt": content[:SOURCE_EXCERPT_LIMIT],
         "content": content,
         "sha256": content_sha,
@@ -283,7 +301,7 @@ def _unique_record_filename(item: SourceItem, payload: dict[str, Any], used_name
 
 def _slug(value: Any) -> str:
     raw = str(value or "").strip().lower()
-    slug = re.sub(r"[^a-z0-9]+", "-", raw).strip("-")
+    slug = "".join(ch if ("a" <= ch <= "z" or "0" <= ch <= "9") else "-" for ch in raw).strip("-")
     return slug[:64]
 
 
@@ -295,11 +313,11 @@ def _first_text(metadata: dict[str, Any], *keys: str) -> str:
     return ""
 
 
-def _canonical_source_category(value: str) -> str:
-    normalized = re.sub(r"[^a-z0-9]+", "_", value.strip().lower()).strip("_")
-    if normalized in VALID_SOURCE_CATEGORIES:
-        return normalized
-    return SOURCE_CATEGORY_ALIASES.get(normalized, "other")
+def _provider_source_type(value: str) -> str:
+    normalized = str(value or "").strip()
+    if normalized == "cached":
+        return "cached_package"
+    return normalized or "local_file"
 
 
 def _workspace_relative(workspace: Path, path: Path) -> str:
