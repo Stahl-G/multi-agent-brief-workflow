@@ -363,6 +363,7 @@ def _record_from_claim(claim: Claim) -> tuple[SourceAppendixRecord, list[str]]:
     if not publisher:
         warnings.append("Source metadata missing publisher/institution.")
 
+    title_for_completeness = title
     if not title:
         title = "Source record"
 
@@ -380,7 +381,7 @@ def _record_from_claim(claim: Claim) -> tuple[SourceAppendixRecord, list[str]]:
             retrieval_source_type=retrieval_source_type,
             underlying_evidence_type=underlying_evidence_type,
             metadata_warnings=_metadata_completeness_warnings(
-                title=title,
+                title=title_for_completeness,
                 publisher=publisher,
                 source_category=source_category,
                 retrieval_source_type=retrieval_source_type,

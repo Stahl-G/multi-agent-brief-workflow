@@ -483,7 +483,6 @@ def test_source_appendix_trace_includes_metadata_completeness_warnings(tmp_path:
                 statement="ExampleCo shipments reached 12 MW.",
                 evidence_text=raw_excerpt,
                 metadata={
-                    "source_title": "ExampleCo Source",
                     "source_category": "news_media",
                 },
             ),
@@ -523,6 +522,7 @@ def test_source_appendix_trace_includes_metadata_completeness_warnings(tmp_path:
 
     assert result.trace_status == "generated"
     assert "Metadata warnings:" in result.trace_markdown
+    assert "Source metadata missing source title/name." in result.trace_markdown
     assert "Source metadata missing publisher/institution." in result.trace_markdown
     assert "Source metadata missing retrieval source type." in result.trace_markdown
     assert "Source metadata missing underlying evidence type." in result.trace_markdown
