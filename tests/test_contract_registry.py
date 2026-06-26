@@ -172,6 +172,28 @@ def test_semantic_assessment_report_contract_is_optional_experimental_schema_fou
         assert "semantic_assessment_report" not in auditor_stage.expected_artifacts
 
 
+def test_source_evidence_pack_manifest_contract_is_optional_source_discovery_control():
+    root_registry = ContractRegistry.from_config_dir(ROOT / "configs")
+    package_registry = ContractRegistry.from_package()
+
+    for registry in (root_registry, package_registry):
+        manifest = registry.artifact("source_evidence_pack_manifest")
+        source_stage = registry.stage("source-discovery")
+        scout_stage = registry.stage("scout")
+        assert manifest is not None
+        assert source_stage is not None
+        assert scout_stage is not None
+        assert manifest.required is False
+        assert manifest.path == "output/intermediate/source_evidence_pack_manifest.json"
+        assert manifest.producer_kind == "control_tool"
+        assert manifest.producer_stage == "source-discovery"
+        assert manifest.producer_role == "python_tool"
+        assert manifest.validation_result == "experimental_source_evidence_pack_manifest"
+        assert "source_evidence_pack_manifest" not in source_stage.produces
+        assert "source_evidence_pack_manifest" not in source_stage.expected_artifacts
+        assert "source_evidence_pack_manifest" not in scout_stage.expected_artifacts
+
+
 def test_registry_reports_unknown_expected_artifact(tmp_path: Path):
     config_dir = _copy_configs(tmp_path)
     stage_specs_path = config_dir / "stage_specs.yaml"

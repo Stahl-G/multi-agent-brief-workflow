@@ -38,6 +38,7 @@ validation unless that is stated separately.
 | Stage-scoped quality gate control files (`gates/auditor_quality_gate_report.json`, `gates/finalize_quality_gate_report.json`; legacy latest projection `quality_gate_report.json`) | Supported |
 | Atomic Claim Graph (`atomic_claim_graph.json` schema, coverage/type validation, Analyst/Editor contract boundary, and reader-residue projection) | Experimental |
 | Evidence Span Registry (`evidence_span_registry.json` schema, source-pack byte binding, archive projection, and Source Appendix trace view) | Experimental |
+| Durable Source Evidence Pack materialization (`sources materialize-pack`, `input/sources/*.json`, and optional `source_evidence_pack_manifest.json` hash validation) | Experimental |
 | Claim-Support Matrix (`claim_support_matrix.json` schema, cross-artifact validation, and gate/status projection from explicit support records) | Experimental |
 | Semantic Assessment Report (`semantic_assessment_report.json` schema, reference validation, proposal projection, and status visibility) | Experimental |
 | ReportSpec / ReportPack / ReportTemplate / PolicyProfile registry, workspace skeletons, and bundle projection (`report_spec.yaml` contract, packaged `market_weekly`, `management_monthly`, and `solar_industry_periodic` pack/template registry, packaged `manufacturing_default`, `solar_manufacturing_default`, `finance_default`, and `internet_default` policy profiles, `packs` / `validate-report-spec` CLI, `new <pack> <workspace>` local-first setup, and `packs bundle` delivery/audit manifest projection) | Experimental |
@@ -171,6 +172,16 @@ publication, judge industry compliance, verify internet rumors, provide tax or
 investment advice, or provide a lite/force-deliver path.
 
 Source appendices are reader-facing delivery artifacts generated during finalize from cited Claim Ledger sources. They are not source evidence, semantic proof, runtime state, provenance graphs, or workflow gates.
+
+Durable Source Evidence Pack materialization is experimental. The
+`sources materialize-pack` command can turn explicit manual or cached-package
+source records into workspace-local source evidence files under
+`input/sources/` and an optional hash-checked
+`output/intermediate/source_evidence_pack_manifest.json`. This helps ordinary
+recurring reports archive reproducible source bytes. It does not upgrade
+`source_candidates.yaml`, search summaries, model summaries, or source plans
+into evidence; it does not assess semantic support, generate Claim-Support
+Matrix rows, or authorize delivery.
 
 Fast-rerun fact-layer import is an experimental control transaction. It can
 import a complete, clean, archived frozen fact layer into a new runtime run for
