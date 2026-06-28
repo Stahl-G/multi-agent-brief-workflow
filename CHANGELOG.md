@@ -94,6 +94,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `extraction_scope.yaml` plus source registrations only; it does not parse
   PDFs, generate evidence spans, draw legal or disclosure conclusions, bypass
   gates, or authorize delivery.
+- **SourceHub Lite setup commands**: added experimental `sources add-file`,
+  `sources add-rss`, and `sources add-web-search` to register local text files,
+  RSS feeds, and runtime web-search handoff tasks in `sources.yaml`. Local
+  files are copied into the workspace before registration so external absolute
+  paths are not persisted. Web-search tasks use `runtime_tool` handoff mode and
+  do not execute Python web search, crawl the web, create source candidates as
+  evidence, generate Evidence Span Registry entries, bypass gates, or authorize
+  delivery.
 - **Source taxonomy normalization**: durable source evidence records and Claim
   Ledger source metadata now preserve separate provider/storage
   `source_type`, retrieval/page `retrieval_source_type`, reader-facing

@@ -95,6 +95,12 @@ breaking rename.
   workspace's `input/sources/evidence_extract/` directory, but this is setup
   only: it does not parse PDFs, generate evidence spans, create legal or
   disclosure conclusions, run stages, approve delivery, or bypass gates.
+  Experimental SourceHub Lite setup commands can copy local text evidence files
+  into `input/sources/sourcehub/`, register RSS feeds, and register
+  `runtime_tool` web-search handoff tasks in `sources.yaml`. These commands are
+  source setup only: they do not execute web search, crawl the web, turn source
+  candidates or search summaries into evidence, generate Evidence Span Registry
+  entries, run stages, approve delivery, or bypass gates.
   Resolved PolicyProfiles may tighten existing deterministic quality-gate
   strictness and reader-final forbidden-phrase checks through a limited adapter.
   These contracts describe report type metadata over the existing Claim Ledger,

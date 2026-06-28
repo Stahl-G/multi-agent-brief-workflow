@@ -40,6 +40,10 @@ deterministic-default, and projection controls only; they do not judge industry
 compliance, detect investment advice, verify internet rumors, claim
 IR/disclosure readiness, prove semantic truth, publish reports, or authorize
 release.
+The current development line also includes experimental source setup commands
+for `evidence_extract` and SourceHub Lite; they register or copy explicit
+sources without hidden crawling, span extraction, support judgment, or delivery
+authority.
 
 The v0.9.x experimental support surfaces remain traceability, support-record,
 and proposal controls: Atomic Claim Graph, Evidence Span Registry,
@@ -238,7 +242,7 @@ See [docs/claude-code-quickstart.md](docs/claude-code-quickstart.md) for the ful
 
 Current release baseline: v0.10.1
 
-The v0.10.1 release adds the experimental Product OS PolicyProfile layer: ReportSpec / ReportPack / ReportTemplate contracts, conservative workspace skeletons, delivery/audit bundle projection, resolved policy projection, limited deterministic gate adaptation, and public-safe dogfood fixtures. The current development line also includes an experimental `evidence_extract` source/scope registration path. It does not rename the CLI, Python package, workspace artifacts, or experiment IDs. It does not parse PDFs automatically, judge industry compliance, detect investment advice, verify internet rumors, claim IR/disclosure readiness, prove semantic truth, publish reports automatically, or create release authority.
+The v0.10.1 release adds the experimental Product OS PolicyProfile layer: ReportSpec / ReportPack / ReportTemplate contracts, conservative workspace skeletons, delivery/audit bundle projection, resolved policy projection, limited deterministic gate adaptation, and public-safe dogfood fixtures. The current development line also includes experimental `evidence_extract` source/scope registration and SourceHub Lite setup commands for local text files, RSS feeds, and runtime web-search handoff tasks. It does not rename the CLI, Python package, workspace artifacts, or experiment IDs. It does not parse PDFs automatically, execute hidden web search or crawling, judge industry compliance, detect investment advice, verify internet rumors, claim IR/disclosure readiness, prove semantic truth, publish reports automatically, or create release authority.
 
 It is still not an autonomous agent, does not automatically edit brief content, does not automatically learn, does not provide a long-term memory system, and is not an investment advice tool, trading signal generator, or replacement for human review. See [architecture status](docs/architecture-status.md), [roadmap](docs/roadmap.md), and [red lines and anti-patterns](docs/red-lines-and-anti-patterns.md).
 

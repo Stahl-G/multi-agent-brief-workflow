@@ -618,6 +618,90 @@ def test_start_handoff_projects_policy_profile_without_runtime_effect(tmp_path):
     assert "runtime_effect=none" in data["prompt"]
 
 
+def test_start_handoff_projects_sourcehub_runtime_search_tasks(tmp_path):
+    ws = _write_workspace(tmp_path)
+    sources = yaml.safe_load((ws / "sources.yaml").read_text(encoding="utf-8"))
+    sources["source_strategy"]["enabled_providers"].append("web_search")
+    sources["web_search"] = {
+        "enabled": True,
+        "mode": "runtime_tool",
+        "search_tasks": [
+            {
+                "query": "solar prices",
+                "domains": ["example.com"],
+                "max_results": 12,
+                "sourcehub_registered": True,
+                "handoff_only": True,
+            }
+        ],
+    }
+    (ws / "sources.yaml").write_text(
+        yaml.safe_dump(sources, sort_keys=False),
+        encoding="utf-8",
+    )
+
+    rc = main([
+        "start",
+        "--workspace", str(ws),
+        "--skip-doctor",
+        "--venv", str(tmp_path / ".venv" / "bin" / "activate"),
+    ])
+    assert rc == 0
+
+    md = (ws / "output" / "intermediate" / "agent_handoff.md").read_text(encoding="utf-8")
+    data = json.loads((ws / "output" / "intermediate" / "agent_handoff.json").read_text(encoding="utf-8"))
+    projection = data["sourcehub_projection"]
+    assert projection["status"] == "available"
+    assert projection["source_config_path"] == "sources.yaml"
+    assert projection["runtime_effect"] == "handoff_only"
+    runtime_web = projection["runtime_web_search"]
+    assert runtime_web["enabled"] is True
+    assert runtime_web["mode"] == "runtime_tool"
+    assert runtime_web["search_tasks"][0]["query"] == "solar prices"
+    assert runtime_web["search_tasks"][0]["domains"] == ["example.com"]
+    assert "SourceHub Lite Projection" in md
+    assert "solar prices" in md
+    assert "sources.yaml" in md
+    assert "SourceHub Lite projection" in data["prompt"]
+    assert "queries=solar prices" in data["prompt"]
+    assert "runtime search tool" in data["prompt"]
+
+
+def test_build_handoff_all_runtimes_include_sourcehub_search_tasks(tmp_path):
+    ws = _write_workspace(tmp_path)
+    (ws / "sources.yaml").write_text(
+        """
+source_strategy:
+  profile: "research"
+  enabled_providers:
+    - "manual"
+    - "web_search"
+manual:
+  enabled: true
+  sources: []
+web_search:
+  enabled: true
+  mode: runtime_tool
+  search_tasks:
+    - query: "solar prices"
+      max_results: 10
+      sourcehub_registered: true
+      handoff_only: true
+""".strip(),
+        encoding="utf-8",
+    )
+    for runtime in VALID_RUNTIMES:
+        handoff = build_handoff(
+            workspace=ws,
+            repo_workdir=ROOT,
+            runtime=runtime,
+            run_doctor=False,
+        )
+        assert handoff.sourcehub_projection["status"] == "available"
+        assert "solar prices" in handoff.prompt
+        assert "sources.yaml" in handoff.prompt
+
+
 def test_start_handoff_projects_report_template_section_order(tmp_path):
     ws = _write_workspace(tmp_path)
     _write_solar_report_spec(ws)

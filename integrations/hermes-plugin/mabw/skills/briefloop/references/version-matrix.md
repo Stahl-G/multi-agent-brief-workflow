@@ -37,6 +37,9 @@ Historical implementation name: MABW
   - `multi-agent-brief validate-report-spec <report_spec.yaml>`
   - `multi-agent-brief extract --workspace <workspace> --scope <text>
     --source <file>` for `evidence_extract` source/scope registration
+  - `multi-agent-brief sources add-file <path>`
+  - `multi-agent-brief sources add-rss <url>`
+  - `multi-agent-brief sources add-web-search --query <text>`
   - `multi-agent-brief new <pack> <workspace>` / `briefloop new <pack> <workspace>`
     for conservative local-first workspace skeletons
   - packaged ReportPacks: `market_weekly`, `management_monthly`,
@@ -59,8 +62,11 @@ Historical implementation name: MABW
     generated handoff artifacts for existing audited/final reader Markdown
   - limited PolicyProfile deterministic gate adapter for existing gate
     strictness and reader-final forbidden-phrase checks
+  - SourceHub Lite setup for local text files, RSS feed registration, and
+    runtime web-search handoff tasks
   - no stage execution, template rendering, delivery, publication approval,
-    section-conformance gate, or gate bypass; no second gate engine
+    web-search execution, section-conformance gate, or gate bypass; no second
+    gate engine
 - MABW-080 experiment operations:
   - `validate-case`
   - `scaffold-condition`

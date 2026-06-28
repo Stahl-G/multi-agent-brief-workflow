@@ -41,7 +41,7 @@ validation unless that is stated separately.
 | Durable Source Evidence Pack materialization (`sources materialize-pack`, `input/sources/*.json`, optional `source_evidence_pack_manifest.json` hash validation, and source taxonomy normalization) | Experimental |
 | Claim-Support Matrix (`claim_support_matrix.json` schema, cross-artifact validation, and gate/status projection from explicit support records) | Experimental |
 | Semantic Assessment Report (`semantic_assessment_report.json` schema, reference validation, proposal projection, and status visibility) | Experimental |
-| ReportSpec / ReportPack / ReportTemplate / PolicyProfile registry, workspace skeletons, template renderer MVP, and bundle projection (`report_spec.yaml` contract, packaged `market_weekly`, `management_monthly`, `solar_industry_periodic`, and `evidence_extract` pack/template registry, packaged `manufacturing_default`, `solar_manufacturing_default`, `evidence_extract_default`, `finance_default`, and `internet_default` policy profiles, `packs` / `validate-report-spec` CLI, `new <pack> <workspace>` local-first setup, `extract` source/scope registration for evidence_extract workspaces, finalize-time section-order rendering, and `packs bundle` delivery/audit manifest projection) | Experimental |
+| ReportSpec / ReportPack / ReportTemplate / PolicyProfile registry, workspace skeletons, template renderer MVP, SourceHub Lite setup, and bundle projection (`report_spec.yaml` contract, packaged `market_weekly`, `management_monthly`, `solar_industry_periodic`, and `evidence_extract` pack/template registry, packaged `manufacturing_default`, `solar_manufacturing_default`, `evidence_extract_default`, `finance_default`, and `internet_default` policy profiles, `packs` / `validate-report-spec` CLI, `new <pack> <workspace>` local-first setup, `extract` source/scope registration for evidence_extract workspaces, `sources add-file` / `sources add-rss` / `sources add-web-search` source setup, finalize-time section-order rendering, and `packs bundle` delivery/audit manifest projection) | Experimental |
 | Provenance projection control file (`provenance_graph.json`) | Supported |
 | Finalize delivery bundle (`output/delivery/brief.md` + configured DOCX) | Supported |
 | Source appendix audit/control copy (`source_appendix.md`) | Supported |
@@ -71,6 +71,7 @@ validation unless that is stated separately.
 | `multi-agent-brief onboard` | Supported |
 | `multi-agent-brief doctor` | Supported |
 | `multi-agent-brief extract --workspace <path> --scope <text> --source <file>` | Experimental |
+| `multi-agent-brief sources add-file/add-rss/add-web-search` | Experimental |
 | `multi-agent-brief inputs extract` | Experimental |
 | `multi-agent-brief inputs classify` | Supported |
 | `multi-agent-brief finalize` | Supported |
@@ -174,6 +175,14 @@ files into `input/sources/evidence_extract/`, write `extraction_scope.yaml`,
 and update `sources.yaml` manual source entries. This is source/scope setup
 only: it does not parse PDFs or binary documents, generate Evidence Span
 Registry entries, draw legal or disclosure conclusions, run stages, or
+authorize delivery.
+SourceHub Lite commands can copy explicit local text files into
+`input/sources/sourcehub/`, register RSS feeds, and register runtime web-search
+handoff tasks in `sources.yaml`. This is source setup only: local files remain
+workspace-local evidence inputs, RSS registration does not fetch feeds, and
+web-search handoff uses `runtime_tool` mode without executing Python web
+search. SourceHub Lite does not turn source candidates or search summaries into
+evidence, generate Evidence Span Registry entries, run stages, bypass gates, or
 authorize delivery.
 Workspace creation may use an
 explicit `--policy-profile` or deterministic `--industry` hint, but the result
