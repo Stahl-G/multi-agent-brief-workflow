@@ -6,9 +6,17 @@ import argparse
 import json
 from pathlib import Path
 
+import yaml
+
 from multi_agent_brief.sources.evidence_pack import (
     SourceEvidencePackError,
     materialize_source_evidence_pack,
+)
+from multi_agent_brief.sources.sourcehub import (
+    SourceHubError,
+    add_file_sources,
+    add_rss_feed,
+    add_web_search_handoff,
 )
 from multi_agent_brief.sources.decider import (
     SourceCandidatesError,
@@ -90,6 +98,93 @@ def register_sources(subparsers: argparse._SubParsersAction) -> None:
         help="Emit machine-readable JSON.",
     )
 
+    add_file_parser = sources_sub.add_parser(
+        "add-file",
+        help="Copy local text evidence files into the workspace and register them.",
+    )
+    _add_workspace_selector(add_file_parser)
+    add_file_parser.add_argument(
+        "paths",
+        nargs="+",
+        help="Local text source files or glob patterns (.md, .txt, .json).",
+    )
+    add_file_parser.add_argument(
+        "--name",
+        help="Reader-facing source name. Only valid with one file.",
+    )
+    add_file_parser.add_argument(
+        "--category",
+        default="other",
+        help="Reader-facing source category. Defaults to other.",
+    )
+    add_file_parser.add_argument(
+        "--language",
+        default="en",
+        help="Source language hint. Defaults to en.",
+    )
+    add_file_parser.add_argument(
+        "--json",
+        action="store_true",
+        help="Emit machine-readable JSON.",
+    )
+
+    add_rss_parser = sources_sub.add_parser(
+        "add-rss",
+        help="Register an RSS/Atom feed in sources.yaml.",
+    )
+    _add_workspace_selector(add_rss_parser)
+    add_rss_parser.add_argument("url", help="RSS/Atom feed URL.")
+    add_rss_parser.add_argument("--name", help="Feed display name.")
+    add_rss_parser.add_argument(
+        "--category",
+        default="news_media",
+        help="Reader-facing source category. Defaults to news_media.",
+    )
+    add_rss_parser.add_argument(
+        "--language",
+        default="en",
+        help="Feed language hint. Defaults to en.",
+    )
+    add_rss_parser.add_argument(
+        "--json",
+        action="store_true",
+        help="Emit machine-readable JSON.",
+    )
+
+    add_web_parser = sources_sub.add_parser(
+        "add-web-search",
+        help="Register a runtime web-search handoff task without executing search.",
+    )
+    _add_workspace_selector(add_web_parser)
+    add_web_parser.add_argument(
+        "--query",
+        required=True,
+        help="Search query for the runtime handoff.",
+    )
+    add_web_parser.add_argument(
+        "--domain",
+        action="append",
+        dest="domains",
+        default=[],
+        help="Preferred domain for the handoff task. Repeatable.",
+    )
+    add_web_parser.add_argument(
+        "--max-results",
+        type=int,
+        default=10,
+        help="Maximum results for the runtime handoff. Defaults to 10.",
+    )
+    add_web_parser.add_argument(
+        "--recency-days",
+        type=int,
+        help="Optional recency window for the runtime handoff.",
+    )
+    add_web_parser.add_argument(
+        "--json",
+        action="store_true",
+        help="Emit machine-readable JSON.",
+    )
+
 
 def register_doctor(subparsers: argparse._SubParsersAction) -> None:
     """Register the doctor subparser."""
@@ -107,6 +202,12 @@ def handle_sources(args: argparse.Namespace) -> int:
         return _sources_decide(args)
     if args.sources_action == "materialize-pack":
         return _sources_materialize_pack(args)
+    if args.sources_action == "add-file":
+        return _sources_add_file(args)
+    if args.sources_action == "add-rss":
+        return _sources_add_rss(args)
+    if args.sources_action == "add-web-search":
+        return _sources_add_web_search(args)
     return 1
 
 
@@ -429,6 +530,107 @@ def _sources_materialize_pack(args: argparse.Namespace) -> int:
         "[sources] Boundary: source evidence records are durable inputs, not"
         " semantic support proof or delivery approval."
     )
+    return 0
+
+
+def _sources_add_file(args: argparse.Namespace) -> int:
+    try:
+        workspace = _workspace_from_sources_args(args)
+        result = add_file_sources(
+            workspace=workspace,
+            values=list(args.paths),
+            source_category=args.category,
+            language=args.language,
+            name=args.name,
+        )
+    except (OSError, SourceHubError, yaml.YAMLError) as exc:
+        return _print_sourcehub_error("sources.add-file", args, exc)
+    return _print_sourcehub_result("sources.add-file", args, result)
+
+
+def _sources_add_rss(args: argparse.Namespace) -> int:
+    try:
+        workspace = _workspace_from_sources_args(args)
+        result = add_rss_feed(
+            workspace=workspace,
+            url=args.url,
+            name=args.name,
+            source_category=args.category,
+            language=args.language,
+        )
+    except (OSError, SourceHubError, yaml.YAMLError) as exc:
+        return _print_sourcehub_error("sources.add-rss", args, exc)
+    return _print_sourcehub_result("sources.add-rss", args, result)
+
+
+def _sources_add_web_search(args: argparse.Namespace) -> int:
+    try:
+        workspace = _workspace_from_sources_args(args)
+        result = add_web_search_handoff(
+            workspace=workspace,
+            query=args.query,
+            domains=list(args.domains or []),
+            max_results=int(args.max_results),
+            recency_days=args.recency_days,
+        )
+    except (OSError, SourceHubError, yaml.YAMLError) as exc:
+        return _print_sourcehub_error("sources.add-web-search", args, exc)
+    return _print_sourcehub_result("sources.add-web-search", args, result)
+
+
+def _add_workspace_selector(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument(
+        "--workspace",
+        help="BriefLoop workspace path. Defaults to the current directory.",
+    )
+    parser.add_argument(
+        "--config",
+        help="Path to config.yaml. Overrides --workspace when provided.",
+    )
+
+
+def _workspace_from_sources_args(args: argparse.Namespace) -> Path:
+    config = getattr(args, "config", None)
+    if config:
+        return Path(config).expanduser().resolve().parent
+    workspace = getattr(args, "workspace", None)
+    if workspace:
+        return Path(workspace).expanduser().resolve()
+    return Path.cwd().resolve()
+
+
+def _print_sourcehub_error(label: str, args: argparse.Namespace, exc: Exception) -> int:
+    payload = {
+        "ok": False,
+        "action": label,
+        "error": str(exc),
+        "boundary": "sourcehub_lite_source_setup_only",
+    }
+    if getattr(args, "json", False):
+        print(json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True))
+    else:
+        print(f"[error] {exc}")
+    return 1
+
+
+def _print_sourcehub_result(label: str, args: argparse.Namespace, result: dict) -> int:
+    if getattr(args, "json", False):
+        print(json.dumps(result, ensure_ascii=False, indent=2, sort_keys=True))
+        return 0
+    print(f"[{label}] ok: {result.get('ok')}")
+    if label == "sources.add-file":
+        print(f"registered_files: {result.get('source_count')}")
+        for source in result.get("sources", []):
+            print(f"- {source.get('path')}")
+        print("boundary: source setup only; no collection, span extraction, or support judgment")
+    elif label == "sources.add-rss":
+        feed = result.get("feed") if isinstance(result.get("feed"), dict) else {}
+        print(f"feed: {feed.get('name')} <{feed.get('url')}>")
+        print("boundary: feed registration only; no fetch was run")
+    elif label == "sources.add-web-search":
+        task = result.get("task") if isinstance(result.get("task"), dict) else {}
+        print(f"query: {task.get('query')}")
+        print("boundary: runtime web-search handoff only; no Python search was run")
     return 0
 
 

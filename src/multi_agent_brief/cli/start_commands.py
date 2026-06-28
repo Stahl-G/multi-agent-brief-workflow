@@ -42,6 +42,7 @@ from multi_agent_brief.product.policy_projection import project_workspace_policy
 from multi_agent_brief.product.template_conformance import project_workspace_report_template_conformance
 from multi_agent_brief.product.template_projection import project_workspace_report_template
 from multi_agent_brief.product.template_render_plan import project_workspace_report_template_render_plan
+from multi_agent_brief.sources.sourcehub import project_sourcehub_handoff
 
 
 RUNTIME_AUTO = "auto"
@@ -175,6 +176,7 @@ class AgentHandoff:
     stage_completion_protocol: dict[str, Any] = field(default_factory=dict)
     assessment_target_manifest: dict[str, Any] = field(default_factory=dict)
     policy_profile_projection: dict[str, Any] = field(default_factory=dict)
+    sourcehub_projection: dict[str, Any] = field(default_factory=dict)
     report_template_projection: dict[str, Any] = field(default_factory=dict)
     report_template_conformance_projection: dict[str, Any] = field(default_factory=dict)
     report_template_render_plan_projection: dict[str, Any] = field(default_factory=dict)
@@ -566,6 +568,7 @@ def build_handoff(
     protocol_text = _render_stage_completion_protocol_prompt(handoff.stage_completion_protocol)
     handoff.prompt = f"{handoff.prompt}\n\n{protocol_text}"
     _apply_experiment_080_assessment_target(handoff, ws)
+    _apply_sourcehub_projection(handoff, ws)
     _apply_policy_profile_projection(handoff, ws)
     _apply_report_template_projection(handoff, ws)
     _apply_report_template_conformance_projection(handoff, ws)
@@ -598,6 +601,41 @@ def build_handoff(
     )
 
     return handoff
+
+
+def _apply_sourcehub_projection(handoff: AgentHandoff, workspace: Path) -> None:
+    projection = project_sourcehub_handoff(workspace)
+    handoff.sourcehub_projection = projection
+    if projection.get("status") == "not_available":
+        return
+    runtime_web = (
+        projection.get("runtime_web_search")
+        if isinstance(projection.get("runtime_web_search"), dict)
+        else {}
+    )
+    tasks = runtime_web.get("search_tasks") if isinstance(runtime_web.get("search_tasks"), list) else []
+    task_text = "; ".join(
+        str(item.get("query") or "").strip()
+        for item in tasks[:5]
+        if isinstance(item, dict) and item.get("query")
+    ) or "none"
+    text = (
+        "SourceHub Lite projection: "
+        f"status={projection.get('status')}; "
+        f"source_config={projection.get('source_config_path') or 'sources.yaml'}; "
+        f"runtime_web_search_mode={runtime_web.get('mode') or 'unknown'}; "
+        f"runtime_web_search_tasks={runtime_web.get('task_count', 0)}; "
+        f"queries={task_text}; "
+        "boundary=sourcehub_lite_handoff_projection_only; runtime_effect=handoff_only. "
+        "If runtime web-search tasks are present, the Orchestrator must use the "
+        "runtime search tool and materialize useful results into input/sources/ "
+        "before source-discovery completion. Do not call Python --search unless "
+        "web_search.mode is external_api. Do not treat source_candidates.yaml or "
+        "search summaries as evidence, and do not use SourceHub setup to bypass "
+        "Claim Ledger, gates, or human delivery."
+    )
+    handoff.prompt = f"{handoff.prompt}\n\n{text}"
+    handoff.notes.append(text)
 
 
 def _apply_policy_profile_projection(handoff: AgentHandoff, workspace: Path) -> None:
@@ -1187,6 +1225,51 @@ def write_handoff_artifacts(handoff: AgentHandoff, workspace: Path) -> tuple[Pat
             for item in forbidden:
                 md_content.append(f"  - `{item}`")
         md_content.append("")
+    if handoff.sourcehub_projection and handoff.sourcehub_projection.get("status") != "not_available":
+        projection = handoff.sourcehub_projection
+        runtime_web = (
+            projection.get("runtime_web_search")
+            if isinstance(projection.get("runtime_web_search"), dict)
+            else {}
+        )
+        search_tasks = (
+            runtime_web.get("search_tasks")
+            if isinstance(runtime_web.get("search_tasks"), list)
+            else []
+        )
+        md_content.extend([
+            "## SourceHub Lite Projection",
+            "",
+            f"- Status: `{projection.get('status')}`",
+            f"- Source config: `{projection.get('source_config_path') or 'sources.yaml'}`",
+            f"- Boundary: `{projection.get('boundary')}`",
+            f"- Runtime effect: `{projection.get('runtime_effect')}`",
+            f"- SourceHub local files: `{projection.get('sourcehub_file_count', 0)}`",
+            f"- RSS feeds: `{projection.get('rss_feed_count', 0)}`",
+            f"- Runtime web-search mode: `{runtime_web.get('mode') or 'unknown'}`",
+            f"- Runtime web-search tasks: `{runtime_web.get('task_count', 0)}`",
+            "",
+            "Runtime web-search handoff tasks:",
+        ])
+        if search_tasks:
+            for task in search_tasks:
+                if not isinstance(task, dict):
+                    continue
+                domains = ", ".join(str(item) for item in (task.get("domains") or [])) or "none"
+                md_content.append(
+                    f"- `{task.get('query')}`: max_results=`{task.get('max_results')}`, "
+                    f"domains=`{domains}`"
+                )
+        else:
+            md_content.append("- none")
+        md_content.extend([
+            "",
+            "This projection is source setup / handoff only. Runtime web-search",
+            "tasks must be executed by the runtime tool and materialized into",
+            "`input/sources/` before source-discovery completion. Search summaries",
+            "and source candidates are not source evidence.",
+            "",
+        ])
     if handoff.policy_profile_projection and handoff.policy_profile_projection.get("status") != "not_available":
         projection = handoff.policy_profile_projection
         profile = projection.get("profile") if isinstance(projection.get("profile"), dict) else {}

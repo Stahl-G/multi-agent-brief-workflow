@@ -30,6 +30,7 @@ Current baseline: **v0.10.1**.
 | Function | What it does | Status | Notes |
 |---|---|---|---|
 | Manual local inputs | Uses local files already placed in the workspace | Always on | Best first path for trying BriefLoop |
+| SourceHub Lite setup | Copies local text files into the workspace and registers RSS or runtime web-search handoff tasks | Experimental | Source setup only; no hidden crawling, span extraction, or support judgment |
 | Cached source packages | Reuses pre-downloaded public or private source packs | Optional | Useful for repeatable runs |
 | Runtime web search | Lets the active agent runtime gather sources through its own search tool | Optional | No BriefLoop API key required |
 | External search APIs | Uses configured search backends such as Tavily, Exa, Brave, Firecrawl, or Serper | Optional | Requires API keys |
