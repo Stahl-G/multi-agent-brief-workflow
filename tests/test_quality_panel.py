@@ -212,10 +212,10 @@ def _write_gate_report(
     )
 
 
-def _write_finalize_report(ws: Path) -> None:
+def _write_finalize_report(ws: Path, *, reader_status: str = "pass") -> None:
     report = {
         "status": "pass",
-        "reader_clean": {"status": "pass", "sample_findings": []},
+        "reader_clean": {"status": reader_status, "sample_findings": []},
         "duplicate_citation_count": 0,
         "source_appendix_warnings": [],
         "source_appendix_trace_warnings": [],
@@ -389,6 +389,47 @@ def test_quality_panel_honors_workflow_blocker_in_overall_status(tmp_path: Path)
     assert {
         "action": "inspect_workflow_blocker",
         "reason": "adversarial workflow blocker",
+    } in payload["recommended_actions"]
+
+
+def test_quality_panel_blocks_failed_finalize_gate_status_without_findings(tmp_path: Path) -> None:
+    ws = _workspace(tmp_path)
+    _write_source_evidence_pack(ws)
+    _write_claim_ledger(ws)
+    _write_gate_report(ws)
+    _write_gate_report(ws, status="fail", findings=[], stage="finalize")
+    _write_finalize_report(ws)
+    assert main(["state", "check", "--workspace", str(ws), "--json"]) == 0
+    _set_workflow_unblocked(ws)
+
+    payload = build_quality_panel(ws)
+
+    assert payload["gates"]["finalize_status"] == "fail"
+    assert payload["gates"]["blocking_count"] == 0
+    assert payload["overall_status"] == "block"
+    assert {
+        "action": "resolve_quality_gate_blockers",
+        "reason": "quality_gate_status_failed",
+    } in payload["recommended_actions"]
+
+
+def test_quality_panel_keeps_unknown_reader_clean_incomplete(tmp_path: Path) -> None:
+    ws = _workspace(tmp_path)
+    _write_source_evidence_pack(ws)
+    _write_claim_ledger(ws)
+    _write_gate_report(ws)
+    _write_gate_report(ws, stage="finalize")
+    _write_finalize_report(ws, reader_status="unknown")
+    assert main(["state", "check", "--workspace", str(ws), "--json"]) == 0
+    _set_workflow_unblocked(ws)
+
+    payload = build_quality_panel(ws)
+
+    assert payload["delivery"]["reader_clean_status"] == "unknown"
+    assert payload["overall_status"] == "incomplete"
+    assert {
+        "action": "complete_finalize_delivery_hygiene",
+        "reason": "finalize_or_reader_clean_missing",
     } in payload["recommended_actions"]
 
 

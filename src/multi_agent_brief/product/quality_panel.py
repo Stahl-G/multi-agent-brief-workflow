@@ -268,25 +268,32 @@ def _overall_status(
 ) -> str:
     if not workspace_status.get("ok"):
         return "incomplete"
+    auditor_gate_level = _gate_status_level(gates.get("auditor_status"))
+    finalize_gate_level = _gate_status_level(gates.get("finalize_status"))
+    reader_clean_status = _text(delivery.get("reader_clean_status"))
     if (
         workflow.get("blocked") or
         control_integrity.get("run_integrity") not in {"clean", "unknown"}
         or gates.get("blocking_count", 0) > 0
-        or delivery.get("reader_clean_status") == "fail"
+        or auditor_gate_level == "block"
+        or finalize_gate_level == "block"
+        or reader_clean_status == "fail"
         or claims.get("unsupported_count", 0) > 0
     ):
         return "block"
     if (
         control_integrity.get("fact_layer_status") in {"missing", "incomplete"}
         or source_evidence.get("source_pack_status") in {"missing", "not_available"}
-        or gates.get("auditor_status") == "missing"
-        or gates.get("finalize_status") == "missing"
-        or delivery.get("reader_clean_status") == "missing"
+        or auditor_gate_level in {"missing", "incomplete"}
+        or finalize_gate_level in {"missing", "incomplete"}
+        or reader_clean_status != "pass"
     ):
         return "incomplete"
     if (
         source_evidence.get("source_pack_status") == "invalid"
         or claims.get("claim_support_matrix_status") == "invalid"
+        or auditor_gate_level == "warning"
+        or finalize_gate_level == "warning"
         or gates.get("warning_count", 0) > 0
         or delivery.get("source_appendix_warning_count", 0) > 0
         or claims.get("weak_support_count", 0) > 0
@@ -322,7 +329,20 @@ def _recommended_actions(
         })
     if gates.get("blocking_count", 0) > 0:
         actions.append({"action": "resolve_quality_gate_blockers", "reason": "blocking_gate_findings"})
-    if gates.get("finalize_status") == "missing" or delivery.get("reader_clean_status") == "missing":
+    gate_levels = {
+        "auditor": _gate_status_level(gates.get("auditor_status")),
+        "finalize": _gate_status_level(gates.get("finalize_status")),
+    }
+    failed_gate_stages = [stage for stage, level in gate_levels.items() if level == "block"]
+    if failed_gate_stages and gates.get("blocking_count", 0) == 0:
+        actions.append({
+            "action": "resolve_quality_gate_blockers",
+            "reason": "quality_gate_status_failed",
+        })
+    if (
+        gate_levels["finalize"] in {"missing", "incomplete"}
+        or _text(delivery.get("reader_clean_status")) in {"", "missing", "unknown", "invalid"}
+    ):
         actions.append({
             "action": "complete_finalize_delivery_hygiene",
             "reason": "finalize_or_reader_clean_missing",
@@ -355,6 +375,19 @@ def _source_pack_status(record: Mapping[str, Any] | None) -> str:
     if status in {"invalid", "stale"}:
         return "invalid"
     return status
+
+
+def _gate_status_level(value: Any) -> str:
+    status = _text(value)
+    if status == "pass":
+        return "pass"
+    if status in {"fail", "failed", "block", "blocked", "blocking"}:
+        return "block"
+    if status == "warning":
+        return "warning"
+    if status == "missing":
+        return "missing"
+    return "incomplete"
 
 
 def _optional_artifact_status(
