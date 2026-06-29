@@ -57,7 +57,10 @@ from multi_agent_brief.orchestrator.runtime_state.workflow import (
     interpret_stage_completion,
     _stage_is_complete_or_skipped,
 )
-from multi_agent_brief.product.quality_panel import validate_quality_panel_payload
+from multi_agent_brief.product.quality_panel import (
+    validate_quality_panel_payload,
+    validate_quality_summary_markdown,
+)
 from multi_agent_brief.provenance.contract import provenance_artifact_activated
 from multi_agent_brief.quality_gates.contract import quality_gate_artifact_activated
 
@@ -198,7 +201,8 @@ def _validate_artifact(path: Path, fmt: str, artifact_id: str = "") -> tuple[str
         elif fmt in {"yaml", "yml"}:
             yaml.safe_load(text)
         elif fmt == "markdown":
-            pass
+            if artifact_id == "quality_summary":
+                return _validate_quality_summary_markdown(text)
     except json.JSONDecodeError:
         return ARTIFACT_INVALID, "parse_error"
     except yaml.YAMLError:
@@ -608,6 +612,13 @@ def _validate_quality_panel_payload(payload: Any) -> tuple[str, str]:
     if reason:
         return ARTIFACT_INVALID, reason
     return ARTIFACT_VALID, "experimental_quality_panel"
+
+
+def _validate_quality_summary_markdown(text: str) -> tuple[str, str]:
+    reason = validate_quality_summary_markdown(text)
+    if reason:
+        return ARTIFACT_INVALID, reason
+    return ARTIFACT_VALID, "experimental_quality_summary_markdown"
 
 
 def _workspace_root_for_input_classification(artifact_path: Path) -> Path | None:
