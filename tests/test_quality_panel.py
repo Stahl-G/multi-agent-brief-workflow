@@ -370,6 +370,72 @@ def test_quality_summary_write_reads_existing_panel_and_registers_artifact(tmp_p
     assert record["validation_result"] == "experimental_quality_summary_markdown"
 
 
+def test_quality_summarize_cli_writes_panel_and_summary_json(tmp_path: Path, capsys) -> None:
+    ws = _workspace(tmp_path)
+    capsys.readouterr()
+
+    assert main(["quality", "summarize", "--workspace", str(ws), "--json"]) == 0
+    payload = json.loads(capsys.readouterr().out)
+
+    assert payload["ok"] is True
+    assert payload["quality_panel"] == "output/intermediate/quality_panel.json"
+    assert payload["quality_summary"] == "output/intermediate/quality_summary.md"
+    assert payload["boundary"] == "quality_projection_only_not_gate_or_release_authority"
+    assert "not_release_authorization" in payload["non_claims"]
+    assert quality_panel_path(ws).exists()
+    assert quality_summary_path(ws).exists()
+    assert validate_quality_summary_markdown(quality_summary_path(ws).read_text(encoding="utf-8")) is None
+    assert main(["state", "check", "--workspace", str(ws), "--json"]) == 0
+    registry = _json(ws / "output" / "intermediate" / "artifact_registry.json")
+    assert registry["artifacts"]["quality_panel"]["status"] == "valid"
+    assert registry["artifacts"]["quality_summary"]["status"] == "valid"
+
+
+def test_quality_summarize_cli_human_output_keeps_projection_boundary(tmp_path: Path, capsys) -> None:
+    ws = _workspace(tmp_path)
+    capsys.readouterr()
+
+    assert main(["quality", "summarize", "--workspace", str(ws)]) == 0
+    output = capsys.readouterr().out
+
+    assert "quality_panel: output/intermediate/quality_panel.json" in output
+    assert "quality_summary: output/intermediate/quality_summary.md" in output
+    assert "quality projection only" in output
+    assert "no gates were run" in output
+    assert "no release was authorized" in output
+    assert "ready to publish" not in output.lower()
+    assert "truth proven" not in output.lower()
+
+
+def test_quality_summarize_cli_rejects_missing_workspace_without_writing(tmp_path: Path, capsys) -> None:
+    missing = tmp_path / "missing-ws"
+    capsys.readouterr()
+
+    assert main(["quality", "summarize", "--workspace", str(missing), "--json"]) == 1
+    payload = json.loads(capsys.readouterr().out)
+
+    assert payload["ok"] is False
+    assert "workspace does not exist" in payload["error"]
+    assert not missing.exists()
+
+
+def test_quality_summarize_cli_rejects_output_intermediate_shell_without_writing(
+    tmp_path: Path,
+    capsys,
+) -> None:
+    shell = tmp_path / "not-a-workspace"
+    (shell / "output" / "intermediate").mkdir(parents=True)
+    capsys.readouterr()
+
+    assert main(["quality", "summarize", "--workspace", str(shell), "--json"]) == 1
+    payload = json.loads(capsys.readouterr().out)
+
+    assert payload["ok"] is False
+    assert "not a BriefLoop workspace" in payload["error"]
+    assert not (shell / "output" / "intermediate" / "quality_panel.json").exists()
+    assert not (shell / "output" / "intermediate" / "quality_summary.md").exists()
+
+
 def test_quality_summary_missing_or_invalid_panel_fails_without_writing(tmp_path: Path) -> None:
     ws = _workspace(tmp_path)
 
@@ -423,6 +489,19 @@ def test_quality_summary_registry_requires_valid_quality_panel_source(tmp_path: 
     assert record["validation_result"].startswith(
         "quality_summary_validation_error:quality_panel_invalid:"
     )
+
+
+def test_quality_summary_registry_treats_invalid_utf8_panel_as_invalid(tmp_path: Path) -> None:
+    ws = _workspace(tmp_path)
+    summary = render_quality_summary(build_quality_panel(ws), quality_panel_sha256="0" * 64)
+    quality_summary_path(ws).write_text(summary, encoding="utf-8")
+    quality_panel_path(ws).write_bytes(b"\xff\xfe\x00")
+
+    assert main(["state", "check", "--workspace", str(ws), "--json"]) == 0
+    registry = _json(ws / "output" / "intermediate" / "artifact_registry.json")
+    record = registry["artifacts"]["quality_summary"]
+    assert record["status"] == "invalid"
+    assert record["validation_result"] == "quality_summary_validation_error:quality_panel_unreadable"
 
 
 def test_quality_summary_registry_rejects_stale_or_hand_edited_summary(tmp_path: Path) -> None:

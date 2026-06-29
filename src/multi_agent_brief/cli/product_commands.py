@@ -22,6 +22,12 @@ from multi_agent_brief.product.bundle_projection import (
 )
 from multi_agent_brief.product.policy_registry import PolicyProfileRegistry
 from multi_agent_brief.product.policy_resolver import PolicyProfileResolution, resolve_policy_profile
+from multi_agent_brief.product.quality_panel import (
+    QualityPanelError,
+    quality_panel_path,
+    write_quality_panel,
+    write_quality_summary,
+)
 from multi_agent_brief.product.report_pack_aliases import (
     RECOMMENDED_REPORT_PACK_ENTRIES,
     aliases_for_report_pack,
@@ -157,6 +163,21 @@ def register_extract(subparsers: argparse._SubParsersAction) -> None:
         help="Replace previously registered evidence-extract source copies.",
     )
     parser.add_argument("--json", action="store_true", help="Emit machine-readable JSON.")
+
+
+def register_quality(subparsers: argparse._SubParsersAction) -> None:
+    parser = subparsers.add_parser(
+        "quality",
+        help="Write experimental Quality Panel projection artifacts.",
+    )
+    actions = parser.add_subparsers(dest="quality_action", required=True)
+
+    summarize_parser = actions.add_parser(
+        "summarize",
+        help="Write quality_panel.json and quality_summary.md for operator review.",
+    )
+    summarize_parser.add_argument("--workspace", required=True, help="Path to workspace directory.")
+    summarize_parser.add_argument("--json", action="store_true", help="Emit machine-readable JSON.")
 
 
 def handle_new_workspace(args: argparse.Namespace) -> int:
@@ -306,6 +327,57 @@ def handle_extract(args: argparse.Namespace) -> int:
     return 0
 
 
+def handle_quality(args: argparse.Namespace) -> int:
+    action = getattr(args, "quality_action", "")
+    if action != "summarize":
+        return 1
+
+    workspace = Path(args.workspace).expanduser().resolve()
+    try:
+        _require_existing_briefloop_workspace(workspace)
+        panel = write_quality_panel(workspace=workspace)
+        summary = write_quality_summary(workspace=workspace, panel_payload=panel)
+    except (QualityPanelError, OSError, ValueError, json.JSONDecodeError) as exc:
+        payload = {
+            "ok": False,
+            "error": str(exc),
+            "workspace": str(workspace),
+            "boundary": "quality_projection_only_not_gate_or_release_authority",
+        }
+        _print_payload("quality summarize", payload, as_json=getattr(args, "json", False))
+        return 1
+
+    payload = {
+        "ok": True,
+        "workspace": str(workspace),
+        "quality_panel": _workspace_relative(workspace, quality_panel_path(workspace)),
+        "quality_summary": summary["path"],
+        "quality_summary_sha256": summary["sha256"],
+        "overall_status": panel.get("overall_status"),
+        "recommended_actions": panel.get("recommended_actions", []),
+        "boundary": "quality_projection_only_not_gate_or_release_authority",
+        "non_claims": [
+            "not_a_quality_score",
+            "not_a_gate_report_replacement",
+            "not_release_authorization",
+            "not_delivery_approval",
+            "not_semantic_truth_proof",
+            "not_repair_execution",
+        ],
+    }
+    _print_payload("quality summarize", payload, as_json=getattr(args, "json", False))
+    return 0
+
+
+def _require_existing_briefloop_workspace(workspace: Path) -> None:
+    if not workspace.exists() or not workspace.is_dir():
+        raise ValueError(f"workspace does not exist: {workspace}")
+    if not (workspace / "config.yaml").exists() and not (
+        workspace / "output" / "intermediate" / "runtime_manifest.json"
+    ).exists():
+        raise ValueError(f"not a BriefLoop workspace: {workspace}")
+
+
 def _print_payload(label: str, payload: dict[str, Any], *, as_json: bool) -> None:
     if as_json:
         print(json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True))
@@ -401,6 +473,21 @@ def _print_payload(label: str, payload: dict[str, Any], *, as_json: bool) -> Non
             print(
                 "boundary: source/scope registration only; no parsing, span extraction,"
                 " legal conclusion, delivery, or gate bypass"
+            )
+        else:
+            print(payload.get("error"))
+    elif label == "quality summarize":
+        if payload.get("ok"):
+            print(f"workspace: {payload.get('workspace')}")
+            print(f"quality_panel: {payload.get('quality_panel')}")
+            print(f"quality_summary: {payload.get('quality_summary')}")
+            print(f"overall_status: {payload.get('overall_status')}")
+            actions = payload.get("recommended_actions")
+            action_count = len(actions) if isinstance(actions, list) else 0
+            print(f"recommended_actions: {action_count}")
+            print(
+                "boundary: quality projection only; no gates were run, no repair was started,"
+                " no delivery was approved, and no release was authorized"
             )
         else:
             print(payload.get("error"))
