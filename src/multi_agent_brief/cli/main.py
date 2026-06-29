@@ -122,6 +122,7 @@ def build_parser(*, prog: str | None = None) -> argparse.ArgumentParser:
     product_commands.register_packs(subparsers)
     product_commands.register_validate_report_spec(subparsers)
     product_commands.register_extract(subparsers)
+    product_commands.register_quality(subparsers)
 
     # Internal review release modes and human approval ledger
     approval_commands.register(subparsers)
@@ -253,6 +254,9 @@ def _dispatch(args: argparse.Namespace) -> int:
 
     if cmd == "extract":
         return product_commands.handle_extract(args)
+
+    if cmd == "quality":
+        return product_commands.handle_quality(args)
 
     if cmd == "claude":
         return claude_commands.handle(args)

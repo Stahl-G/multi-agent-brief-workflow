@@ -158,6 +158,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   rendered from valid `quality_panel.json`. This is an operator-readable
   projection only; it is not a quality score, gate report replacement, release
   authorization, delivery approval, truth proof, or repair action.
+- **Quality summarize CLI**: added experimental
+  `briefloop quality summarize --workspace <workspace>` to write
+  `quality_panel.json` and source-bound `quality_summary.md` together. The
+  command is a deterministic projection writer only; it does not run gates,
+  create blockers, start repair, approve delivery, prove truth, or authorize
+  release.
 
 ### Fixed
 

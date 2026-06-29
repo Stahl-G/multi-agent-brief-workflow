@@ -114,9 +114,11 @@ breaking rename.
   existing control integrity, source evidence, gate, claim/support, and
   delivery hygiene surfaces, with optional
   `output/intermediate/quality_summary.md` as a compact human-readable
-  projection from that panel. These product-quality audit/control projections
-  do not run gates, create a quality score, replace gate reports, decide release
-  eligibility, approve delivery, prove semantic truth, or execute repair.
+  projection from that panel. The experimental `quality summarize` command can
+  write both artifacts together. These product-quality audit/control
+  projections do not run gates, create a quality score, replace gate reports,
+  decide release eligibility, approve delivery, prove semantic truth, or execute
+  repair.
   These contracts describe report type metadata over the existing Claim Ledger,
   artifact registry, gates, event log, archive, source appendix, support
   records, frozen-artifact integrity, and human delivery approval spine. These
