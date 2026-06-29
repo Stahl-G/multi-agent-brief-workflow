@@ -26,6 +26,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   product-facing entries while preserving canonical internal ReportPack ids.
   This is a CLI contract check only; it does not rename ReportPack ids or
   change workspace behavior.
+- **README canonicalization guard**: `README.md` and `README.zh-CN.md` are the
+  canonical public README bodies, while `README_en.md` is retained as a short
+  compatibility pointer to `README.md`. The v0.11 readiness and release checks
+  now verify this split before release prep. This is a public-link and
+  public-claim guard only; it does not change support status or product
+  behavior.
 
 ### Fixed
 

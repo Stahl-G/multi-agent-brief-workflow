@@ -43,19 +43,8 @@ def main() -> int:
         changed += 1
         print("  Updated README.md current version")
 
-    # 4. README_en.md current version
-    readme_en = ROOT / "README_en.md"
-    readme_en_text = readme_en.read_text(encoding="utf-8")
-    if readme_en_text.count(f"Current version: **{tag}**") != 1:
-        import re
-        new_text = re.sub(
-            r"Current version: \*\*v?\d+\.\d+\.\d+\*\*[^\n]*",
-            f"Current version: **{tag}**",
-            readme_en_text,
-        )
-        readme_en.write_text(new_text, encoding="utf-8")
-        changed += 1
-        print("  Updated README_en.md current version")
+    # 4. README_en.md is a compatibility pointer to README.md; no version update needed.
+    print("  README_en.md compatibility pointer (no update needed)")
 
     # 5. README.zh-CN.md current version
     readme_zh_cn = ROOT / "README.zh-CN.md"

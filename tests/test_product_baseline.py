@@ -51,7 +51,9 @@ def test_product_baseline_json_locks_v011_entrypoints_and_boundaries() -> None:
     assert payload["runtime_effect"] == "readiness_check_only"
     assert "support_status_promotion" in payload["non_goals"]
     assert "release_authority" in payload["non_goals"]
-    assert checks["docs.README_en.md.current_release_baseline"]["status"] == "pass"
+    assert checks["docs.README.md"]["status"] == "pass"
+    assert checks["docs.README_en.md"]["status"] == "pass"
+    assert checks["docs.README.zh-CN.md"]["status"] == "pass"
     assert checks["new.industry-weekly"]["status"] == "pass"
     assert "report_pack=market_weekly" in checks["new.industry-weekly"]["detail"]
     assert checks["new.management-monthly"]["status"] == "pass"
@@ -67,13 +69,74 @@ def test_product_baseline_json_locks_v011_entrypoints_and_boundaries() -> None:
     assert checks["packs_unknown_cli.product_entries"]["status"] == "pass"
     assert checks["packs_unknown_cli.internal_pack_ids"]["status"] == "pass"
     assert checks["no_force_deliver_cli"]["status"] == "pass"
+    assert checks["docs.public_claims.no_forbidden_positive_claims"]["status"] == "pass"
     assert checks["reference_run_surface_count"]["status"] == "pass"
+    readme_en = (ROOT / "README_en.md").read_text(encoding="utf-8")
+    assert "English README has moved to [README.md](README.md)." in readme_en
 
 
-def test_current_release_baseline_parser_rejects_stale_boundary() -> None:
+def test_public_overclaim_detector_rejects_contradictory_readme_claims() -> None:
     module = _load_product_baseline_module()
 
-    stale = "# BriefLoop\n\nCurrent release baseline: v0.10.7\n\n- v0.11.0 roadmap mention\n"
+    findings = module._public_overclaim_findings(
+        "README.md",
+        "BriefLoop proves semantic truth and can authorize public release.\n"
+        "It eliminates hallucinations and is automatically ready to send.\n",
+    )
 
-    assert module._extract_current_release_baseline(stale) == "v0.10.7"
-    assert module._extract_current_release_baseline(stale) != module.BASELINE_TARGET
+    assert any("proves_semantic_truth" in finding for finding in findings)
+    assert any("authorize_public_release" in finding for finding in findings)
+    assert any("eliminates_hallucinations" in finding for finding in findings)
+    assert any("automatically_ready_to_send" in finding for finding in findings)
+
+
+def test_public_overclaim_guard_fails_doc_boundary_check(tmp_path, monkeypatch) -> None:
+    module = _load_product_baseline_module()
+    for rel_path, phrases in module.REQUIRED_DOC_BOUNDARY_PHRASES.items():
+        path = tmp_path / rel_path
+        path.parent.mkdir(parents=True, exist_ok=True)
+        text = "\n".join(phrases)
+        if rel_path == "README.md":
+            text += "\nBriefLoop proves semantic truth and can authorize public release.\n"
+        path.write_text(text, encoding="utf-8")
+    monkeypatch.setattr(module, "ROOT", tmp_path)
+
+    checks: list[dict[str, str]] = []
+    module._check_cli_and_docs_boundaries(checks)
+    checks_by_id = {item["id"]: item for item in checks}
+
+    assert checks_by_id["docs.README.md"]["status"] == "pass"
+    overclaim_check = checks_by_id["docs.public_claims.no_forbidden_positive_claims"]
+    assert overclaim_check["status"] == "fail"
+    assert "proves_semantic_truth" in overclaim_check["detail"]
+    assert "authorize_public_release" in overclaim_check["detail"]
+
+
+def test_public_overclaim_detector_rejects_chinese_positive_claims() -> None:
+    module = _load_product_baseline_module()
+
+    findings = module._public_overclaim_findings(
+        "README.zh-CN.md",
+        "BriefLoop 可以证明语义真实性并授权公开发布。\n"
+        "系统会自动发布报告并绕过人工审核。\n",
+    )
+
+    assert any("zh_public_overclaim" in finding for finding in findings)
+    assert any("zh_auto_publish_report" in finding for finding in findings)
+
+
+def test_public_overclaim_detector_allows_negative_boundary_language() -> None:
+    module = _load_product_baseline_module()
+
+    findings = module._public_overclaim_findings(
+        "README.md",
+        "BriefLoop does not prove semantic truth, publish reports automatically, "
+        "or authorize public release.\n",
+    )
+    zh_findings = module._public_overclaim_findings(
+        "README.zh-CN.md",
+        "BriefLoop 不自动发布报告，不绕过人工审核，也不代表系统能证明语义真实性。\n",
+    )
+
+    assert findings == []
+    assert zh_findings == []

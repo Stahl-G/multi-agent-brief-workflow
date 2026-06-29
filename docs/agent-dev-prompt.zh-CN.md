@@ -201,7 +201,7 @@ Workspace memory：
 3. 先找 source of truth，再改生成产物。
 4. 每个 PR 尽量只做一个 契约 slice。
 5. 不要把 司乐师、溯源、quality、packaging、agent prompts 混进一个大 PR。
-6. 文档变更要同步 `README.md` 和 `README_en.md`，如果影响用户可见行为。
+6. 文档变更要同步 `README.md` 和 `README.zh-CN.md`，如果影响用户可见行为；`README_en.md` 只是兼容跳转文件。
 7. 版本声明必须和 `VERSION`、`pyproject.toml`、CHANGELOG、release checks 一致。
 8. Public roadmap 保持高层；详细工程计划放入 ignored private planning paths。
 

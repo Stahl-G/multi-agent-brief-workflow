@@ -176,6 +176,16 @@ multi-agent-brief init ~/mabw-workspace --from-onboarding onboarding.json
 multi-agent-brief run --workspace ~/mabw-workspace
 ```
 
+Common setup helpers:
+
+```bash
+multi-agent-brief init --from-onboarding onboarding.json <workspace>
+multi-agent-brief sources decide --config <workspace>/config.yaml
+```
+
+`sources decide` is the explicit source-discovery helper for workspaces that use
+the `llm_decide` source profile.
+
 ### Windows PowerShell
 
 Windows does not require WSL or Git Bash. PowerShell is the recommended path.

@@ -77,17 +77,18 @@ def main() -> int:
         _error(f"README.md current version does not match {tag}")
         errors.append("README.md")
 
-    # 4. README_en.md
+    # 4. README_en.md compatibility pointer
     readme_en_path = ROOT / "README_en.md"
     if readme_en_path.exists():
         readme_en = _read(readme_en_path)
-        if f"Current version: **{tag}**" in readme_en:
-            _ok("README_en.md current version")
+        if "English README has moved to [README.md](README.md)." in readme_en:
+            _ok("README_en.md compatibility pointer")
         else:
-            _error(f"README_en.md does not mention {tag}")
+            _error("README_en.md is not the compatibility pointer to README.md")
             errors.append("README_en.md")
     else:
-        _ok("README_en.md (not present)")
+        _error("README_en.md compatibility pointer missing")
+        errors.append("README_en.md")
 
     # 5. README.zh-CN.md
     readme_zh_cn_path = ROOT / "README.zh-CN.md"
@@ -114,7 +115,7 @@ def main() -> int:
     # 7. Stale old versions in "current version" context
     current_version_patterns = [
         (r"当前版本[:：]\s*\*\*v?([0-9]+\.[0-9]+\.[0-9]+)\*\*", ["README.zh-CN.md"]),
-        (r"Current version[:：]\s*\*\*v?([0-9]+\.[0-9]+\.[0-9]+)\*\*", ["README.md", "README_en.md", "docs/roadmap.md"]),
+        (r"Current version[:：]\s*\*\*v?([0-9]+\.[0-9]+\.[0-9]+)\*\*", ["README.md", "docs/roadmap.md"]),
     ]
     for pat, files in current_version_patterns:
         for file in files:
