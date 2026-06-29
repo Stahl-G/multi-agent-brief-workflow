@@ -532,7 +532,7 @@ def test_briefloop_skill_is_not_slash_command_implementation():
 
 
 def test_readme_first_screen_uses_briefloop_as_writer_command():
-    readme_paths = ["README.md", "README_en.md", "README.zh-CN.md"]
+    readme_paths = ["README.md", "README.zh-CN.md"]
     for path in readme_paths:
         text = _read(path)
         first_screen = "\n".join(text.splitlines()[:32])
@@ -540,6 +540,9 @@ def test_readme_first_screen_uses_briefloop_as_writer_command():
         assert "/mabw" in first_screen
         assert "BriefLoop" in first_screen
         assert "/generate-brief" not in first_screen
+
+    readme_en = _read("README_en.md")
+    assert "English README has moved to [README.md](README.md)." in readme_en
 
 
 def test_claude_mabw_new_forbids_private_company_inference():

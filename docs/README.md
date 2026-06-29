@@ -13,7 +13,7 @@ tree is fully bilingual.
 
 | Topic | English | Chinese |
 |---|---|---|
-| README | [README.md](../README.md) / [README_en.md](../README_en.md) | [README.zh-CN.md](../README.zh-CN.md) |
+| README | [README.md](../README.md) | [README.zh-CN.md](../README.zh-CN.md) |
 | Function map | [features.md](features.md) | [features.zh-CN.md](features.zh-CN.md) |
 | Windows PowerShell setup | [windows-powershell.md](windows-powershell.md) | [windows-powershell.zh-CN.md](windows-powershell.zh-CN.md) |
 | Golden path | [golden-path.md](golden-path.md) | [golden-path.zh-CN.md](golden-path.zh-CN.md) |
@@ -28,6 +28,8 @@ tree is fully bilingual.
 | Migration notes | [MIGRATION.md](MIGRATION.md) | [MIGRATION.zh-CN.md](MIGRATION.zh-CN.md) |
 | What MABW tracks | [what-mabw-keeps-track-of.md](what-mabw-keeps-track-of.md) | [what-mabw-keeps-track-of.zh-CN.md](what-mabw-keeps-track-of.zh-CN.md) |
 | MABW-080 experiment guide | [experiments-080.md](experiments-080.md) | English-first |
+
+`README_en.md` is retained only as a compatibility pointer to `README.md`.
 
 ## English-First Reference Docs
 

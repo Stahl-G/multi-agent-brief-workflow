@@ -13,6 +13,12 @@ SCRIPT = Path(__file__).resolve().parent.parent / "scripts" / "check_release_con
 VERSION_SCRIPT = Path(__file__).resolve().parent.parent / "scripts" / "check_version_consistency.py"
 BUMP_VERSION_SCRIPT = Path(__file__).resolve().parent.parent / "scripts" / "bump_version.py"
 RELEASE_SCRIPT = Path(__file__).resolve().parent.parent / "scripts" / "release.sh"
+README_EN_POINTER = (
+    "# BriefLoop English README\n\n"
+    "The English README has moved to [README.md](README.md).\n\n"
+    "This file is kept as a compatibility pointer so existing external links to\n"
+    "`README_en.md` do not break.\n"
+)
 
 
 def _bash_executable() -> str:
@@ -119,7 +125,7 @@ def test_check_version_consistency_fails_on_hermes_adapter_mismatch(tmp_path, mo
     (root / "VERSION").write_text("1.2.3\n", encoding="utf-8")
     (root / "pyproject.toml").write_text('[project]\nversion = "1.2.3"\n', encoding="utf-8")
     (root / "README.md").write_text("Current version: **v1.2.3**\n", encoding="utf-8")
-    (root / "README_en.md").write_text("Current version: **v1.2.3**\n", encoding="utf-8")
+    (root / "README_en.md").write_text(README_EN_POINTER, encoding="utf-8")
     (root / "README.zh-CN.md").write_text("当前版本：**v1.2.3**\n", encoding="utf-8")
     (root / "CHANGELOG.md").write_text("## [1.2.3]\n", encoding="utf-8")
 
@@ -160,7 +166,7 @@ def test_bump_version_does_not_rewrite_ruff_target_version(tmp_path, monkeypatch
         encoding="utf-8",
     )
     (root / "README.md").write_text("Current version: **v0.0.1**\n", encoding="utf-8")
-    (root / "README_en.md").write_text("Current version: **v0.0.1**\n", encoding="utf-8")
+    (root / "README_en.md").write_text(README_EN_POINTER, encoding="utf-8")
     (root / "README.zh-CN.md").write_text("当前版本：**v0.0.1**\n", encoding="utf-8")
     adapter = root / "src" / "multi_agent_brief" / "hermes" / "adapter.py"
     adapter.parent.mkdir(parents=True)
@@ -180,6 +186,9 @@ def test_bump_version_does_not_rewrite_ruff_target_version(tmp_path, monkeypatch
     assert 'version = "1.2.3"' in pyproject
     assert 'target-version = "py39"' in pyproject
     assert 'target-version = "1.2.3"' not in pyproject
+    readme_en = (root / "README_en.md").read_text(encoding="utf-8")
+    assert "English README has moved to [README.md](README.md)." in readme_en
+    assert "Current version:" not in readme_en
 
 
 def test_release_script_syntax():

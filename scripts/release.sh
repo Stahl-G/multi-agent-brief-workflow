@@ -7,7 +7,7 @@
 # Usage:
 #   echo "0.5.9" > VERSION
 #   python3 scripts/bump_version.py
-#   git add VERSION README.md README_en.md CHANGELOG.md pyproject.toml src/ .agents/ Formula/
+#   git add VERSION README.md README.zh-CN.md CHANGELOG.md pyproject.toml src/ .agents/ Formula/
 #   git commit -m "chore(release): v0.5.9"
 #   bash scripts/release.sh
 set -euo pipefail

@@ -170,6 +170,15 @@ multi-agent-brief init ~/mabw-workspace --from-onboarding onboarding.json
 multi-agent-brief run --workspace ~/mabw-workspace
 ```
 
+常用设置辅助命令：
+
+```bash
+multi-agent-brief init --from-onboarding onboarding.json <workspace>
+multi-agent-brief sources decide --config <workspace>/config.yaml
+```
+
+`sources decide` 是用于 `llm_decide` 来源配置的显式 source-discovery 辅助命令。
+
 ### Windows PowerShell
 
 Windows 不需要 WSL 或 Git Bash。推荐直接用 PowerShell。

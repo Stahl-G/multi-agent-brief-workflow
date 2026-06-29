@@ -13,6 +13,7 @@ import argparse
 import contextlib
 import io
 import json
+import re
 import sys
 import tempfile
 from pathlib import Path
@@ -70,10 +71,9 @@ REQUIRED_DOC_BOUNDARY_PHRASES = {
         "The system does not publish or bypass review",
     ],
     "README_en.md": [
-        "does not parse PDFs automatically",
-        "prove semantic truth",
-        "approve delivery",
-        "create public release authority",
+        "English README has moved to [README.md](README.md).",
+        "compatibility pointer",
+        "README.zh-CN.md",
     ],
     "README.zh-CN.md": [
         "写作入口",
@@ -97,6 +97,71 @@ REQUIRED_DOC_BOUNDARY_PHRASES = {
         "Quality Panel projection",
     ],
 }
+FORBIDDEN_PUBLIC_CLAIM_PATTERNS = [
+    (
+        "proves_semantic_truth",
+        re.compile(r"\b(proves|proved|proving)\s+semantic\s+truth\b", re.IGNORECASE),
+    ),
+    (
+        "eliminates_hallucinations",
+        re.compile(r"\beliminates?\s+hallucinations?\b", re.IGNORECASE),
+    ),
+    (
+        "automatically_ready_to_send",
+        re.compile(
+            r"\bautomatically\s+ready\s+to\s+send\b"
+            r"|\bready\s+to\s+send\s+automatically\b",
+            re.IGNORECASE,
+        ),
+    ),
+    (
+        "authorize_public_release",
+        re.compile(
+            r"\b(can|could|will|does|may)\s+authorize\s+public\s+release\b"
+            r"|\b(authorizes|authorized|authorizing)\s+public\s+release\b",
+            re.IGNORECASE,
+        ),
+    ),
+    (
+        "publish_reports_automatically",
+        re.compile(
+            r"\b(can|could|will|does|may)\s+publish\s+reports?\s+automatically\b"
+            r"|\bautomatically\s+publishes?\s+reports?\b",
+            re.IGNORECASE,
+        ),
+    ),
+    (
+        "bypass_review",
+        re.compile(
+            r"\b(can|could|will|does|may)\s+bypass\s+(human\s+)?review\b"
+            r"|\bbypasses\s+(human\s+)?review\b",
+            re.IGNORECASE,
+        ),
+    ),
+    (
+        "zh_public_overclaim",
+        re.compile(
+            r"(可以|能|能够|会|将)[^。；\n]{0,16}"
+            r"(证明语义真实性|证明语义真理|消除幻觉|自动发布|公开发布|绕过人工审核|绕过审核|授权公开发布)"
+        ),
+    ),
+    ("zh_auto_publish_report", re.compile(r"自动发布报告")),
+]
+NEGATING_CONTEXT_TOKENS = (
+    "does not",
+    "do not",
+    "cannot",
+    "can't",
+    "not ",
+    "without",
+    "不",
+    "不能",
+    "不会",
+    "不应",
+    "不要",
+    "不代表",
+    "禁止",
+)
 
 
 def main() -> int:
@@ -312,17 +377,11 @@ def _check_cli_and_docs_boundaries(checks: list[dict[str, str]]) -> None:
         "force-deliver" not in help_text and "force deliver" not in help_text.lower(),
         "top-level CLI help does not expose force-deliver",
     )
-    readme_en = (ROOT / "README_en.md").read_text(encoding="utf-8")
-    current_baseline = _extract_current_release_baseline(readme_en)
-    _append_check(
-        checks,
-        "docs.README_en.md.current_release_baseline",
-        current_baseline == BASELINE_TARGET,
-        f"current_release_baseline={current_baseline or '<missing>'} expected={BASELINE_TARGET}",
-    )
 
+    public_overclaims: list[str] = []
     for rel_path, phrases in REQUIRED_DOC_BOUNDARY_PHRASES.items():
-        text = (ROOT / rel_path).read_text(encoding="utf-8").lower()
+        raw_text = (ROOT / rel_path).read_text(encoding="utf-8")
+        text = raw_text.lower()
         missing = [phrase for phrase in phrases if phrase.lower() not in text]
         _append_check(
             checks,
@@ -330,6 +389,14 @@ def _check_cli_and_docs_boundaries(checks: list[dict[str, str]]) -> None:
             not missing,
             f"required boundary phrases missing={missing}",
         )
+        public_overclaims.extend(_public_overclaim_findings(rel_path, raw_text))
+
+    _append_check(
+        checks,
+        "docs.public_claims.no_forbidden_positive_claims",
+        not public_overclaims,
+        f"forbidden positive claims={public_overclaims}",
+    )
 
 
 def _check_reference_run_surface(checks: list[dict[str, str]]) -> None:
@@ -384,12 +451,20 @@ def _run_cli_json(argv: list[str]) -> tuple[int, dict[str, Any]]:
     return code, payload if isinstance(payload, dict) else {"ok": False, "payload": payload}
 
 
-def _extract_current_release_baseline(text: str) -> str:
-    for line in text.splitlines():
-        stripped = line.strip()
-        if stripped.lower().startswith("current release baseline:"):
-            return stripped.split(":", 1)[1].strip()
-    return ""
+def _public_overclaim_findings(rel_path: str, text: str) -> list[str]:
+    findings: list[str] = []
+    for line_no, line in enumerate(text.splitlines(), 1):
+        for label, pattern in FORBIDDEN_PUBLIC_CLAIM_PATTERNS:
+            for match in pattern.finditer(line):
+                if _has_negating_context(line, match.start()):
+                    continue
+                findings.append(f"{rel_path}:{line_no}:{label}:{match.group(0)}")
+    return findings
+
+
+def _has_negating_context(line: str, match_start: int) -> bool:
+    prefix = line[max(0, match_start - 32):match_start].lower()
+    return any(token in prefix for token in NEGATING_CONTEXT_TOKENS)
 
 
 def _append_check(checks: list[dict[str, str]], check_id: str, ok: bool, detail: str) -> None:
