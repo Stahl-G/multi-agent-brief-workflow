@@ -21,13 +21,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   entrypoints, canonical ReportPack mappings, local-first workspace skeletons,
   control-spine defaults, no force-deliver CLI surface, reference-run docs, and
   public boundary wording before a v0.11 release. This is a readiness guard
-  only; it does not bump the version, promote support status, run stages,
-  approve delivery, prove truth, or create release authority.
+  only; it does not bump the version, promote wider Product OS support status,
+  run stages, approve delivery, prove truth, or create release authority.
 - **Release consistency product-baseline guard**: `check_release_consistency.py`
   now runs the v0.11 product-baseline readiness check so release prep fails
   closed if product-facing entries, ReportPack defaults, packaged parity, or
   public boundary wording drift. This is still a release-readiness check only;
-  it does not promote support status or add runtime authority.
+  it does not promote wider Product OS support status or add runtime authority.
 - **Product-baseline `packs` CLI surface guard**: the v0.11 readiness check now
   verifies real `packs list --json` and unknown-pack error output expose
   product-facing entries while preserving canonical internal ReportPack ids.
@@ -48,6 +48,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **ReportPack support-status alignment**: baseline ReportPacks now expose
+  machine-readable `status: supported` for `market_weekly`,
+  `management_monthly`, and `evidence_extract`, while
+  `solar_industry_periodic` remains `experimental`. The product-baseline
+  readiness check now verifies these config and CLI statuses against the public
+  support-matrix split.
 - **Material-fact bibliography false positives**: deterministic audit now skips
   bibliography / source-reference sections when checking
   `number_without_source`, so numbers in source titles do not become blocking

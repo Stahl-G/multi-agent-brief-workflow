@@ -64,6 +64,12 @@ STABLE_SCENARIO_PACKS = {
     "management_monthly",
     "evidence_extract",
 }
+EXPECTED_REPORT_PACK_STATUSES = {
+    "market_weekly": "supported",
+    "management_monthly": "supported",
+    "evidence_extract": "supported",
+    "solar_industry_periodic": "experimental",
+}
 REQUIRED_CONTROL_SPINE = {
     "claim_ledger",
     "artifact_registry",
@@ -339,6 +345,15 @@ def _check_report_pack_configs(checks: list[dict[str, str]]) -> None:
             "hidden_autonomous_crawling=false",
         )
 
+    for pack_id, expected_status in sorted(EXPECTED_REPORT_PACK_STATUSES.items()):
+        pack = root_packs.get(pack_id) or {}
+        _append_check(
+            checks,
+            f"{pack_id}.status",
+            pack.get("status") == expected_status,
+            f"status={pack.get('status')} expected={expected_status}",
+        )
+
 
 def _check_product_entries(checks: list[dict[str, str]]) -> None:
     for entry, pack_id in {
@@ -405,6 +420,17 @@ def _check_packs_cli_surface(checks: list[dict[str, str]]) -> None:
         "packs_list_cli.aliases",
         not missing_aliases,
         f"missing aliases={missing_aliases}",
+    )
+    status_mismatches = []
+    for pack_id, expected_status in EXPECTED_REPORT_PACK_STATUSES.items():
+        item = packs_by_id.get(pack_id) or {}
+        if item.get("status") != expected_status:
+            status_mismatches.append(f"{pack_id}:{item.get('status')}!={expected_status}")
+    _append_check(
+        checks,
+        "packs_list_cli.support_statuses",
+        not status_mismatches,
+        f"status mismatches={status_mismatches}",
     )
 
     unknown_code, unknown_payload = _run_cli_json(["packs", "show", "unknown-pack", "--json"])
