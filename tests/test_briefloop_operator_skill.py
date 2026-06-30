@@ -136,6 +136,7 @@ def test_runtime_status_and_control_references_track_quality_and_release_surface
     assert "briefloop quality summarize --workspace <workspace>" in runtime
     assert "not a gate runner" in runtime
     assert "Approval ledger records must be scoped to the current run" in status
+    assert "branding_context" in status
     assert "SHA-256 binding" in status
     assert "Use the owning CLI transaction instead." in control
     assert "agent draft surfaces" in control

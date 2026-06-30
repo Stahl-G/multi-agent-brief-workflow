@@ -14,6 +14,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Mapping
 
+from multi_agent_brief.core.config import load_config
 from multi_agent_brief.orchestrator.runtime_state._io import (
     _read_json_if_exists,
     _read_state_bytes,
@@ -41,6 +42,7 @@ VALID_APPROVAL_ROLES = {
     "ir_owner",
     "legal_or_compliance_reviewer",
 }
+APPROVED_BRANDING_AUTHORIZATION_VALUES = {"approved", "authorized"}
 
 
 RELEASE_MODES: dict[str, dict[str, Any]] = {
@@ -281,6 +283,8 @@ def check_release_readiness(
     if approval_required:
         blockers.extend(f"missing_required_approval:{role}" for role in missing_roles)
         blockers.extend(f"approval_not_approved:{role}" for role in rejected_roles)
+    branding_context = _release_branding_context(ws)
+    blockers.extend(branding_context["blockers"])
     status = "pass" if not blockers else "blocked"
     now = utc_now()
     report = {
@@ -299,6 +303,7 @@ def check_release_readiness(
             for role in sorted(latest)
             if role in required_roles
         ],
+        "branding_context": branding_context,
         "ledger_path": "output/intermediate/human_approval_ledger.json"
         if approval_ledger_path(ws).exists()
         else "",
@@ -322,6 +327,8 @@ def check_release_readiness(
                 "status": status,
                 "approval_required": approval_required,
                 "missing_roles": missing_roles,
+                "branding_status": branding_context["status"],
+                "branding_blocked": bool(branding_context["blockers"]),
                 "blocked": bool(blockers),
                 "boundary": RELEASE_CHECK_BOUNDARY,
             },
@@ -412,10 +419,21 @@ def validate_release_readiness_report_payload(payload: Any) -> str | None:
     for field in ("required_roles", "approved_roles", "missing_roles", "blockers"):
         if not isinstance(payload.get(field), list):
             return f"release_readiness_report_schema_error:{field}"
+    branding_context = payload.get("branding_context")
+    if not isinstance(branding_context, dict):
+        return "release_readiness_report_schema_error:branding_context"
+    if branding_context.get("status") not in {"not_required", "complete", "missing", "blocked"}:
+        return "release_readiness_report_schema_error:branding_context.status"
+    for field in ("missing_fields", "blockers"):
+        if not isinstance(branding_context.get(field), list):
+            return f"release_readiness_report_schema_error:branding_context.{field}"
     required_roles = list(RELEASE_MODES[mode]["required_roles"])
     if payload.get("required_roles") != required_roles:
         return "release_readiness_report_schema_error:required_roles"
     blockers = payload.get("blockers")
+    for blocker in branding_context.get("blockers", []):
+        if blocker not in blockers:
+            return "release_readiness_report_schema_error:branding_context.blockers"
     if payload.get("status") == "blocked" and not blockers:
         return "release_readiness_report_schema_error:blockers"
     if payload.get("status") == "pass" and blockers:
@@ -846,6 +864,130 @@ def _latest_records_for_mode(
         if role:
             latest[role] = record
     return latest
+
+
+def _release_branding_context(workspace: Path) -> dict[str, Any]:
+    config_path = workspace / "config.yaml"
+    if not config_path.exists():
+        return _empty_branding_context(required=False, status="not_required")
+    try:
+        config = load_config(config_path)
+    except Exception as exc:
+        raise ReleaseApprovalError(
+            f"config.yaml invalid for release branding context: {exc}"
+        ) from exc
+    release_config = config.get("release")
+    release_config = release_config if isinstance(release_config, dict) else {}
+    branding = release_config.get("branding")
+    if not isinstance(branding, dict):
+        return _empty_branding_context(required=False, status="not_required")
+
+    required = _as_bool(branding.get("required"), default=False)
+    institution_name = _first_text(
+        branding.get("institution_name"),
+        branding.get("organization_name"),
+        branding.get("brand_owner"),
+    )
+    authorization_status = _first_text(
+        branding.get("institution_use_authorization"),
+        branding.get("authorization_status"),
+    ).lower()
+    authorization_reference = _first_text(
+        branding.get("authorization_reference"),
+        branding.get("authorization_ref"),
+        branding.get("approval_reference"),
+    )
+    required_fields = [
+        "institution_name",
+        "institution_use_authorization",
+        "authorization_reference",
+    ] if required else []
+    missing_fields: list[str] = []
+    blockers: list[str] = []
+    if required and not institution_name:
+        missing_fields.append("institution_name")
+        blockers.append("missing_branding_metadata:institution_name")
+    if required and not authorization_status:
+        missing_fields.append("institution_use_authorization")
+        blockers.append("missing_branding_metadata:institution_use_authorization")
+    if (
+        required
+        and authorization_status in APPROVED_BRANDING_AUTHORIZATION_VALUES
+        and not authorization_reference
+    ):
+        missing_fields.append("authorization_reference")
+        blockers.append("missing_branding_metadata:authorization_reference")
+    if (
+        required
+        and authorization_status
+        and authorization_status not in APPROVED_BRANDING_AUTHORIZATION_VALUES
+    ):
+        blockers.append(f"institution_branding_not_authorized:{authorization_status}")
+    if not required:
+        status = "not_required"
+    elif missing_fields:
+        status = "missing"
+    elif blockers:
+        status = "blocked"
+    else:
+        status = "complete"
+    return {
+        "required": required,
+        "status": status,
+        "required_fields": required_fields,
+        "present_fields": [
+            field
+            for field, present in (
+                ("institution_name", bool(institution_name)),
+                ("institution_use_authorization", bool(authorization_status)),
+                ("authorization_reference", bool(authorization_reference)),
+            )
+            if present
+        ],
+        "missing_fields": missing_fields,
+        "institution_name_present": bool(institution_name),
+        "institution_use_authorization": authorization_status,
+        "authorization_reference_present": bool(authorization_reference),
+        "blockers": blockers,
+        "boundary": "branding_context_metadata_not_public_release_authorization",
+    }
+
+
+def _empty_branding_context(*, required: bool, status: str) -> dict[str, Any]:
+    return {
+        "required": required,
+        "status": status,
+        "required_fields": [],
+        "present_fields": [],
+        "missing_fields": [],
+        "institution_name_present": False,
+        "institution_use_authorization": "",
+        "authorization_reference_present": False,
+        "blockers": [],
+        "boundary": "branding_context_metadata_not_public_release_authorization",
+    }
+
+
+def _first_text(*values: Any) -> str:
+    for value in values:
+        text = _clean_text(value)
+        if text:
+            return text
+    return ""
+
+
+def _as_bool(value: Any, *, default: bool = False) -> bool:
+    if value is None:
+        return default
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, str):
+        text = value.strip().lower()
+        if text in {"1", "true", "yes", "y", "on"}:
+            return True
+        if text in {"0", "false", "no", "n", "off"}:
+            return False
+    return bool(value)
 
 
 def _public_record(record: Mapping[str, Any]) -> dict[str, Any]:
