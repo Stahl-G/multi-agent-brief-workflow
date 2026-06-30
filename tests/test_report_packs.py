@@ -133,6 +133,21 @@ def test_report_pack_payload_validation_rejects_invalid_default_spec() -> None:
     assert any(item.field == "default_report_spec.control_spine.archive" for item in violations)
 
 
+def test_report_pack_payload_validation_allows_supported_and_experimental_statuses() -> None:
+    supported = _market_pack()
+    experimental = _solar_pack()
+
+    assert not [item for item in validate_report_pack_payload(supported) if item.field == "status"]
+    assert not [item for item in validate_report_pack_payload(experimental) if item.field == "status"]
+
+    invalid = _market_pack()
+    invalid["status"] = "stable"
+
+    violations = validate_report_pack_payload(invalid)
+
+    assert any(item.field == "status" for item in violations)
+
+
 def test_report_packs_do_not_change_runtime_stage_contracts() -> None:
     registry = ContractRegistry.from_config_dir(ROOT / "configs")
 
@@ -158,7 +173,7 @@ def test_packs_cli_list_and_show_pack(capsys) -> None:
     shown = json.loads(capsys.readouterr().out)
     assert shown["ok"] is True
     assert shown["pack"]["pack_id"] == "market_weekly"
-    assert shown["pack"]["status"] == "experimental"
+    assert shown["pack"]["status"] == "supported"
     assert shown["recommended_entry"] == "industry-weekly"
     assert "market_weekly" in shown["aliases"]
 
@@ -166,12 +181,14 @@ def test_packs_cli_list_and_show_pack(capsys) -> None:
     shown = json.loads(capsys.readouterr().out)
     assert shown["ok"] is True
     assert shown["pack"]["pack_id"] == "solar_industry_periodic"
+    assert shown["pack"]["status"] == "experimental"
     assert shown["pack"]["default_policy_profile"] == "solar_manufacturing_default"
 
     assert main(["packs", "show", "evidence_extract", "--json"]) == 0
     shown = json.loads(capsys.readouterr().out)
     assert shown["ok"] is True
     assert shown["pack"]["pack_id"] == "evidence_extract"
+    assert shown["pack"]["status"] == "supported"
     assert shown["pack"]["default_policy_profile"] == "evidence_extract_default"
 
 

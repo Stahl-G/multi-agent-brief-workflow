@@ -54,7 +54,7 @@ EVIDENCE_EXTRACT_TEXT_EXTENSIONS = {".md", ".txt", ".json"}
 def register_new_workspace(subparsers: argparse._SubParsersAction) -> None:
     parser = subparsers.add_parser(
         "new",
-        help="Create a conservative zero-config workspace from an experimental ReportPack.",
+        help="Create a conservative zero-config workspace from a ReportPack.",
     )
     parser.add_argument("report_pack", help="Product entry or ReportPack id, for example industry-weekly.")
     parser.add_argument("workspace", help="Target workspace directory.")
@@ -90,7 +90,7 @@ def register_new_workspace(subparsers: argparse._SubParsersAction) -> None:
 def register_packs(subparsers: argparse._SubParsersAction) -> None:
     parser = subparsers.add_parser(
         "packs",
-        help="List and inspect experimental ReportPack contracts.",
+        help="List and inspect supported and experimental ReportPack contracts.",
     )
     actions = parser.add_subparsers(dest="packs_action", required=True)
 
@@ -127,7 +127,7 @@ def register_packs(subparsers: argparse._SubParsersAction) -> None:
 def register_validate_report_spec(subparsers: argparse._SubParsersAction) -> None:
     parser = subparsers.add_parser(
         "validate-report-spec",
-        help="Validate an experimental ReportSpec YAML file.",
+        help="Validate a ReportSpec YAML file.",
     )
     parser.add_argument("report_spec", help="Path to report_spec.yaml.")
     parser.add_argument("--json", action="store_true", help="Emit machine-readable JSON.")

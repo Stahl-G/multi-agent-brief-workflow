@@ -2,7 +2,7 @@ schema_version: briefloop.report_pack.v1
 pack_id: evidence_extract
 report_type: evidence_extract
 display_name: Evidence Extract
-status: experimental
+status: supported
 description: Local-first evidence extraction pack contract over explicit scope and registered source files.
 default_policy_profile: evidence_extract_default
 default_report_spec:
@@ -34,7 +34,7 @@ default_report_spec:
     - source_appendix
   metadata:
     product_layer: report_pack_registry
-    boundary: experimental_contract_only
+    boundary: supported_baseline_contract
     required_inputs:
       - extraction_scope
       - local_source_files

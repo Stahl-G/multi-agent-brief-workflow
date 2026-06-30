@@ -42,11 +42,17 @@ This file is kept as a compatibility pointer so existing external links to
 
 For the Simplified Chinese README, see [README.zh-CN.md](README.zh-CN.md).
 """
-EXPECTED_PRODUCT_ENTRIES = {
+EXPECTED_BASELINE_PRODUCT_ENTRIES = {
     "industry-weekly": "market_weekly",
     "management-monthly": "management_monthly",
     "document-review": "evidence_extract",
+}
+EXPECTED_EXPERIMENTAL_PRODUCT_ENTRIES = {
     "solar-periodic": "solar_industry_periodic",
+}
+EXPECTED_PRODUCT_ENTRIES = {
+    **EXPECTED_BASELINE_PRODUCT_ENTRIES,
+    **EXPECTED_EXPERIMENTAL_PRODUCT_ENTRIES,
 }
 EXPECTED_LEGACY_ENTRIES = {
     "market-weekly": "market_weekly",
@@ -57,6 +63,12 @@ STABLE_SCENARIO_PACKS = {
     "market_weekly",
     "management_monthly",
     "evidence_extract",
+}
+EXPECTED_REPORT_PACK_STATUSES = {
+    "market_weekly": "supported",
+    "management_monthly": "supported",
+    "evidence_extract": "supported",
+    "solar_industry_periodic": "experimental",
 }
 REQUIRED_CONTROL_SPINE = {
     "claim_ledger",
@@ -333,9 +345,22 @@ def _check_report_pack_configs(checks: list[dict[str, str]]) -> None:
             "hidden_autonomous_crawling=false",
         )
 
+    for pack_id, expected_status in sorted(EXPECTED_REPORT_PACK_STATUSES.items()):
+        pack = root_packs.get(pack_id) or {}
+        _append_check(
+            checks,
+            f"{pack_id}.status",
+            pack.get("status") == expected_status,
+            f"status={pack.get('status')} expected={expected_status}",
+        )
+
 
 def _check_product_entries(checks: list[dict[str, str]]) -> None:
-    for entry, pack_id in {**EXPECTED_PRODUCT_ENTRIES, **EXPECTED_LEGACY_ENTRIES}.items():
+    for entry, pack_id in {
+        **EXPECTED_BASELINE_PRODUCT_ENTRIES,
+        **EXPECTED_EXPERIMENTAL_PRODUCT_ENTRIES,
+        **EXPECTED_LEGACY_ENTRIES,
+    }.items():
         aliases = aliases_for_report_pack(pack_id)
         _append_check(
             checks,
@@ -367,13 +392,18 @@ def _check_packs_cli_surface(checks: list[dict[str, str]]) -> None:
     )
     missing_entries = []
     missing_aliases = []
-    for product_entry, pack_id in EXPECTED_PRODUCT_ENTRIES.items():
+    for product_entry, pack_id in EXPECTED_BASELINE_PRODUCT_ENTRIES.items():
         item = packs_by_id.get(pack_id) or {}
         aliases = item.get("aliases") if isinstance(item.get("aliases"), list) else []
         if item.get("recommended_entry") != product_entry:
             missing_entries.append(f"{pack_id}->{product_entry}")
         if product_entry not in aliases:
             missing_aliases.append(f"{pack_id}:{product_entry}")
+    for experimental_entry, pack_id in EXPECTED_EXPERIMENTAL_PRODUCT_ENTRIES.items():
+        item = packs_by_id.get(pack_id) or {}
+        aliases = item.get("aliases") if isinstance(item.get("aliases"), list) else []
+        if experimental_entry not in aliases:
+            missing_aliases.append(f"{pack_id}:{experimental_entry}")
     for legacy_entry, pack_id in EXPECTED_LEGACY_ENTRIES.items():
         item = packs_by_id.get(pack_id) or {}
         aliases = item.get("aliases") if isinstance(item.get("aliases"), list) else []
@@ -390,6 +420,17 @@ def _check_packs_cli_surface(checks: list[dict[str, str]]) -> None:
         "packs_list_cli.aliases",
         not missing_aliases,
         f"missing aliases={missing_aliases}",
+    )
+    status_mismatches = []
+    for pack_id, expected_status in EXPECTED_REPORT_PACK_STATUSES.items():
+        item = packs_by_id.get(pack_id) or {}
+        if item.get("status") != expected_status:
+            status_mismatches.append(f"{pack_id}:{item.get('status')}!={expected_status}")
+    _append_check(
+        checks,
+        "packs_list_cli.support_statuses",
+        not status_mismatches,
+        f"status mismatches={status_mismatches}",
     )
 
     unknown_code, unknown_payload = _run_cli_json(["packs", "show", "unknown-pack", "--json"])
@@ -420,7 +461,7 @@ def _check_packs_cli_surface(checks: list[dict[str, str]]) -> None:
 def _check_workspace_creation(checks: list[dict[str, str]]) -> None:
     with tempfile.TemporaryDirectory(prefix="briefloop-product-baseline-") as tmp:
         base = Path(tmp)
-        for entry, expected_pack in EXPECTED_PRODUCT_ENTRIES.items():
+        for entry, expected_pack in EXPECTED_BASELINE_PRODUCT_ENTRIES.items():
             workspace = base / entry
             stdout = io.StringIO()
             with contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(io.StringIO()):

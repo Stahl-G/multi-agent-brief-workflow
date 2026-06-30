@@ -2,7 +2,7 @@ schema_version: briefloop.report_pack.v1
 pack_id: market_weekly
 report_type: market_weekly
 display_name: Market Weekly
-status: experimental
+status: supported
 description: Weekly market-tracking report pack contract over the existing BriefLoop control spine.
 default_policy_profile: manufacturing_default
 default_report_spec:
@@ -33,4 +33,4 @@ default_report_spec:
     - docx
   metadata:
     product_layer: report_pack_registry
-    boundary: experimental_contract_only
+    boundary: supported_baseline_contract

@@ -1,4 +1,4 @@
-"""Experimental ReportPack config contract."""
+"""ReportPack config contract."""
 
 from __future__ import annotations
 
@@ -12,6 +12,7 @@ from multi_agent_brief.contracts.schemas.report_spec import REPORT_PACK_ID_RE
 from multi_agent_brief.product.report_spec import validate_report_spec_payload
 
 REPORT_PACK_SCHEMA_VERSION = "briefloop.report_pack.v1"
+VALID_REPORT_PACK_STATUSES = {"experimental", "supported"}
 
 
 @dataclass(frozen=True)
@@ -72,8 +73,9 @@ def validate_report_pack_payload(
         elif field in {"pack_id", "report_type"} and not REPORT_PACK_ID_RE.match(value.strip()):
             violations.append(FieldViolation(field=field, error="must match ^[a-z][a-z0-9_]*$"))
 
-    if payload.get("status") != "experimental":
-        violations.append(FieldViolation(field="status", error="must be experimental"))
+    if payload.get("status") not in VALID_REPORT_PACK_STATUSES:
+        statuses = ", ".join(sorted(VALID_REPORT_PACK_STATUSES))
+        violations.append(FieldViolation(field="status", error=f"must be one of: {statuses}"))
 
     default_policy_profile = payload.get("default_policy_profile")
     if not isinstance(default_policy_profile, str) or not default_policy_profile.strip():

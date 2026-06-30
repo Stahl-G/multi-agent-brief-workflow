@@ -61,11 +61,18 @@ def test_product_baseline_json_locks_v011_entrypoints_and_boundaries() -> None:
     assert "report_pack=management_monthly" in checks["new.management-monthly"]["detail"]
     assert checks["new.document-review"]["status"] == "pass"
     assert "report_pack=evidence_extract" in checks["new.document-review"]["detail"]
+    assert "new.solar-periodic" not in checks
+    assert checks["entry.solar-periodic"]["status"] == "pass"
     assert checks["entry.market-weekly"]["status"] == "pass"
     assert checks["entry.evidence-extract"]["status"] == "pass"
     assert checks["packs_list_cli.ok"]["status"] == "pass"
     assert checks["packs_list_cli.product_entries"]["status"] == "pass"
     assert checks["packs_list_cli.aliases"]["status"] == "pass"
+    assert checks["packs_list_cli.support_statuses"]["status"] == "pass"
+    assert checks["market_weekly.status"]["status"] == "pass"
+    assert checks["management_monthly.status"]["status"] == "pass"
+    assert checks["evidence_extract.status"]["status"] == "pass"
+    assert checks["solar_industry_periodic.status"]["status"] == "pass"
     assert checks["packs_unknown_cli.error"]["status"] == "pass"
     assert checks["packs_unknown_cli.product_entries"]["status"] == "pass"
     assert checks["packs_unknown_cli.internal_pack_ids"]["status"] == "pass"
