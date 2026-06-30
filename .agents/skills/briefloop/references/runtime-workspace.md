@@ -16,6 +16,15 @@ Read this when operating a real BriefLoop/MABW workspace.
 - Advance stages only with deterministic completion transactions.
 - Use owner-stage repair transactions for frozen artifact repair.
 - Trigger delivery only when the operator explicitly asks and gates allow it.
+- Write product-quality projections with
+  `briefloop quality summarize --workspace <workspace>` when the operator asks
+  for the Quality Panel / Summary / static HTML audit surfaces. This command is
+  a deterministic projection writer, not a gate runner, repair action, delivery
+  approval, or quality score.
+- Use `multi-agent-brief approval init`, `multi-agent-brief approval record`,
+  and `multi-agent-brief release check` only for internal release-mode approval
+  records. These commands write event-linked control records; they do not
+  authorize public release or bypass gates.
 
 ## Forbidden Actions
 
@@ -25,6 +34,11 @@ Read this when operating a real BriefLoop/MABW workspace.
   checks, or `finalize-complete`.
 - Do not write source evidence from search summaries alone; source files must be
   durable evidence inputs.
+- Do not hand-edit `quality_panel.json`, `quality_summary.md`,
+  `quality_panel.html`, `human_approval_ledger.json`, or
+  `release_readiness_report.json`. Use the owning deterministic command.
+- Do not treat a Quality Panel `pass` or release readiness report as permission
+  to deliver or publish.
 
 ## Stop Conditions
 
@@ -35,3 +49,6 @@ Stop and report the exact error when:
 - gate reports have blocking findings
 - target status says `auditable_brief` complete or incomplete
 - a command asks for human review or fresh evidence setup
+- quality summary / HTML artifacts are stale or hand-edited; rerun
+  `briefloop quality summarize`
+- approval ledger or release readiness records fail event-log linkage

@@ -1,6 +1,6 @@
 # BriefLoop Skill Version Matrix
 
-Skill contract version: `briefloop-operator-skill-v0.1`
+Skill contract version: `briefloop-operator-skill-v0.1.2`
 Last verified against BriefLoop runtime: `v0.10.7`
 Public project name: BriefLoop
 Historical implementation name: MABW
@@ -42,6 +42,11 @@ Historical implementation name: MABW
   - `multi-agent-brief sources add-web-search --query <text>`
   - `multi-agent-brief new <pack> <workspace>` / `briefloop new <pack> <workspace>`
     for conservative local-first workspace skeletons
+  - product-facing ReportPack entries:
+    - `industry-weekly` -> canonical ReportPack `market_weekly`
+    - `management-monthly` -> canonical ReportPack `management_monthly`
+    - `document-review` -> canonical ReportPack `evidence_extract`
+    - `solar-periodic` -> canonical ReportPack `solar_industry_periodic`
   - packaged ReportPacks: `market_weekly`, `management_monthly`,
     `solar_industry_periodic`, `evidence_extract`
   - packaged ReportTemplates: `market_weekly`, `management_monthly`,
@@ -64,9 +69,33 @@ Historical implementation name: MABW
     strictness and reader-final forbidden-phrase checks
   - SourceHub Lite setup for local text files, RSS feed registration, and
     runtime web-search handoff tasks
-  - no stage execution, template rendering, delivery, publication approval,
-    web-search execution, section-conformance gate, or gate bypass; no second
-    gate engine
+  - internal release-mode approval records:
+    - `multi-agent-brief approval init`
+    - `multi-agent-brief approval record`
+    - `multi-agent-brief release check`
+    - artifacts: `human_approval_ledger.json`,
+      `release_readiness_report.json`
+    - event-log linkage is required before approval records are trusted
+    - internal review readiness only; no public release authority
+  - Quality Panel / Summary / static HTML projections:
+    - `briefloop quality summarize --workspace <workspace>`
+    - artifacts: `quality_panel.json`, `quality_summary.md`,
+      `quality_panel.html`
+    - quality summary and HTML are SHA-bound projections of
+      `quality_panel.json`
+    - audit bundle inclusion is allowed when present and valid; delivery bundle
+      inclusion is not
+    - projection only; no gate execution, quality score, repair, delivery
+      approval, or release authority
+  - v0.11.0 product-baseline readiness guard:
+    - `scripts/check_product_baseline.py`
+    - release consistency runs the baseline guard before release prep
+    - verifies stable product entries, README boundary wording,
+      `README_en.md` compatibility-pointer shape, and forbidden public
+      overclaims
+  - no stage execution from Product OS commands, publication approval,
+    web-search execution, section-conformance gate, gate bypass, semantic truth
+    proof, or second gate engine
 - MABW-080 experiment operations:
   - `validate-case`
   - `scaffold-condition`

@@ -1,5 +1,23 @@
 # BriefLoop Operator Skill Changelog
 
+## briefloop-operator-skill-v0.1.2 — 2026-06-30
+
+- Added Quality Panel / Quality Summary / static HTML operator guidance,
+  including `briefloop quality summarize`, SHA-bound summary/HTML projections,
+  and audit-bundle-only boundaries.
+- Added internal release-mode approval guidance for `approval init`,
+  `approval record`, `release check`, event-log linkage, and the distinction
+  between internal readiness and public release authority.
+- Added v0.11 product-baseline readiness checks to the repo-development
+  validation checklist.
+- Documented product-facing ReportPack entry aliases while preserving canonical
+  internal pack ids in control artifacts.
+- Documented README canonicalization: `README.md` and `README.zh-CN.md` are the
+  long-form public README bodies; `README_en.md` is a compatibility pointer.
+- Added new Python-owned projection/control artifacts to the control-record map:
+  `quality_panel.json`, `quality_summary.md`, `quality_panel.html`,
+  `human_approval_ledger.json`, and `release_readiness_report.json`.
+
 ## briefloop-operator-skill-v0.1.1 — 2026-06-19
 
 - Clarified that MABW-080 is the current experiment command surface.

@@ -11,6 +11,7 @@ Checks:
   7. Generated agent configs are up to date (delegates to generate_agent_configs.py --check)
   8. Public safety scan passes for tracked release files
   9. Product baseline readiness guard passes
+  10. BriefLoop operator skill freshness guard passes
 
 Usage:
   python scripts/check_release_consistency.py [--strict] [--no-tag]
@@ -197,6 +198,37 @@ def check_product_baseline() -> bool:
     return True
 
 
+def check_briefloop_skill_freshness() -> bool:
+    """Run BriefLoop operator skill freshness guard and return True if it passes."""
+    result = subprocess.run(
+        [sys.executable, str(REPO_ROOT / "scripts" / "check_briefloop_skill_freshness.py"), "--json"],
+        capture_output=True, text=True, cwd=str(REPO_ROOT),
+    )
+    stdout = result.stdout.strip()
+    stderr = result.stderr.strip()
+    payload_ok = False
+    if result.returncode == 0 and stdout:
+        try:
+            payload = json.loads(stdout)
+            payload_ok = payload.get("ok") is True
+        except json.JSONDecodeError:
+            payload_ok = False
+    if result.returncode != 0 or not payload_ok:
+        print("  [FAIL] BriefLoop skill freshness failed:")
+        if stdout:
+            print("         stdout:")
+            for line in stdout.splitlines():
+                print(f"           {line}")
+        if stderr:
+            print("         stderr:")
+            for line in stderr.splitlines():
+                print(f"           {line}")
+        if not stdout and not stderr:
+            print("         no stdout/stderr captured")
+        return False
+    return True
+
+
 def main(strict: bool = False, check_tag: bool = True) -> int:
     print("Release Consistency Check")
     print("=" * 40)
@@ -263,6 +295,12 @@ def main(strict: bool = False, check_tag: bool = True) -> int:
         check("Product baseline readiness passes", product_baseline_ok)
     except Exception as exc:
         check("Product baseline readiness passes", False, str(exc))
+
+    try:
+        skill_freshness_ok = check_briefloop_skill_freshness()
+        check("BriefLoop skill freshness passes", skill_freshness_ok)
+    except Exception as exc:
+        check("BriefLoop skill freshness passes", False, str(exc))
 
     print()
     if ERRORS:

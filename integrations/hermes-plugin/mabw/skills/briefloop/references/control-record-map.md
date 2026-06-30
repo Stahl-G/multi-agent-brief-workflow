@@ -15,9 +15,26 @@ Do not edit directly:
 - `output/intermediate/quality_gate_report.json`
 - `output/intermediate/claim_ledger.json`
 - `output/intermediate/improvement_memory_snapshot.md`
+- `output/intermediate/human_approval_ledger.json`
+- `output/intermediate/release_readiness_report.json`
+- `output/intermediate/quality_panel.json`
+- `output/intermediate/quality_summary.md`
+- `output/intermediate/quality_panel.html`
 - `output/runs/<run_id>/`
 
 Use the owning CLI transaction instead.
+
+Owning commands for recent control-tool projections:
+
+- `briefloop quality summarize --workspace <workspace>` writes
+  `quality_panel.json`, source-bound `quality_summary.md`, and static
+  `quality_panel.html`.
+- `multi-agent-brief approval init`, `multi-agent-brief approval record`, and
+  `multi-agent-brief release check` write `human_approval_ledger.json` and
+  `release_readiness_report.json` with event-log linkage.
+
+These files are operator/audit projections or approval records. They are not
+agent draft surfaces, not final reader content, and not repair shortcuts.
 
 ## Agent-Owned Draft Surfaces
 
@@ -37,5 +54,7 @@ Human approval owns:
 
 - Improvement Ledger approval/rejection/revert decisions
 - delivery intent
+- internal release-mode approval decisions recorded through
+  `approval init` / `approval record`
 - external assessment files
 - semantic judgment that Python cannot deterministically validate
