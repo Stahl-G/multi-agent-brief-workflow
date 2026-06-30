@@ -77,6 +77,9 @@ Historical implementation name: MABW
     - artifacts: `human_approval_ledger.json`,
       `release_readiness_report.json`
     - event-log linkage is required before approval records are trusted
+    - `release_readiness_report.json` includes configured `branding_context`
+      metadata when `release.branding` is present, and required institution
+      branding authorization context can block internal readiness
     - internal review readiness only; no public release authority
   - Quality Panel / Summary / static HTML projections:
     - `briefloop quality summarize --workspace <workspace>`

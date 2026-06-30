@@ -29,6 +29,7 @@ REQUIRED_REFERENCE_PHRASES: dict[str, list[str]] = {
         "approval record",
         "release check",
         "release_readiness_report.json",
+        "branding_context",
         "industry-weekly",
         "management-monthly",
         "document-review",

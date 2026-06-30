@@ -54,6 +54,7 @@ def _print_payload(label: str, payload: dict[str, Any], *, as_json: bool) -> Non
         "approval_required",
         "missing_roles",
         "blockers",
+        "branding_context",
         "authorization",
         "next_step",
         "report_path",

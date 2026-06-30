@@ -25,6 +25,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   assertions in the eval-case runner. These cases validate control-surface
   behavior only; they do not prove output quality, source support, or release
   authorization.
+- **Release branding readiness context**: `release check` now includes
+  configured `release.branding` metadata in
+  `output/intermediate/release_readiness_report.json` and blocks internal
+  readiness when required institution branding or institution-use authorization
+  context is missing or explicitly unauthorized. This is deterministic metadata
+  validation only; it does not provide legal/compliance advice, authorize
+  public release, publish externally, or bypass human delivery approval.
 - **Feedback contamination regression**: added a v0.11.1 issue-closure
   regression proving feedback-only input text remains classified as feedback
   and is not exposed through the runtime handoff as evidence material. The

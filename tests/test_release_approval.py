@@ -185,8 +185,95 @@ def test_release_check_passes_internal_mode_after_required_approvals(tmp_path: P
     assert report["event_id"]
     assert report["approved_roles"] == ["content_owner", "evidence_reviewer"]
     assert report["blockers"] == []
+    assert report["branding_context"]["status"] == "not_required"
     assert report["authorization"] == "not_authorized_for_public_release"
     assert "Ready for research_review internal review" in report["next_step"]
+
+
+def test_release_check_blocks_missing_required_branding_context(tmp_path: Path) -> None:
+    ws = _workspace(tmp_path)
+    config_path = ws / "config.yaml"
+    config_path.write_text(
+        config_path.read_text(encoding="utf-8")
+        + "\nrelease:\n  branding:\n    required: true\n",
+        encoding="utf-8",
+    )
+
+    assert main(["approval", "init", "--workspace", str(ws), "--mode", "internal_draft"]) == 0
+    assert main(["release", "check", "--workspace", str(ws), "--mode", "internal_draft"]) == 1
+
+    report = _json(ws / "output" / "intermediate" / "release_readiness_report.json")
+    assert validate_release_readiness_report_payload(report) is None
+    assert report["status"] == "blocked"
+    assert report["branding_context"]["status"] == "missing"
+    assert report["branding_context"]["missing_fields"] == [
+        "institution_name",
+        "institution_use_authorization",
+    ]
+    assert "missing_branding_metadata:institution_name" in report["blockers"]
+    assert "missing_branding_metadata:institution_use_authorization" in report["blockers"]
+    assert report["authorization"] == "not_authorized_for_public_release"
+
+
+def test_release_check_blocks_unauthorized_institution_branding(tmp_path: Path) -> None:
+    ws = _workspace(tmp_path)
+    config_path = ws / "config.yaml"
+    config_path.write_text(
+        config_path.read_text(encoding="utf-8")
+        + (
+            "\nrelease:\n"
+            "  branding:\n"
+            "    required: true\n"
+            "    institution_name: Synthetic Institute\n"
+            "    institution_use_authorization: unauthorized\n"
+        ),
+        encoding="utf-8",
+    )
+
+    assert main(["approval", "init", "--workspace", str(ws), "--mode", "internal_draft"]) == 0
+    assert main(["release", "check", "--workspace", str(ws), "--mode", "internal_draft"]) == 1
+
+    report = _json(ws / "output" / "intermediate" / "release_readiness_report.json")
+    assert validate_release_readiness_report_payload(report) is None
+    assert report["status"] == "blocked"
+    assert report["branding_context"]["status"] == "blocked"
+    assert report["branding_context"]["institution_name_present"] is True
+    assert report["branding_context"]["institution_use_authorization"] == "unauthorized"
+    assert report["branding_context"]["authorization_reference_present"] is False
+    assert report["blockers"] == ["institution_branding_not_authorized:unauthorized"]
+
+
+def test_release_check_passes_with_complete_required_branding_context(tmp_path: Path) -> None:
+    ws = _workspace(tmp_path)
+    config_path = ws / "config.yaml"
+    config_path.write_text(
+        config_path.read_text(encoding="utf-8")
+        + (
+            "\nrelease:\n"
+            "  branding:\n"
+            "    required: true\n"
+            "    institution_name: Synthetic Institute\n"
+            "    institution_use_authorization: approved\n"
+            "    authorization_reference: synthetic-approval-record\n"
+        ),
+        encoding="utf-8",
+    )
+
+    assert main(["approval", "init", "--workspace", str(ws), "--mode", "internal_draft"]) == 0
+    assert main(["release", "check", "--workspace", str(ws), "--mode", "internal_draft"]) == 0
+
+    report = _json(ws / "output" / "intermediate" / "release_readiness_report.json")
+    assert validate_release_readiness_report_payload(report) is None
+    assert report["status"] == "pass"
+    assert report["branding_context"]["status"] == "complete"
+    assert report["branding_context"]["required_fields"] == [
+        "institution_name",
+        "institution_use_authorization",
+        "authorization_reference",
+    ]
+    assert report["branding_context"]["missing_fields"] == []
+    assert report["blockers"] == []
+    assert report["authorization"] == "not_authorized_for_public_release"
 
 
 def test_release_check_rejection_overrides_previous_approval(tmp_path: Path) -> None:
@@ -529,6 +616,19 @@ def test_release_readiness_report_missing_event_id_is_invalid(tmp_path: Path) ->
 
     assert validate_release_readiness_report_payload(report) == (
         "release_readiness_report_schema_error:event_id"
+    )
+
+
+def test_release_readiness_report_missing_branding_context_is_invalid(tmp_path: Path) -> None:
+    ws = _workspace(tmp_path)
+    assert main(["approval", "init", "--workspace", str(ws), "--mode", "internal_draft"]) == 0
+    assert main(["release", "check", "--workspace", str(ws), "--mode", "internal_draft"]) == 0
+
+    report = _json(ws / "output" / "intermediate" / "release_readiness_report.json")
+    report.pop("branding_context")
+
+    assert validate_release_readiness_report_payload(report) == (
+        "release_readiness_report_schema_error:branding_context"
     )
 
 

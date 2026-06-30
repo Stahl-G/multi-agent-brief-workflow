@@ -32,9 +32,9 @@ Owning commands for recent control-tool projections:
 - `multi-agent-brief approval init` and `multi-agent-brief approval record`
   write `human_approval_ledger.json` with event-log linkage.
 - `multi-agent-brief release check` reads `human_approval_ledger.json` and
-  writes a fresh `release_readiness_report.json` with event-log linkage. Do
-  not treat a readiness report as refreshed merely because an approval was
-  recorded.
+  writes a fresh `release_readiness_report.json` with event-log linkage and
+  configured `branding_context` metadata. Do not treat a readiness report as
+  refreshed merely because an approval was recorded.
 
 These files are operator/audit projections or approval records. They are not
 agent draft surfaces, not final reader content, and not repair shortcuts.

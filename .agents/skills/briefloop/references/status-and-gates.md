@@ -57,6 +57,10 @@ release-mode approval records.
   matching event-log entries.
 - The control artifacts are `human_approval_ledger.json` and
   `release_readiness_report.json`.
+- When `config.yaml` declares `release.branding.required: true`,
+  `release_readiness_report.json` also projects `branding_context` and blocks
+  internal readiness if institution branding or institution-use authorization
+  metadata is missing or explicitly unauthorized.
 - `release_readiness_report.json` is an internal readiness projection, not an
   external publication authorization.
 - Missing approvals are a human-review gap, not a gate bypass request.
