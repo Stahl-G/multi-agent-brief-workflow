@@ -86,7 +86,12 @@ def test_public_overclaim_detector_rejects_contradictory_readme_claims() -> None
         "BriefLoop proves truth.\n"
         "BriefLoop can prove truth.\n"
         "BriefLoop proves every claim is true.\n"
+        "BriefLoop guarantees every claim is true.\n"
         "BriefLoop publishes reports automatically.\n"
+        "BriefLoop automatically approves delivery.\n"
+        "Improvement Memory improves output quality.\n"
+        "Python judges semantic manifestation.\n"
+        "BriefLoop implements Claim-Support Matrix support sufficiency.\n"
         "It eliminates hallucinations and is automatically ready to send.\n",
     )
 
@@ -94,7 +99,13 @@ def test_public_overclaim_detector_rejects_contradictory_readme_claims() -> None
     assert any("proves truth" in finding for finding in findings)
     assert any("can prove truth" in finding for finding in findings)
     assert any("proves every claim is true" in finding for finding in findings)
+    assert any("guarantees_truth" in finding for finding in findings)
+    assert any("guarantees every claim is true" in finding for finding in findings)
     assert any("publishes reports automatically" in finding for finding in findings)
+    assert any("approve_delivery" in finding for finding in findings)
+    assert any("improvement_memory_quality" in finding for finding in findings)
+    assert any("python_semantic_judgment" in finding for finding in findings)
+    assert any("support_sufficiency_implemented" in finding for finding in findings)
     assert any("authorize_public_release" in finding for finding in findings)
     assert any("eliminates_hallucinations" in finding for finding in findings)
     assert any("automatically_ready_to_send" in finding for finding in findings)
@@ -163,7 +174,9 @@ def test_public_overclaim_detector_allows_negative_boundary_language() -> None:
     findings = module._public_overclaim_findings(
         "README.md",
         "BriefLoop does not prove truth, prove semantic truth, publish reports automatically, "
-        "or authorize public release.\n",
+        "approve delivery, authorize public release, implement support-sufficiency structures, "
+        "or judge semantic manifestation.\n"
+        "Improvement Memory does not improve output quality as a general fact.\n",
     )
     bullet_findings = module._public_overclaim_findings(
         "README.md",

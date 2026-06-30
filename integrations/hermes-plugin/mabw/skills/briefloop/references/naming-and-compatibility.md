@@ -12,14 +12,27 @@ notes, or compatibility claims.
 - Python module: `multi_agent_brief`
 - Package/distribution: `multi-agent-brief-workflow`
 - Experiment namespace: MABW-080
+- Public README bodies:
+  - `README.md` is the canonical English README.
+  - `README.zh-CN.md` is the canonical Chinese README.
+  - `README_en.md` is only a short compatibility pointer to `README.md`.
+- Product-facing ReportPack entries:
+  - `industry-weekly` -> internal/canonical `market_weekly`
+  - `management-monthly` -> internal/canonical `management_monthly`
+  - `document-review` -> internal/canonical `evidence_extract`
+  - `solar-periodic` -> internal/canonical `solar_industry_periodic`
 
 ## Compatibility Rules
 
 - Do not rename runtime surfaces by accident.
 - Do not change workspace artifact names for public framing only.
+- Do not write product-facing aliases into control artifacts that require
+  canonical ids unless the implementation explicitly supports that alias layer.
 - When public docs say BriefLoop, keep compatibility notes for
   `multi-agent-brief`, `briefloop`, `/briefloop`, `/mabw`, package/module
   paths, and MABW experiment IDs.
+- Keep README canonicalization intact. `README_en.md` should remain a pointer,
+  not a third long-form README body.
 - BriefLoop-090 can be a future experiment/readiness label; v0.9.0 is a semver
   release. `experiments 090` is not a current CLI namespace. Do not conflate
   them.

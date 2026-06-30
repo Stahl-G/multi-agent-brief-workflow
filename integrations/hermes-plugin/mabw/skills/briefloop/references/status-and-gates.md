@@ -13,7 +13,12 @@ Status can show:
 - run integrity and reference eligibility
 - topology-satisfied stages
 - `auditable_brief` target complete or incomplete
+- ReportPack, PolicyProfile, ReportTemplate, source-evidence, release-mode, and
+  Quality Panel projections when present
 - next suggested command
+
+Projection status is not authority by itself. Invalid optional artifacts must
+not become support, release, gate, or delivery authority.
 
 ## Gates
 
@@ -24,6 +29,37 @@ through the proper rerun/repair path.
 Blocking findings stop stage completion. Warning-only findings are still
 evidence and should be reported, but they are not Python proof of semantic
 failure.
+
+Legacy `output/intermediate/quality_gate_report.json` is a latest/compatibility
+projection. Stage-scoped gate authority lives under
+`output/intermediate/gates/*_quality_gate_report.json`.
+
+## Quality Panel And Summary
+
+`quality_panel.json`, `quality_summary.md`, and `quality_panel.html` are
+experimental product-quality audit/control projections.
+
+- Write them with `briefloop quality summarize --workspace <workspace>`.
+- `quality_summary.md` and `quality_panel.html` must be rendered from the
+  sibling `quality_panel.json` and carry its SHA-256 binding.
+- They may be included in the audit bundle when valid.
+- They do not run gates, replace gate reports, create a quality score, repair
+  artifacts, approve delivery, decide release eligibility, or prove truth.
+- If stale or hand-edited, rerun `briefloop quality summarize`; do not patch
+  them manually.
+
+## Release Readiness
+
+`approval init`, `approval record`, and `release check` write internal
+release-mode approval records.
+
+- Approval ledger records must be scoped to the current run and linked to
+  matching event-log entries.
+- The control artifacts are `human_approval_ledger.json` and
+  `release_readiness_report.json`.
+- `release_readiness_report.json` is an internal readiness projection, not an
+  external publication authorization.
+- Missing approvals are a human-review gap, not a gate bypass request.
 
 ## Auditable Target
 

@@ -118,6 +118,14 @@ FORBIDDEN_PUBLIC_CLAIM_PATTERNS = [
         ),
     ),
     (
+        "guarantees_truth",
+        re.compile(
+            r"\b(guarantees|guaranteed|guaranteeing)\s+(semantic\s+)?truth\b"
+            r"|\b(guarantees|guaranteed|guaranteeing)\s+every\s+claims?\s+(is|are)\s+true\b",
+            re.IGNORECASE,
+        ),
+    ),
+    (
         "eliminates_hallucinations",
         re.compile(r"\beliminates?\s+hallucinations?\b", re.IGNORECASE),
     ),
@@ -151,6 +159,42 @@ FORBIDDEN_PUBLIC_CLAIM_PATTERNS = [
         re.compile(
             r"\b(can|could|will|does|may)\s+bypass\s+(human\s+)?review\b"
             r"|\bbypasses\s+(human\s+)?review\b",
+            re.IGNORECASE,
+        ),
+    ),
+    (
+        "approve_delivery",
+        re.compile(
+            r"\b(can|could|will|does|may)\s+approve\s+delivery\b"
+            r"|\b(approves|approved|approving)\s+delivery\b"
+            r"|\bautomatically\s+approves?\s+delivery\b",
+            re.IGNORECASE,
+        ),
+    ),
+    (
+        "improvement_memory_quality",
+        re.compile(
+            r"\bImprovement\s+Memory\s+"
+            r"(improves|improved|improving|can\s+improve|will\s+improve)\s+"
+            r"output\s+quality\b",
+            re.IGNORECASE,
+        ),
+    ),
+    (
+        "python_semantic_judgment",
+        re.compile(
+            r"\bPython\s+"
+            r"(judges|judged|judging|can\s+judge|will\s+judge)\s+"
+            r"(prose\s+quality|semantic\s+manifestation|factual\s+regression)\b",
+            re.IGNORECASE,
+        ),
+    ),
+    (
+        "support_sufficiency_implemented",
+        re.compile(
+            r"\b(implements|implemented|implementing|has\s+implemented)\b"
+            r"[^.\n]{0,80}\bsupport[- ]sufficiency\b"
+            r"|\bsupport[- ]sufficiency\s+structures?\s+(are|is)\s+implemented\b",
             re.IGNORECASE,
         ),
     ),
