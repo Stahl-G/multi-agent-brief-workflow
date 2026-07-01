@@ -408,6 +408,7 @@ def _write_auditable_target_workspace(
                 "ledger": "output/intermediate/claim_ledger.json",
             },
             "gate_results": [
+                {"gate_id": "coverage_omission", "status": "pass", "blocking": False, "finding_ids": []},
                 {"gate_id": "material_fact", "status": "pass", "blocking": False, "finding_ids": []},
                 {"gate_id": "freshness", "status": "pass", "blocking": False, "finding_ids": []},
                 {"gate_id": "target_relevance", "status": "pass", "blocking": False, "finding_ids": []},
@@ -590,12 +591,28 @@ def _add_scorecard_archive_reports(archive_manifest: Path) -> None:
     add_json(
         "intermediate/gates/auditor_quality_gate_report.json",
         "output/intermediate/gates/auditor_quality_gate_report.json",
-        {"status": "pass", "gate_results": []},
+        {
+            "status": "pass",
+            "gate_results": [
+                {"gate_id": "coverage_omission", "status": "pass", "blocking": False, "finding_ids": []},
+                {"gate_id": "material_fact", "status": "pass", "blocking": False, "finding_ids": []},
+                {"gate_id": "freshness", "status": "pass", "blocking": False, "finding_ids": []},
+                {"gate_id": "target_relevance", "status": "pass", "blocking": False, "finding_ids": []},
+            ],
+        },
     )
     add_json(
         "intermediate/gates/finalize_quality_gate_report.json",
         "output/intermediate/gates/finalize_quality_gate_report.json",
-        {"status": "pass", "gate_results": []},
+        {
+            "status": "pass",
+            "gate_results": [
+                {"gate_id": "coverage_omission", "status": "pass", "blocking": False, "finding_ids": []},
+                {"gate_id": "material_fact", "status": "pass", "blocking": False, "finding_ids": []},
+                {"gate_id": "freshness", "status": "pass", "blocking": False, "finding_ids": []},
+                {"gate_id": "target_relevance", "status": "pass", "blocking": False, "finding_ids": []},
+            ],
+        },
     )
     add_json(
         "control/artifact_registry.json",
@@ -2206,11 +2223,29 @@ def test_experiments_080_score_run_treats_warning_only_gate_reports_as_control_p
         "status": "warning",
         "gate_results": [
             {
+                "gate_id": "coverage_omission",
+                "status": "pass",
+                "blocking": False,
+                "finding_ids": [],
+            },
+            {
                 "gate_id": "material_fact",
                 "status": "warning",
                 "blocking": False,
                 "finding_ids": ["QG_MATERIAL_FACT_001"],
-            }
+            },
+            {
+                "gate_id": "freshness",
+                "status": "pass",
+                "blocking": False,
+                "finding_ids": [],
+            },
+            {
+                "gate_id": "target_relevance",
+                "status": "pass",
+                "blocking": False,
+                "finding_ids": [],
+            },
         ],
         "findings": [
             {

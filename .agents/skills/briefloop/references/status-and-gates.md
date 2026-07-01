@@ -35,6 +35,9 @@ Coverage/omission findings are deterministic continuity checks over valid
 They detect high-priority selected screened candidates that disappear without an
 explicit limitation or omission reason. They are not full-world recall checks,
 semantic support proof, or source-discovery completeness claims.
+Stage-scoped gate reports must include `coverage_omission`, `material_fact`,
+`freshness`, and `target_relevance` results before auditor/finalize completion
+can accept them.
 
 Legacy `output/intermediate/quality_gate_report.json` is a latest/compatibility
 projection. Stage-scoped gate authority lives under
@@ -67,6 +70,8 @@ release-mode approval records.
   `release_readiness_report.json` also projects `branding_context` and blocks
   internal readiness if institution branding or institution-use authorization
   metadata is missing or explicitly unauthorized.
+- Branding status and exact branding blockers must match the recorded
+  `release_readiness_checked` event; do not hand-edit readiness reports.
 - `release_readiness_report.json` is an internal readiness projection, not an
   external publication authorization.
 - Missing approvals are a human-review gap, not a gate bypass request.

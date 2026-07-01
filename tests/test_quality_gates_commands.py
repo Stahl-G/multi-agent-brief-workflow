@@ -394,7 +394,7 @@ def _quality_gate_payload(*, status: str, stage_id: str) -> dict:
                 "blocking": status == "fail" and gate_id == "target_relevance",
                 "finding_ids": ["QG_TARGET_001"] if gate_id == "target_relevance" and status == "fail" else [],
             }
-            for gate_id in ("freshness", "material_fact", "target_relevance")
+            for gate_id in ("coverage_omission", "freshness", "material_fact", "target_relevance")
         ],
         "findings": [
             {

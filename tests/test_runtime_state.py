@@ -609,6 +609,12 @@ def _write_quality_gate_report(
         "status": status,
         "gate_results": [
             {
+                "gate_id": "coverage_omission",
+                "status": "pass",
+                "blocking": False,
+                "finding_ids": [],
+            },
+            {
                 "gate_id": "freshness",
                 "status": "pass",
                 "blocking": False,
@@ -6244,6 +6250,30 @@ def test_auditor_stage_complete_rejects_incomplete_quality_gate_report(tmp_path)
 
     assert excinfo.value.error_code == "E_QUALITY_GATE_REQUIRED"
     assert "missing: freshness" in str(excinfo.value)
+
+
+def test_auditor_stage_complete_requires_coverage_omission_gate_result(tmp_path):
+    ws = _write_workspace(tmp_path)
+    initialize_runtime_state(workspace=ws, repo_workdir=ROOT)
+    _advance_to_auditor(ws)
+    _write_quality_gate_report(ws)
+    report_path = _intermediate(ws) / "gates" / "auditor_quality_gate_report.json"
+    report = json.loads(report_path.read_text(encoding="utf-8"))
+    report["gate_results"] = [
+        result for result in report["gate_results"] if result["gate_id"] != "coverage_omission"
+    ]
+    report_path.write_text(json.dumps(report), encoding="utf-8")
+
+    with pytest.raises(RuntimeStateError) as excinfo:
+        complete_stage_transaction(
+            workspace=ws,
+            repo_workdir=ROOT,
+            stage_id="auditor",
+            reason="auditor complete",
+        )
+
+    assert excinfo.value.error_code == "E_QUALITY_GATE_REQUIRED"
+    assert "missing: coverage_omission" in str(excinfo.value)
 
 
 def test_auditor_stage_complete_rejects_missing_quality_gate_input_metadata(tmp_path):

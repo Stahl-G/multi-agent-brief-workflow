@@ -28,6 +28,12 @@ QUALITY_GATE_STATE_FILES = {
 }
 
 GATE_IDS = {"coverage_omission", "editor_new_fact", "material_fact", "freshness", "target_relevance"}
+STAGE_COMPLETION_REQUIRED_GATE_IDS = {
+    "coverage_omission",
+    "freshness",
+    "material_fact",
+    "target_relevance",
+}
 GATE_STATUSES = {"pass", "warning", "fail"}
 FINDING_SEVERITIES = {"low", "medium", "high"}
 BLOCKING_LEVELS = {"none", "warning", "blocking"}
@@ -474,11 +480,11 @@ def _quality_gate_binding_reasons(
         for result in payload.get("gate_results") or []
         if isinstance(result, dict)
     }
-    required_gate_ids = {"material_fact", "freshness", "target_relevance"}
-    missing_gate_ids = sorted(required_gate_ids - gate_ids)
+    missing_gate_ids = sorted(STAGE_COMPLETION_REQUIRED_GATE_IDS - gate_ids)
     if missing_gate_ids:
+        required = ", ".join(sorted(STAGE_COMPLETION_REQUIRED_GATE_IDS))
         return [
-            "Quality gate report must include material_fact, freshness, and target_relevance gate_results; "
+            f"Quality gate report must include {required} gate_results; "
             f"missing: {', '.join(missing_gate_ids)}."
         ]
     if payload.get("status") == "fail":

@@ -82,6 +82,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Coverage gate stage-completion binding**: stage-scoped quality-gate reports
+  must now include the `coverage_omission` gate result before auditor/finalize
+  completion can accept them, closing the upgraded-workspace gap where older
+  three-gate reports could bypass coverage continuity checks.
+- **Release branding blocker event binding**: release-readiness reports now
+  compare the exact branding blocker list recorded by `release check`, so
+  hand-edited branding blockers cannot remain valid merely by preserving a
+  blocked/non-blocked boolean shape.
 - **Release branding event-link binding**: `release_readiness_report.json`
   validation now requires the report `branding_context` status and blocked
   state to match the recorded `release_readiness_checked` event metadata, so
