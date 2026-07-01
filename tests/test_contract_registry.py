@@ -227,10 +227,12 @@ def test_quality_panel_contract_is_optional_product_projection():
         panel = registry.artifact("quality_panel")
         summary = registry.artifact("quality_summary")
         html = registry.artifact("quality_panel_html")
+        guidance = registry.artifact("guidance_manifestation_report")
         finalize_stage = registry.stage("finalize")
         assert panel is not None
         assert summary is not None
         assert html is not None
+        assert guidance is not None
         assert finalize_stage is not None
         assert panel.required is False
         assert panel.producer_kind == "control_tool"
@@ -250,12 +252,20 @@ def test_quality_panel_contract_is_optional_product_projection():
         assert html.path == "output/intermediate/quality_panel.html"
         assert html.validation_result == "experimental_quality_panel_html"
         assert html.consumer_stages == ()
+        assert guidance.required is False
+        assert guidance.producer_kind == "control_tool"
+        assert guidance.producer_stage == "guidance-manifestation"
+        assert guidance.path == "output/intermediate/guidance_manifestation_report.json"
+        assert guidance.validation_result == "experimental_guidance_manifestation_report"
+        assert guidance.consumer_stages == ()
         assert "quality_panel" not in finalize_stage.produces
         assert "quality_panel" not in finalize_stage.expected_artifacts
         assert "quality_summary" not in finalize_stage.produces
         assert "quality_summary" not in finalize_stage.expected_artifacts
         assert "quality_panel_html" not in finalize_stage.produces
         assert "quality_panel_html" not in finalize_stage.expected_artifacts
+        assert "guidance_manifestation_report" not in finalize_stage.produces
+        assert "guidance_manifestation_report" not in finalize_stage.expected_artifacts
 
 
 def test_registry_reports_unknown_expected_artifact(tmp_path: Path):

@@ -1,5 +1,16 @@
 # BriefLoop Operator Skill Changelog
 
+## briefloop-operator-skill-v0.1.4 — 2026-07-01
+
+- Added Guidance Manifestation diagnostic guidance for
+  `guidance_manifestation_report.json`, including the allowed labels
+  `explicitly_reflected`, `partially_reflected`, `contradicted`, and
+  `not_observable`.
+- Clarified that manifestation labels are human/imported diagnostics surfaced
+  through status / Quality Panel only; they do not mutate Improvement Memory,
+  approve guidance, create a quality score, run gates, approve delivery, or
+  decide release readiness.
+
 ## briefloop-operator-skill-v0.1.3 — 2026-07-01
 
 - Added Trajectory Regulation operator guidance: status / Quality Panel can

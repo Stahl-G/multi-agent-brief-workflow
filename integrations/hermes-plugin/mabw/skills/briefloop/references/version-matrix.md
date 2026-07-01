@@ -114,9 +114,21 @@ Historical implementation name: MABW
     - projection only; no workflow-state write, repair execution, gate
       execution, delivery approval, release readiness decision, or quality
       score
+  - Guidance Manifestation diagnostic projection:
+    - artifact: `guidance_manifestation_report.json`
+    - surfaced through `multi-agent-brief status --workspace <workspace>
+      --json` and Quality Panel
+    - allowed labels: `explicitly_reflected`, `partially_reflected`,
+      `contradicted`, `not_observable`
+    - labels are human/imported diagnostics for approved guidance entries
+      already materialized into the current run
+    - Python validates and counts labels; it does not judge manifestation,
+      mutate Improvement Memory, approve guidance, run gates, approve delivery,
+      decide release readiness, or claim output-quality improvement
   - Packaged synthetic eval fixtures include a trajectory retry-budget case
     that proves repeated retry decisions project human-review guidance without
-    mutating workflow state.
+    mutating workflow state, plus a guidance manifestation `not_observable`
+    case that keeps the result diagnostic-only.
   - v0.11.0 product-baseline readiness guard:
     - `scripts/check_product_baseline.py`
     - release consistency runs the baseline guard before release prep

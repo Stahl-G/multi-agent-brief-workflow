@@ -20,6 +20,7 @@ Do not edit directly:
 - `output/intermediate/quality_panel.json`
 - `output/intermediate/quality_summary.md`
 - `output/intermediate/quality_panel.html`
+- `output/intermediate/guidance_manifestation_report.json`
 - `output/runs/<run_id>/`
 
 Use the owning CLI transaction instead.
@@ -35,6 +36,10 @@ Owning commands for recent control-tool projections:
   writes a fresh `release_readiness_report.json` with event-log linkage and
   configured `branding_context` metadata. Do not treat a readiness report as
   refreshed merely because an approval was recorded.
+- `guidance_manifestation_report.json` is an imported/human diagnostic record
+  for approved guidance manifestation labels; it is validated and surfaced by
+  status / Quality Panel, but it is not an Improvement Memory writer and not a
+  gate or release artifact.
 
 These files are operator/audit projections or approval records. They are not
 agent draft surfaces, not final reader content, and not repair shortcuts.

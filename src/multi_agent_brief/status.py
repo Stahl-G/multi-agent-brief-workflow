@@ -25,6 +25,7 @@ from multi_agent_brief.orchestrator.runtime_state.semantic_assessment_report imp
 )
 from multi_agent_brief.orchestrator.timing import derive_control_timing_from_path
 from multi_agent_brief.outputs.atomic_reader_projection import project_atomic_reader_text_from_workspace
+from multi_agent_brief.product.guidance_manifestation import project_workspace_guidance_manifestation
 from multi_agent_brief.product.policy_projection import project_workspace_policy_profile
 from multi_agent_brief.product.template_conformance import project_workspace_report_template_conformance
 from multi_agent_brief.product.template_projection import project_workspace_report_template
@@ -66,6 +67,7 @@ def build_workspace_status(workspace: str | Path) -> dict[str, Any]:
         "report_template_conformance": {},
         "report_template_render_plan": {},
         "trajectory_regulation": {},
+        "guidance_manifestation": {},
         "timing": {},
         "stale_or_unknown": [],
         "suggested_next_command": None,
@@ -141,6 +143,10 @@ def build_workspace_status(workspace: str | Path) -> dict[str, Any]:
         event_log_corrupt_count=int(payload["events"].get("corrupt_count") or 0),
         run_id=(manifest_payload or {}).get("run_id") if isinstance(manifest_payload, dict) else None,
     )
+    payload["guidance_manifestation"] = project_workspace_guidance_manifestation(
+        ws,
+        runtime_manifest=manifest_payload if isinstance(manifest_payload, dict) else None,
+    )
     payload["timing"] = derive_control_timing_from_path(
         event_log_path,
         workflow_state=workflow_payload if isinstance(workflow_payload, dict) else None,
@@ -201,6 +207,7 @@ def format_workspace_status(status: dict[str, Any]) -> str:
     report_template_conformance = status.get("report_template_conformance") or {}
     report_template_render_plan = status.get("report_template_render_plan") or {}
     trajectory_regulation = status.get("trajectory_regulation") or {}
+    guidance_manifestation = status.get("guidance_manifestation") or {}
     events = status.get("events") or {}
     timing = status.get("timing") or {}
     run_integrity = workflow.get("run_integrity") if isinstance(workflow.get("run_integrity"), dict) else {}
@@ -346,6 +353,18 @@ def format_workspace_status(status: dict[str, Any]) -> str:
             f"repair_starts={counts.get('repair_started_count', 0)} "
             f"actions={len(actions)} "
             "boundary=projection_only "
+            "runtime_effect=none"
+        )
+    if guidance_manifestation.get("status") not in {None, "not_available", "no_materialized_guidance"}:
+        counts = guidance_manifestation.get("summary_counts")
+        counts = counts if isinstance(counts, dict) else {}
+        lines.append(
+            "[status] guidance_manifestation: "
+            f"{guidance_manifestation.get('status')} "
+            f"assessed={counts.get('assessed_entry_count', 0)} "
+            f"not_observable={counts.get('not_observable_count', 0)} "
+            f"contradicted={counts.get('contradicted_count', 0)} "
+            "boundary=diagnostic_only "
             "runtime_effect=none"
         )
     for marker in status.get("stale_or_unknown") or []:
