@@ -147,6 +147,15 @@ breaking rename.
   recommended actions. It is a read-only operator safety diagnostic: it does
   not change workflow state, start repair, run gates, block stages, approve
   delivery, or decide release readiness.
+  Experimental Guidance Manifestation projection can read optional
+  `output/intermediate/guidance_manifestation_report.json` labels for
+  materialized approved guidance entries and surface
+  `explicitly_reflected`, `partially_reflected`, `contradicted`, and
+  `not_observable` counts in status and Quality Panel. The labels are
+  human/imported diagnostic assessments; Python validates and counts them but
+  does not judge manifestation, mutate Improvement Memory, approve guidance,
+  create a quality score, run gates, approve delivery, or decide release
+  readiness.
   These contracts describe report type metadata over the existing Claim Ledger,
   artifact registry, gates, event log, archive, source appendix, support
   records, frozen-artifact integrity, and human delivery approval spine. These

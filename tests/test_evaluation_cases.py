@@ -38,14 +38,14 @@ def test_eval_cases_validate_and_run_packaged_cases(capsys):
     assert rc == 0
     validation = json.loads(capsys.readouterr().out)
     assert validation["ok"] is True
-    assert validation["case_count"] == 15
+    assert validation["case_count"] == 16
 
     rc = main(["eval-cases", "run", "--repo-workdir", str(ROOT), "--json"])
 
     assert rc == 0
     result = json.loads(capsys.readouterr().out)
     assert result["ok"] is True
-    assert result["passed_count"] == 15
+    assert result["passed_count"] == 16
     assert result["failed_count"] == 0
     assert {
         "unsupported_material_fact",
@@ -60,6 +60,7 @@ def test_eval_cases_validate_and_run_packaged_cases(capsys):
         "source_evidence_pack_blocks_non_evidence_file",
         "release_readiness_forged_event_blocker",
         "trajectory_retry_budget_exhausted",
+        "guidance_manifestation_not_observable",
         "unapproved_entry_not_materialized",
         "approved_guidance_materialized",
         "reverted_entry_removed_from_next_snapshot",

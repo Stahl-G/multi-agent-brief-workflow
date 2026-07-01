@@ -17,6 +17,9 @@ from pathlib import Path
 from typing import Any, Mapping
 
 from multi_agent_brief.core.claim_ledger import ClaimLedger
+from multi_agent_brief.product.guidance_manifestation import (
+    validate_guidance_manifestation_projection_payload,
+)
 from multi_agent_brief.product.trajectory_regulation import validate_trajectory_regulation_payload
 
 QUALITY_PANEL_SCHEMA_VERSION = "briefloop.quality_panel.v1"
@@ -106,6 +109,11 @@ def build_quality_panel(workspace: str | Path) -> dict[str, Any]:
         if isinstance(workspace_status.get("trajectory_regulation"), dict)
         else {}
     )
+    guidance_manifestation = (
+        workspace_status.get("guidance_manifestation")
+        if isinstance(workspace_status.get("guidance_manifestation"), dict)
+        else {}
+    )
     control_integrity = {
         "run_integrity": run_integrity.get("status") or "unknown",
         "reference_eligible": bool(run_integrity.get("reference_eligible")),
@@ -145,6 +153,7 @@ def build_quality_panel(workspace: str | Path) -> dict[str, Any]:
         "claims": claims,
         "delivery": delivery,
         "trajectory_regulation": trajectory,
+        "guidance_manifestation": guidance_manifestation,
         "recommended_actions": recommended_actions,
         "non_goals": [
             "quality_score",
@@ -489,6 +498,13 @@ def validate_quality_panel_payload(payload: Any) -> str | None:
         trajectory_error = validate_trajectory_regulation_payload(trajectory)
         if trajectory_error:
             return f"quality_panel_schema_error:trajectory_regulation:{trajectory_error}"
+    guidance = payload.get("guidance_manifestation")
+    if guidance is not None:
+        if not isinstance(guidance, dict):
+            return "quality_panel_schema_error:guidance_manifestation"
+        guidance_error = validate_guidance_manifestation_projection_payload(guidance)
+        if guidance_error:
+            return f"quality_panel_schema_error:guidance_manifestation:{guidance_error}"
     recommended_actions = payload.get("recommended_actions")
     if not isinstance(recommended_actions, list):
         return "quality_panel_schema_error:recommended_actions"

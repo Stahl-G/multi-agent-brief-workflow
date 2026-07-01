@@ -5,7 +5,8 @@ regression checks. v0.6.5 extended the packaged suite with provenance
 projection coverage. v0.7.0 adds Improvement Memory control cases. The
 pre-release v0.11.1 issue-closure line adds synthetic Product OS blocker cases
 for durable source evidence pack validation, event-linked release readiness
-reports, and trajectory retry-budget projection.
+reports, trajectory retry-budget projection, and guidance manifestation
+`not_observable` diagnostics.
 
 These cases validate control-surface behavior across:
 
@@ -17,6 +18,7 @@ These cases validate control-surface behavior across:
 - durable source evidence pack manifest validation
 - event-linked release-readiness projection validation
 - trajectory-regulation projection from repeated retry decisions
+- guidance-manifestation diagnostics for materialized approved guidance
 - Hermes guidance invariants
 
 They are not benchmark scores and are not workflow artifacts.

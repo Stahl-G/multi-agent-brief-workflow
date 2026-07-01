@@ -14,7 +14,8 @@ Status can show:
 - topology-satisfied stages
 - `auditable_brief` target complete or incomplete
 - ReportPack, PolicyProfile, ReportTemplate, source-evidence, release-mode, and
-  Quality Panel / Trajectory Regulation projections when present
+  Quality Panel / Trajectory Regulation / Guidance Manifestation projections
+  when present
 - next suggested command
 
 Projection status is not authority by itself. Invalid optional artifacts must
@@ -25,6 +26,14 @@ repeated-blocker counts from `workflow_state.json` and `event_log.jsonl`, then
 may suggest `request_human_review` or `block_run` as operator actions. It does
 not write workflow state, start repair, run gates, execute repair, approve
 delivery, or decide release readiness.
+
+Guidance Manifestation is diagnostic-only. It reads optional
+`guidance_manifestation_report.json` labels for materialized approved guidance
+entries and can surface `explicitly_reflected`, `partially_reflected`,
+`contradicted`, and `not_observable` counts. The labels must come from
+human/imported assessment, not Python semantic judgment. Do not treat this as
+Improvement Memory mutation, guidance approval, quality scoring, gate authority,
+delivery approval, release readiness, or proof that guidance improved output.
 
 ## Gates
 

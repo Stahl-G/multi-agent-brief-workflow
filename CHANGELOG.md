@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Guidance Manifestation diagnostic projection**: status and Quality Panel
+  can now surface optional
+  `output/intermediate/guidance_manifestation_report.json` labels for
+  materialized approved guidance entries:
+  `explicitly_reflected`, `partially_reflected`, `contradicted`, and
+  `not_observable`. Packaged public-safe eval cases include a synthetic
+  `not_observable` report. This is an observability diagnostic only; it does
+  not mutate Improvement Memory, approve guidance, score quality, run gates,
+  approve delivery, decide release readiness, or prove that guidance improved
+  output.
 - **Trajectory Regulation read-only projection**: `status --json` and Quality
   Panel now surface retry-stage, repair-cycle, repeated-blocker, and exhausted
   attempt-budget summaries derived from existing `workflow_state.json` and
